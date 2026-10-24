@@ -3,13 +3,17 @@ from base.models.inmueble import Inmueble
 
 
 class Dormitorios(models.Model):
-    modulo = models.OneToOneField(
+    inmueble = models.OneToOneField(
         Inmueble, on_delete=models.CASCADE, null=False
     )
-    dobles = models.IntegerField(default=0)
-    individuales = models.IntegerField(default=0)
-    exteriores = models.IntegerField(default=0)
-    suites = models.IntegerField(default=0)
+    dobles = models.PositiveIntegerField(default=0)
+    individuales = models.PositiveIntegerField(default=0)
+    exteriores = models.PositiveIntegerField(default=0)
+    suites = models.PositiveIntegerField(default=0)
+
+    @property
+    def total(self):
+        return self.dobles + self.individuales + self.suites
 
     def __str__(self) -> str:
-        return f'{self.modulo.referencia} dormitorios'
+        return f'{self.inmueble.referencia} dormitorios'

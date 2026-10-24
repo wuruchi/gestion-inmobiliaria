@@ -17,7 +17,11 @@ def seed_modalidades(dry_run=False):
             for item in items:
                 _, created = Modalidad.objects.update_or_create(
                     codigo=item['codigo'],
-                    defaults={'nombre': item['nombre'], 'orden': item['orden']},
+                    defaults={
+                        'nombre': item['nombre'],
+                        'orden': item['orden'],
+                        'unidad_precio': item['unidad_precio'],
+                    },
                 )
                 stats['Modalidad'][0 if created else 1] += 1
             if dry_run:

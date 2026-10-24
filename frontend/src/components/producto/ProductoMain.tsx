@@ -88,12 +88,12 @@ const ProductoMain = (props: Props) => {
                     </div>
                 </div>
                 <div className='matterport'>
-                    {producto?.matterport_URI && (
+                    {producto?.matterport_url && (
                         <iframe
                             title='Matterport'
                             width='100%'
                             height='800'
-                            src={producto?.matterport_URI}
+                            src={producto?.matterport_url}
                             frameBorder='0'
                             allowFullScreen
                             allow='xr-spatial-tracking'

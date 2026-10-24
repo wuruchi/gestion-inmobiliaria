@@ -6,3 +6,4 @@ db.sqlite3
 *:Zone.Identifier
 media/
 .venv/
+db.sqlite3.bak

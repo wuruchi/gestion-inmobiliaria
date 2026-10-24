@@ -1,15 +1,12 @@
 from .modalidad import Modalidad
 from .inmueble import Inmueble
+from .inmueble_modalidad import InmuebleModalidad
 from .ubicacion import Barrio, Comarca, Distrito, Provincia, Municipio
 from .banios import Banios
-from .cocina import Cocina
 from .dormitorios import Dormitorios
 from .image_inmueble import ImageInmueble
 from .otros_espacios import OtrosEspacios
-from .salon import Salon
-from .terraza import Terraza
 from .dotacion import Dotacion
-from .carpinteria import Carpinteria
 from .instalaciones import Instalaciones
 from .entorno import Entorno
 from .seguridad import Seguridad
@@ -18,3 +15,8 @@ from .transporte import Transporte
 from .otros import Otros
 from .condiciones import CondicionesAlquiler
 from .solicitud_reserva import SolicitudReserva
+from .historial_renta import HistorialRenta
+from .propietario import Propietario
+from .datos_internos import DatosInternos
+from .estancias import Estancias
+from .plaza_aparcamiento import PlazaAparcamiento

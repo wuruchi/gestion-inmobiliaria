@@ -4,6 +4,16 @@ from base.models.inmueble import Inmueble
 
 
 class SolicitudReserva(models.Model):
+    PENDIENTE = 'pendiente'
+    CONTACTADA = 'contactada'
+    CERRADA = 'cerrada'
+    DESCARTADA = 'descartada'
+    ESTADOS = (
+        (PENDIENTE, 'Pendiente'),
+        (CONTACTADA, 'Contactada'),
+        (CERRADA, 'Cerrada'),
+        (DESCARTADA, 'Descartada'),
+    )
     inmueble = models.ForeignKey(
         Inmueble,
         on_delete=models.SET_NULL,
@@ -18,7 +28,13 @@ class SolicitudReserva(models.Model):
     telefono = models.CharField(max_length=30)
     fecha_desde = models.DateField(null=True, blank=True)
     acepta_aviso_legal = models.BooleanField(default=False)
-    atendida = models.BooleanField(default=False)
+    estado = models.CharField(max_length=12, choices=ESTADOS, default=PENDIENTE)
+    datos_borrados = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+        help_text='Cuándo se vaciaron nombre, email y teléfono (ver purgar_solicitudes).',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -40,10 +40,13 @@ class SeedLocationsTest(unittest.TestCase):
             self.assertEqual(self.count(db, 'modalidad'), 0)
             self.run_seed(db, 'modalidades')
             self.run_seed(db, 'modalidades')
-            self.assertEqual(self.count(db, 'modalidad'), 4)
+            self.assertEqual(self.count(db, 'modalidad'), 3)
             codes = [r[0] for r in sqlite3.connect(db).execute(
                 'select codigo from base_modalidad order by orden')]
-            self.assertEqual(codes, ['temporal', 'habitual', 'venta', 'otros'])
+            self.assertEqual(codes, ['temporal', 'habitual', 'venta'])
+            units = [r[0] for r in sqlite3.connect(db).execute(
+                'select unidad_precio from base_modalidad order by orden')]
+            self.assertEqual(units, ['mensual', 'mensual', 'total'])
             row = sqlite3.connect(db).execute(
                 "select nombre from base_municipio where codigo_ine='08019'").fetchone()
             self.assertEqual(row[0], 'Barcelona')

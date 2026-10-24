@@ -6,8 +6,8 @@ from rest_framework.exceptions import ParseError
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
-from .models import Inmueble, Barrio, Modalidad, Distrito, Municipio, Provincia
+from django.db.models import Prefetch, Q
+from .models import Inmueble, InmuebleModalidad, Barrio, Modalidad, Distrito, Municipio, Provincia
 from .serializers import InmuebleSerializer, SingleInmuebleSerializer, SolicitudReservaSerializer, DistritosSerializer, MunicipiosSerializer, ProvinciasSerializer, MunicipiosListItemSerializer, DistritosListItemSerializer, BarriosSerializer, ModalidadSerializer
 
 
@@ -15,13 +15,15 @@ INMUEBLES_PER_PAGE = 5
 
 # Everything InmuebleSerializer reads, fetched in 2 queries instead of ~15 per listing.
 def inmuebles_publicados(**filters):
-  return Inmueble.objects.filter(publicar_web=True, **filters).select_related(
+  return Inmueble.objects.con_habitaciones().filter(publicar_web=True, **filters).select_related(
     'provincia', 'municipio__provincia', 'distrito__municipio__provincia', 'barrio',
     'otros', 'banios', 'dormitorios', 'instalaciones', 'arearecreo', 'dotacion',
-    'cocina', 'terraza',
-  ).prefetch_related('images', 'modalidades').order_by('-estado', 'fecha_disponibilidad', '_id')
+    'estancias',
+  ).prefetch_related(
+    'images', Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
+  ).order_by('-estado', 'fecha_disponibilidad', '_id')
 
-def parse_request(request, precio_field='importe_alquiler__lte'):
+def parse_request(request, modalidad=None):
   fecha_entradata = request.query_params.get('fecha_entrada')
   provincia = request.query_params.get('provincia')
   municipio = request.query_params.get('municipio')
@@ -51,9 +53,15 @@ def parse_request(request, precio_field='importe_alquiler__lte'):
   if referencia is not None and len(referencia) > 0:
     kwargs['referencia__icontains'] = referencia
   if habitaciones > 0:
-    kwargs['n_habitaciones'] = habitaciones
+    kwargs['habitaciones_total'] = habitaciones
+  if modalidad:
+    kwargs['precios__modalidad__codigo'] = modalidad
   if max_precio > 0:
-    kwargs[precio_field] = max_precio
+    # Same join as the modalidad above, so the price is that modalidad's price.
+    # Without a modalidad, compare the monthly prices (rent).
+    if not modalidad:
+      kwargs['precios__modalidad__unidad_precio'] = 'mensual'
+    kwargs['precios__precio__lte'] = max_precio
   return kwargs
 
 def paginator_handler(inmuebles, page):
@@ -74,7 +82,7 @@ def getRoutes(request):
 @api_view(['GET'])
 def getInmuebles(request):
   page = request.query_params.get('page', 1)
-  inmuebles = inmuebles_publicados(**parse_request(request))
+  inmuebles = inmuebles_publicados(**parse_request(request)).distinct()
   inmuebles, paginator = paginator_handler(inmuebles, page)
   serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
   return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
@@ -82,7 +90,7 @@ def getInmuebles(request):
 @api_view(['GET'])
 def getInmueblesHabituales(request):
   page = request.query_params.get('page', 1)
-  inmuebles = inmuebles_publicados(modalidades__codigo='habitual', **parse_request(request))
+  inmuebles = inmuebles_publicados(**parse_request(request, 'habitual'))
   inmuebles, paginator = paginator_handler(inmuebles, page)
   serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
   return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
@@ -91,7 +99,7 @@ def getInmueblesHabituales(request):
 @api_view(['GET'])
 def getInmueblesTemporales(request):
   page = request.query_params.get('page', 1)
-  inmuebles = inmuebles_publicados(modalidades__codigo='temporal', **parse_request(request))
+  inmuebles = inmuebles_publicados(**parse_request(request, 'temporal'))
   inmuebles, paginator = paginator_handler(inmuebles, page)
   serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
   return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
@@ -99,7 +107,7 @@ def getInmueblesTemporales(request):
 @api_view(['GET'])
 def getInmueblesVenta(request):
   page = request.query_params.get('page', 1)  
-  inmuebles = inmuebles_publicados(modalidades__codigo='venta', **parse_request(request, 'importe_venta__lte'))
+  inmuebles = inmuebles_publicados(**parse_request(request, 'venta'))
   inmuebles, paginator = paginator_handler(inmuebles, page)
   serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
   return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
@@ -110,10 +118,13 @@ def getInmueble(request, pk):
   inmueble = get_object_or_404(
     Inmueble.objects.select_related(
       'provincia', 'municipio', 'distrito', 'barrio', 'condiciones', 'otros', 'banios',
-      'dormitorios', 'instalaciones', 'arearecreo', 'dotacion', 'cocina',
-      'terraza', 'salon', 'carpinteria', 'otrosespacios', 'seguridad',
+      'dormitorios', 'instalaciones', 'arearecreo', 'dotacion', 'estancias',
+      'otrosespacios', 'seguridad',
       'entorno', 'transporte',
-    ).prefetch_related('images', 'modalidades'),
+    ).prefetch_related(
+      'images', 'plazas',
+      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
+    ),
     _id=pk, publicar_web=True)
   serializer = SingleInmuebleSerializer(inmueble, many=False, context={'request': request})
   return Response(serializer.data)

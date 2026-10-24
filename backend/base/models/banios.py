@@ -3,11 +3,11 @@ from base.models.inmueble import Inmueble
 
 
 class Banios(models.Model):
-    modulo = models.OneToOneField(
+    inmueble = models.OneToOneField(
         Inmueble, on_delete=models.CASCADE, null=False
     )
-    banios = models.IntegerField(default=0)
-    suelo = models.CharField(max_length=150, null=True)
+    banios = models.PositiveIntegerField(default=0)
+    suelo = models.CharField(max_length=150, blank=True, default='')
 
     def __str__(self) -> str:
-        return f'{self.modulo.referencia} - Baños'
+        return f'{self.inmueble.referencia} - Baños'

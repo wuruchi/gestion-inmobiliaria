@@ -3,27 +3,26 @@ export interface Otros {
     capacidad_personas: number;
     suelo_piso: string;
     exterior: string;
-    altura_real: string;
+    altura_real_m: string | null;
     anio_ultima_reforma: number;
     gastos_comunidad_incluidos: boolean;
     orientacion: string;
-    plazas_aparcamiento: number;
     chimenea: boolean;
     vistas_al_mar: boolean;
     vistas_montania: boolean;
     tipo_fachada: string;
     office: string;
     acepta_animales: boolean;
-    estancia_minima: string;
-    estancia_maxima: string;
-    modulo: number;
+    estancia_minima_meses: number | null;
+    estancia_maxima_meses: number | null;
+    inmueble: number;
 }
 
 export interface Banios {
     id: number;
     banios: number;
     suelo: string;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Dormitorios {
@@ -32,7 +31,7 @@ export interface Dormitorios {
     individuales: number;
     exteriores: number;
     suites: number;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Instalaciones {
@@ -59,7 +58,7 @@ export interface Instalaciones {
     dvd: boolean;
     hilo_musical: boolean;
     acceso_silla_ruedas: boolean;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Dotacion {
@@ -82,7 +81,7 @@ export interface Dotacion {
     camas: number;
     sofas: number;
     tendedero: number;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface AreaRecreo {
@@ -93,7 +92,15 @@ export interface AreaRecreo {
     solarium: boolean;
     jardin_infantil: boolean;
     local_social: boolean;
-    modulo: number;
+    inmueble: number;
+}
+
+export interface PlazaAparcamiento {
+    id: number;
+    numero: string;
+    tipo: "coche" | "moto";
+    superficie: string | null;
+    notas: string;
 }
 
 export interface Terraza {
@@ -101,7 +108,7 @@ export interface Terraza {
     terraza: number;
     balcones: number;
     descripcion: string;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Cocina {
@@ -110,21 +117,21 @@ export interface Cocina {
     cocina_amueblada: boolean;
     tipo_cocina: string | null;
     suelo_cocina: string | null;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Salon {
     id: number;
     salon: number;
     descripcion: string | null;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Carpinteria {
     id: number;
     carpinteria_interior: boolean;
     carpinteria_exterior: boolean;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface OtrosEspacios {
@@ -139,7 +146,7 @@ export interface OtrosEspacios {
     lavadero: number;
     estudios: number;
     bibliotecas: number;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Seguridad {
@@ -149,13 +156,13 @@ export interface Seguridad {
     camaras_seguridad: boolean;
     puerta_blindada: boolean;
     caja_seguridad: boolean;
-    cristales_blindades: boolean;
+    cristales_blindados: boolean;
     sistema_alarma: boolean;
     instalacion_antirrobo: boolean;
     instalacion_contra_incendio: boolean;
     video_portero: boolean;
     portero_automatico: boolean;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Entorno {
@@ -168,17 +175,17 @@ export interface Entorno {
     cerca_guarderias: boolean;
     cerca_medico: boolean;
     cerca_centro_comercial: boolean;
-    distancia_playa: string | null;
-    distancia_poblacion: string | null;
-    distancia_ciudad: string | null;
+    distancia_playa_m: number | null;
+    distancia_poblacion_m: number | null;
+    distancia_ciudad_m: number | null;
     cerca_supermercado: boolean;
     cerca_restaurantes: boolean;
     cerca_discotecas: boolean;
-    modulo: number;
+    inmueble: number;
 }
 
 export interface Transporte {
-    modulo: number;
+    inmueble: number;
     cerca_bus: boolean;
     descripcion_bus: string | null;
     cerca_metro: boolean;
@@ -253,18 +260,16 @@ export interface Producto {
     situacion_5_anios: string | null;
     gran_tenedor: boolean;
     zona_tensionada: boolean;
-    original_Id: number;
+    original_id: number;
     referencia: string;
     fecha_disponibilidad: string;
     titulo: string;
     tipo: string;
     modalidades: Modalidad[];
     es_venta: boolean;
-    poblacion: string;
-    ubicacion: string;
     codigo_postal: string;
-    zona: string;
-    zona_ref: string;
+    zona: string | null;
+    zona_ref: string | null;
     direccion: string;
     direccion_short: string;
     geo_latitude: number | null;
@@ -274,12 +279,9 @@ export interface Producto {
     estado: string;
     sup_construida: string;
     sup_cont_comun: string;
-    sup_parking: string;
     sup_util: string;
     n_plz_garaje: number;
-    valor_plz: string;
-    renta_plz: string;
-    cat_nrc: string;
+    plazas: PlazaAparcamiento[];
     cedula: string | null;
     importe_alquiler: string;
     importe_venta: string;
@@ -297,12 +299,12 @@ export interface Producto {
     ibi: string;
     situacion_actual: string;
     n_habitaciones: number;
-    n_banyos: number;
+    n_banios: number;
     notas_web: string | null;
     fecha_firma: string | null;
     fecha_entrega: string | null;
     propietario: string;
-    matterport_URI: string | null;
+    matterport_url: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -319,7 +321,7 @@ export interface ListProducto {
     importe_alquiler: string;
     importe_venta: string;
     n_habitaciones: number;
-    n_banyos: number;
+    n_banios: number;
     descripcion_es: string;
     descripcion_en: string | null;
     description_cat: string | null;

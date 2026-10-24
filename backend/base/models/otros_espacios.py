@@ -3,19 +3,19 @@ from base.models.inmueble import Inmueble
 
 
 class OtrosEspacios(models.Model):
-    modulo = models.OneToOneField(
+    inmueble = models.OneToOneField(
         Inmueble, on_delete=models.CASCADE, null=False
     )
-    despachos = models.IntegerField(default=0)
-    vestidores = models.IntegerField(default=0)
-    altillo = models.IntegerField(default=0)
-    galeria = models.IntegerField(default=0)
-    trastero = models.IntegerField(default=0)
-    buhardilla = models.IntegerField(default=0)
-    bodega = models.IntegerField(default=0)
-    lavadero = models.IntegerField(default=0)
-    estudios = models.IntegerField(default=0)
-    bibliotecas = models.IntegerField(default=0)
+    despachos = models.PositiveIntegerField(default=0)
+    vestidores = models.PositiveIntegerField(default=0)
+    altillo = models.PositiveIntegerField(default=0)
+    galeria = models.PositiveIntegerField(default=0)
+    trastero = models.PositiveIntegerField(default=0)
+    buhardilla = models.PositiveIntegerField(default=0)
+    bodega = models.PositiveIntegerField(default=0)
+    lavadero = models.PositiveIntegerField(default=0)
+    estudios = models.PositiveIntegerField(default=0)
+    bibliotecas = models.PositiveIntegerField(default=0)
 
     def __str__(self) -> str:
-        return f'{self.modulo.referencia} - Otros espacios'
+        return f'{self.inmueble.referencia} - Otros espacios'

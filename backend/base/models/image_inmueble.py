@@ -1,22 +1,27 @@
 from django.db import models
 from base.models.inmueble import Inmueble
 
-# Create your models here.
+
 def content_file_name(instance, filename):
-    return '/'.join([str(instance.modulo._id), filename])
+    return '/'.join([str(instance.inmueble_id), filename])
 
 
 class ImageInmueble(models.Model):
-    modulo = models.ForeignKey(
-        Inmueble, related_name='images', on_delete=models.CASCADE, null=True
+    inmueble = models.ForeignKey(
+        Inmueble, related_name='images', on_delete=models.CASCADE
     )
-    label = models.CharField(max_length=150, null=True, blank=True)
-    image = models.FileField(
-        null=True, blank=True, upload_to=content_file_name
-    )
-    default = models.BooleanField(null=True, blank=False, default=False)
+    alt_text = models.CharField(max_length=150, blank=True, default='')
+    image = models.ImageField(upload_to=content_file_name)
+    posicion = models.PositiveSmallIntegerField(default=0)
+    default = models.BooleanField(default=False)
     _id = models.AutoField(primary_key=True, editable=False)
 
     class Meta:
-        unique_together = ('modulo', '_id')
-        ordering = ['_id']
+        ordering = ['posicion', '_id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['inmueble'],
+                condition=models.Q(default=True),
+                name='uniq_image_default_por_inmueble',
+            )
+        ]

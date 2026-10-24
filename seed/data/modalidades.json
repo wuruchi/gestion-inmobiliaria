@@ -2,9 +2,8 @@
  "sources": [],
  "note": "Application configuration maintained by hand; not downloaded.",
  "items": [
-  {"codigo": "temporal", "nombre": "Vivienda temporal", "orden": 1},
-  {"codigo": "habitual", "nombre": "Vivienda habitual", "orden": 2},
-  {"codigo": "venta", "nombre": "Venta", "orden": 3},
-  {"codigo": "otros", "nombre": "Otros usos", "orden": 4}
+  {"codigo": "temporal", "nombre": "Vivienda temporal", "orden": 1, "unidad_precio": "mensual"},
+  {"codigo": "habitual", "nombre": "Vivienda habitual", "orden": 2, "unidad_precio": "mensual"},
+  {"codigo": "venta", "nombre": "Venta", "orden": 3, "unidad_precio": "total"}
  ]
 }
