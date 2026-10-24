@@ -1,0 +1,111 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.tipo-hogar-wrapper {
+    position: relative;
+}
+
+.tipo-hogar-wrapper:before {
+    content: " ";
+    z-index: -1;
+    // display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    transform: translate(0, -32%);
+    // top: -10rem;
+    opacity: 0.1;
+    // padding: $large-space $extra-extra-largest-space;
+    background-image: url(../img/atb/skyline_main.png);
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.tipo-hogar {
+    @include standard-section();
+    position: relative;
+
+    &__text {
+        > h1 {
+            color: $atb-main;
+        }
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: $large-space;
+    }
+
+    &__cards {
+        margin-top: $normal-space;
+        margin-bottom: $normal-space;
+        @include card-wrapper();
+    }
+
+    &__card-ribbon {
+        display: flex;
+        flex-direction: row;
+        justify-content: end;
+    }
+
+    &__card {
+        cursor: pointer;
+    }
+
+    &__card-temporal {
+        background-image: url(../img/atb/tipohogar/temporal.jpg);
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+    }
+
+    &__card-larga {
+        background-image: url(../img/atb/tipohogar/larga.jpg);
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+    }
+
+    &__card-ventas {
+        background-image: url(../img/atb/tipohogar/ventas.jpg);
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+    }
+
+    &__card-text {
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.8rem;
+
+        > header {
+            font-weight: $font-semibold;
+        }
+
+        > p {
+            font-size: $font-size-normal;
+        }
+    }
+
+    &__card-text:hover {
+        background-color: $atb-light-main;
+        transition: all 0.5s;
+    }
+}
+
+@media screen and (max-width: $large-desktop) {
+    .tipo-hogar {
+        &__cards {
+            gap: $large-space;
+        }
+        &__card {
+            width: 32rem;
+        }
+    }
+}

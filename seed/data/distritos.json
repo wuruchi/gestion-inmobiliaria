@@ -1,0 +1,58 @@
+{
+ "sources": [
+  "https://opendata-ajuntament.barcelona.cat/data/dataset/808daafa-d9ce-48c0-925a-fa5afdb1ed41/resource/576bc645-9481-4bc4-b8bf-f5972c20df3f/download"
+ ],
+ "retrieved": "2026-10-24",
+ "items": [
+  {
+   "municipio_ine": "08019",
+   "codigo": "01",
+   "nombre": "Ciutat Vella"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "02",
+   "nombre": "Eixample"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "03",
+   "nombre": "Sants-Montjuïc"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "04",
+   "nombre": "Les Corts"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "05",
+   "nombre": "Sarrià-Sant Gervasi"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "06",
+   "nombre": "Gràcia"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "07",
+   "nombre": "Horta-Guinardó"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "08",
+   "nombre": "Nou Barris"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "09",
+   "nombre": "Sant Andreu"
+  },
+  {
+   "municipio_ine": "08019",
+   "codigo": "10",
+   "nombre": "Sant Martí"
+  }
+ ]
+}

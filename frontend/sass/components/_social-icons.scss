@@ -1,0 +1,13 @@
+@import "../abstracts/variables";
+
+.social-icons {
+  display: flex;
+  flex-direction: row;
+  gap: $normal-space;
+
+  ion-icon {
+    border: 0.8mm solid $simple-white;
+    border-radius: 100px;
+    padding: 0.8rem;
+  }
+}

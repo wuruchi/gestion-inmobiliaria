@@ -1,0 +1,90 @@
+@import "../abstracts/variables";
+
+.web-propietarios {
+  // position: absolute;
+  // top: 0;
+  // right: $larger-space;
+  // display: inline-block;
+  padding: 0.6rem 2rem;
+  background-color: $atb-yellow;
+  color: $atb-main;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.header {
+  position: relative;
+  background-color: $atb-main;
+  color: $simple-white;
+  font-size: $font-size-normal;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: $small-space $extra-largest-space;
+
+  &__menu {
+    display: flex;
+    flex-direction: column;
+    gap: $small-space;
+
+    &-top {
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
+      gap: $large-space;
+    }
+
+    &__complements {
+      font-size: $font-size_small;
+      display: flex;
+      flex-direction: row;
+      gap: $large-space;
+      align-items: center;
+
+      &__idioma {
+        font-weight: $font-semibold;
+      }
+    }
+
+    &-bottom {
+      font-weight: $font-bold;
+      display: flex;
+      flex-direction: row;
+
+      &__controller {
+        cursor: pointer;
+        padding: 1rem 4rem;
+        font-size: $font-size-normal;
+        background-color: $atb-main;
+        color: $simple-white;
+        font-weight: $font-semibold;
+        border: none;
+        border-radius: 2%;
+      }
+
+      &__controller:hover {
+        background-color: $atb-light-main;
+        color: $simple-white;
+        transition: all 0.5s;
+      }
+
+      &__sub-item {
+        cursor: pointer;
+        padding: 1rem 0.8rem;
+        font-size: $font-size-normal;
+        background-color: $atb-light-main;
+        color: $simple-white;
+        font-weight: $font-regular;
+        width: 24rem;
+        border: none;
+      }
+
+      &__sub-item:hover {
+        background-color: $atb-main;
+        color: $simple-white;
+        transition: all 0.5s;
+      }
+    }
+  }
+}

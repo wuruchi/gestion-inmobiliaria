@@ -1,0 +1,26 @@
+@import "../abstracts/variables";
+
+.bg--red {
+  background-color: $atb-red;
+  color: $simple-white;
+}
+
+.bg--yellow {
+  background-color: $atb-yellow;
+  color: $simple-white;
+}
+
+.bg--orange {
+  background-color: $atb-orange;
+  color: $simple-white;
+}
+
+.bg--main {
+  background-color: $atb-main;
+  color: $simple-white;
+}
+
+.bg--white {
+  background-color: $simple-white;
+  color: $atb-main;
+}

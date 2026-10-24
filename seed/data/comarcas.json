@@ -1,0 +1,64 @@
+{
+ "sources": [
+  "https://analisi.transparenciacatalunya.cat/resource/9aju-tpwc.json?$limit=2000&$select=codi,nom,codi_comarca,nom_comarca,latitud,longitud"
+ ],
+ "retrieved": "2026-10-24",
+ "items": [
+  {
+   "codigo": "03",
+   "nombre": "Alt Penedès"
+  },
+  {
+   "codigo": "06",
+   "nombre": "Anoia"
+  },
+  {
+   "codigo": "07",
+   "nombre": "Bages"
+  },
+  {
+   "codigo": "11",
+   "nombre": "Baix Llobregat"
+  },
+  {
+   "codigo": "13",
+   "nombre": "Barcelonès"
+  },
+  {
+   "codigo": "14",
+   "nombre": "Berguedà"
+  },
+  {
+   "codigo": "17",
+   "nombre": "Garraf"
+  },
+  {
+   "codigo": "21",
+   "nombre": "Maresme"
+  },
+  {
+   "codigo": "24",
+   "nombre": "Osona"
+  },
+  {
+   "codigo": "34",
+   "nombre": "Selva"
+  },
+  {
+   "codigo": "40",
+   "nombre": "Vallès Occidental"
+  },
+  {
+   "codigo": "41",
+   "nombre": "Vallès Oriental"
+  },
+  {
+   "codigo": "42",
+   "nombre": "Moianès"
+  },
+  {
+   "codigo": "43",
+   "nombre": "Lluçanès"
+  }
+ ]
+}

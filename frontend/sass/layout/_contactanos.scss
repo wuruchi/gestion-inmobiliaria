@@ -1,0 +1,87 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.contactanos-wrapper {
+    position: relative;
+}
+
+.contactanos-wrapper:before {
+    @include skyline-white();
+}
+
+.contactanos {
+    @include standard-section();
+    background-color: $atb-main;
+    padding: $largest-space 32rem;
+    color: $simple-white;
+
+    input,
+    textarea {
+        padding: 2rem $large-space;
+        border-radius: 10px;
+        border: none;
+        font-size: inherit;
+        font: inherit;
+        color: $atb-light-main;
+    }
+
+    ::placeholder {
+        color: $atb-light-main;
+    }
+
+    textarea {
+        height: 100%;
+    }
+
+    &__form-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: $normal-space;
+    }
+
+    &__form {
+        margin-top: $large-space;
+        font-size: $font-size-normal;
+        font-weight: 200;
+        display: flex;
+        flex-direction: row;
+        gap: 4.8rem;
+        z-index: 10;
+
+        &__left {
+            display: flex;
+            flex-direction: column;
+            gap: $normal-space;
+
+            input {
+                width: 38rem;
+            }
+        }
+
+        &__right {
+            display: flex;
+            flex-direction: column;
+            gap: $normal-space;
+
+            > div {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 1.2rem;
+            }
+        }
+
+        &__footer {
+            display: flex;
+            flex-direction: row;
+            justify-content: end;
+            width: 100%;
+        }
+    }
+}
+
+@media screen and (max-width: $large-desktop) {
+    .contactanos {
+        padding: $extra-larger-space $largest-space;
+    }
+}

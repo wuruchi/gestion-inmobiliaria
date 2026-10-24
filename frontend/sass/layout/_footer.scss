@@ -1,0 +1,57 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.footer {
+    padding: $larger-space $extra-largest-space-plus;
+    background: $atb-black;
+    color: $simple-white;
+    font-size: $font-size-normal;
+    display: flex;
+    flex-direction: column;
+    gap: $larger-space;
+
+    &__first-row {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    &__second-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        color: $atb-grey;
+
+        > div {
+            text-align: center;
+        }
+
+        div:not(:last-child) {
+            border-right: 3px solid $atb-grey;
+        }
+    }
+
+    &__column {
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        gap: $normal-space;
+    }
+
+    &__content__telemail {
+        > a {
+            color: $atb-light-grey;
+            text-decoration: none;
+        }
+        > a:hover {
+            color: $atb-light-grey;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    }
+}
+
+@media screen and (max-width: $large-desktop) {
+    .footer {
+        font-size: $font-size-normal;
+    }
+}

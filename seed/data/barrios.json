@@ -1,0 +1,446 @@
+{
+ "sources": [
+  "https://opendata-ajuntament.barcelona.cat/data/dataset/808daafa-d9ce-48c0-925a-fa5afdb1ed41/resource/b21fa550-56ea-4f4c-9adc-b8009381896e/download"
+ ],
+ "retrieved": "2026-10-24",
+ "items": [
+  {
+   "municipio_ine": "08019",
+   "distrito": "01",
+   "codigo": "01",
+   "nombre": "el Raval"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "01",
+   "codigo": "02",
+   "nombre": "el Barri Gòtic"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "01",
+   "codigo": "03",
+   "nombre": "la Barceloneta"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "01",
+   "codigo": "04",
+   "nombre": "Sant Pere, Santa Caterina i la Ribera"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "02",
+   "codigo": "05",
+   "nombre": "el Fort Pienc"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "02",
+   "codigo": "06",
+   "nombre": "la Sagrada Família"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "02",
+   "codigo": "07",
+   "nombre": "la Dreta de l'Eixample"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "02",
+   "codigo": "08",
+   "nombre": "l'Antiga Esquerra de l'Eixample"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "02",
+   "codigo": "09",
+   "nombre": "la Nova Esquerra de l'Eixample"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "02",
+   "codigo": "10",
+   "nombre": "Sant Antoni"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "11",
+   "nombre": "el Poble-sec"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "12",
+   "nombre": "la Marina del Prat Vermell"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "13",
+   "nombre": "la Marina de Port"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "14",
+   "nombre": "la Font de la Guatlla"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "15",
+   "nombre": "Hostafrancs"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "16",
+   "nombre": "la Bordeta"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "17",
+   "nombre": "Sants - Badal"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "03",
+   "codigo": "18",
+   "nombre": "Sants"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "04",
+   "codigo": "19",
+   "nombre": "les Corts"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "04",
+   "codigo": "20",
+   "nombre": "la Maternitat i Sant Ramon"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "04",
+   "codigo": "21",
+   "nombre": "Pedralbes"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "05",
+   "codigo": "22",
+   "nombre": "Vallvidrera, el Tibidabo i les Planes"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "05",
+   "codigo": "23",
+   "nombre": "Sarrià"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "05",
+   "codigo": "24",
+   "nombre": "les Tres Torres"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "05",
+   "codigo": "25",
+   "nombre": "Sant Gervasi - la Bonanova"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "05",
+   "codigo": "26",
+   "nombre": "Sant Gervasi - Galvany"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "05",
+   "codigo": "27",
+   "nombre": "el Putxet i el Farró"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "06",
+   "codigo": "28",
+   "nombre": "Vallcarca i els Penitents"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "06",
+   "codigo": "29",
+   "nombre": "el Coll"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "06",
+   "codigo": "30",
+   "nombre": "la Salut"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "06",
+   "codigo": "31",
+   "nombre": "la Vila de Gràcia"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "06",
+   "codigo": "32",
+   "nombre": "el Camp d'en Grassot i Gràcia Nova"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "33",
+   "nombre": "el Baix Guinardó"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "34",
+   "nombre": "Can Baró"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "35",
+   "nombre": "el Guinardó"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "36",
+   "nombre": "la Font d'en Fargues"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "37",
+   "nombre": "el Carmel"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "38",
+   "nombre": "la Teixonera"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "39",
+   "nombre": "Sant Genís dels Agudells"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "40",
+   "nombre": "Montbau"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "41",
+   "nombre": "la Vall d'Hebron"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "42",
+   "nombre": "la Clota"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "07",
+   "codigo": "43",
+   "nombre": "Horta"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "44",
+   "nombre": "Vilapicina i la Torre Llobeta"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "45",
+   "nombre": "Porta"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "46",
+   "nombre": "el Turó de la Peira"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "47",
+   "nombre": "Can Peguera"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "48",
+   "nombre": "la Guineueta"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "49",
+   "nombre": "Canyelles"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "50",
+   "nombre": "les Roquetes"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "51",
+   "nombre": "Verdun"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "52",
+   "nombre": "la Prosperitat"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "53",
+   "nombre": "la Trinitat Nova"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "54",
+   "nombre": "Torre Baró"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "55",
+   "nombre": "Ciutat Meridiana"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "08",
+   "codigo": "56",
+   "nombre": "Vallbona"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "57",
+   "nombre": "la Trinitat Vella"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "58",
+   "nombre": "Baró de Viver"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "59",
+   "nombre": "el Bon Pastor"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "60",
+   "nombre": "Sant Andreu"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "61",
+   "nombre": "la Sagrera"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "62",
+   "nombre": "el Congrés i els Indians"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "09",
+   "codigo": "63",
+   "nombre": "Navas"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "64",
+   "nombre": "el Camp de l'Arpa del Clot"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "65",
+   "nombre": "el Clot"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "66",
+   "nombre": "el Parc i la Llacuna del Poblenou"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "67",
+   "nombre": "la Vila Olímpica del Poblenou"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "68",
+   "nombre": "el Poblenou"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "69",
+   "nombre": "Diagonal Mar i el Front Marítim del Poblenou"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "70",
+   "nombre": "el Besòs i el Maresme"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "71",
+   "nombre": "Provençals del Poblenou"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "72",
+   "nombre": "Sant Martí de Provençals"
+  },
+  {
+   "municipio_ine": "08019",
+   "distrito": "10",
+   "codigo": "73",
+   "nombre": "la Verneda i la Pau"
+  }
+ ]
+}

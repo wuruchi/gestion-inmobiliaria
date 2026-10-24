@@ -1,0 +1,19 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.producto-description {
+  padding: $extra-larger-space;
+  background-color: $atb-light-grey;
+
+  h2 {
+    @include product-subtitle();
+  }
+
+  p {
+    font-size: $font-size-normal;
+    font-weight: $font-light;
+    line-height: 1.4;
+    margin-bottom: $normal-space;
+    text-align: justify;
+  }
+}

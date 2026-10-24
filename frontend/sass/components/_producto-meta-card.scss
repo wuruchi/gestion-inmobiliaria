@@ -1,0 +1,89 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.producto-meta__card {
+    border: 1px solid $atb-main;
+    background-color: $atb-light-grey;
+    border-radius: 10px;
+    overflow: hidden;
+    height: 100%;
+
+    &__header {
+        background-color: $atb-main;
+        color: $simple-white;
+        font-size: $font-size-normal;
+        font-weight: $font-bold;
+        padding: $normal-space $large-space;
+    }
+
+    &__title {
+        color: $atb-main;
+        font-size: $font-size-normal;
+    }
+
+    &__body {
+        display: flex;
+        flex-direction: column;
+        padding: $large-space $larger-space;
+        align-items: left;
+        font-size: $font-size-small;
+        gap: $large-space;
+    }
+
+    &__ubicacion {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: $normal-space;
+        ion-icon {
+            font-size: 2rem;
+            color: $atb-main;
+        }
+    }
+
+    &__precio {
+        font-size: $font-size-medium;
+        color: $atb-main;
+        font-weight: $font-bold;
+    }
+
+    &__referencia {
+        color: $atb-main;
+        font-size: $font-size-normal;
+    }
+
+    &__detalles {
+        li:not(:last-child) {
+            margin-bottom: $normal-space;
+        }
+    }
+
+    &__buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        gap: $small-space;
+
+        > div {
+            color: $atb-main;
+            background-color: $simple-white;
+            padding: $normal-space;
+            border: 0.5mm solid $atb-main;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: row;
+            gap: $small-space;
+            align-items: center;
+        }
+    }
+}
+
+@media screen and (max-width: $large-desktop) {
+    .producto-meta__card {
+        &__body {
+            padding: $normal-space $large-space;
+            font-size: $font-size-small;
+            gap: $normal-space;
+        }
+    }
+}

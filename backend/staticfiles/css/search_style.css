@@ -1,0 +1,388 @@
+/**************************/
+/* SEARCH BAR SECTION */
+/**************************/
+
+.section__search-bar {
+  background-color: #faebf3;
+  padding: 4.8rem 0;
+}
+
+.search-bar__form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  column-gap: 2.4rem;
+  row-gap: 2.4rem;
+}
+
+.search-bar__form label {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 500;
+  margin-bottom: 1.2rem;
+}
+
+.search-bar__form input,
+.search-bar__form select {
+  width: 100%;
+  padding: 1.2rem;
+  font-size: 1.8rem;
+  font-family: inherit;
+  color: inherit;
+  border: none;
+  background: #fff;
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.seach-result-grid {
+  display: grid;
+  column-gap: 6.4rem;
+  row-gap: 4.8rem;
+}
+
+.search-bar__btn {
+  /* align-self: end; */
+}
+
+/**************************/
+/* SEARCH BAR SECTION */
+/**************************/
+
+.section__search-results {
+  background: #fff;
+  padding: 4.8rem 0 9.6rem 0;
+}
+
+/**************************/
+/* VISTA CIUDAD SECTION */
+/**************************/
+
+.section__vista-ciudad {
+  background-color: #faebf3;
+  padding: 2.4rem 0;
+}
+
+.vista-ciudad__img {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
+  /* min-width: 100%;
+  min-height: 100%; */
+}
+
+/**************************/
+/* INMUEBLE RESULT */
+/**************************/
+
+.inmueble-result {
+  box-shadow: 0 2.4rem 4.8rem rgba(0, 0, 0, 0.075);
+  border-radius: 11px;
+  overflow: hidden;
+  position: relative;
+  /* transform: all 0.4s; */
+}
+
+.inmueble-result__link {
+  cursor: pointer;
+}
+
+.inmueble-result__available,
+.inmueble-result__not-available {
+  position: relative;
+}
+
+.inmueble-result__available_after {
+  /* content: "Disponible"; */
+  background-color: #d13786;
+  color: #faebf3;
+  position: absolute;
+  font-size: 1.4rem;
+  padding: 0.8rem 0.8rem;
+  text-align: center;
+  width: 18rem;
+  top: 0%;
+  right: 5%;
+  /* transform: translate(-9%, 0%); */
+}
+
+.inmueble-result__not-available_after {
+  /* content: "Disponible 01-04-2022"; */
+  background-color: #333;
+  color: #faebf3;
+  position: absolute;
+  font-size: 1.4rem;
+  padding: 0.8rem 0.8rem;
+  text-align: center;
+  width: 18rem;
+  top: 0%;
+  right: 5%;
+  /* transform: translate(-10%, 0%); */
+}
+
+.inmueble-result__img {
+  width: 100%;
+}
+
+.inmueble-result__content {
+  padding: 3.2rem 4.8rem 4.8rem 4.8rem;
+}
+
+.inmueble-result__content__price {
+  font-size: 2.4rem;
+  color: #d13786;
+  font-weight: 500;
+  margin-bottom: 3.2rem;
+}
+
+.inmueble-result__content__description {
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: 1.8rem;
+}
+
+.inmueble-result__content__zona {
+  font-size: 2rem;
+  font-weight: 500;
+  margin-bottom: 1.8rem;
+}
+
+.inmueble-result__content_property-id {
+  font-size: 1.6rem;
+  color: #767676;
+  font-weight: 400;
+  margin-bottom: 1.8rem;
+  letter-spacing: -0.1px;
+}
+
+.inmueble-result__title {
+  font-size: 2.4rem;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 3.2rem;
+}
+
+.inmueble-result__content__attributes {
+  list-style: none;
+  display: grid;
+  column-gap: 4.8rem;
+  row-gap: 1.2rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.inmueble-result__content__attribute {
+  font-size: 1.8rem;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.inmueble-result__icon {
+  height: 2.4rem;
+  width: 2.4rem;
+  color: #d13786;
+}
+
+/**************************/
+/* INMUEBLE */
+/**************************/
+
+.inmueble {
+  padding: 4.8rem 0;
+}
+
+.inmueble__main-data {
+  padding: 4.8rem 0;
+  display: grid;
+  /* align-items: center; */
+  column-gap: 4.8rem;
+  row-gap: 1.2rem;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.inmueble__main-data__icon {
+  height: 2.4rem;
+  width: 2.4rem;
+  color: #d13786;
+}
+
+.inmueble__main-data__item {
+  font-size: 1.8rem;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.inmueble__block {
+  display: grid;
+  column-gap: 4.8rem;
+  row-gap: 2.4rem;
+  grid-template-columns: 2fr 1fr;
+}
+
+.inmueble__block__description {
+  padding: 2.4rem 0;
+  white-space: pre-line;
+}
+
+.inmueble__block__details {
+  display: grid;
+  column-gap: 4.8rem;
+  row-gap: 2.4rem;
+  grid-template-columns: 1fr 1fr;
+  padding: 2.4rem 0;
+  grid-column-start: 1;
+  grid-column-end: 2;
+}
+
+.inmueble__block__detail-column {
+  padding: 1.8rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4.8rem;
+  grid-row-start: 2;
+}
+
+.inmueble__block__map {
+  grid-row-start: 3;
+  grid-row-end: 4;
+  background-color: #faebf3;
+}
+
+.inmueble__block__forms {
+  /* background-color: #767676; */
+  grid-row-start: 1;
+  grid-row-end: 4;
+  grid-column-start: 2;
+  grid-column-end: 3;
+  padding: 2.4rem 0 0 0;
+}
+
+/**************************/
+/* INMUEBLE GALLERY */
+/**************************/
+
+.inmueble__gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.2rem;
+  row-gap: 1.2rem;
+}
+
+.inmueble__gallery__right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.2rem;
+  row-gap: 1.2rem;
+}
+
+.inmueble__gallery__image {
+  width: 100%;
+  /* height: 100%; */
+}
+
+/**************************/
+/* INMUEBLE FORMS */
+/**************************/
+
+.inmueble__form {
+  background-color: #faebf3;
+  padding: 6.4rem 4.8rem;
+  border-radius: 5px;
+}
+
+.inmueble__form-info {
+  position: relative;
+  margin-bottom: 3.2rem;
+}
+
+/* .inmueble__form-contacto {
+  border: 1px solid #d13786;
+} */
+
+.inmueble__form-info::after {
+  content: "Disponible 01-04-2022";
+  background-color: #333;
+  color: #faebf3;
+  position: absolute;
+  font-size: 1.4rem;
+  padding: 0.8rem 0.8rem;
+  text-align: center;
+  width: 18rem;
+  top: 0%;
+  right: 50%;
+  transform: translate(50%, 0%);
+}
+
+.inmueble__form-title {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.inmueble__form-subtitle {
+  font-size: 1.6rem;
+  font-weight: 400;
+}
+
+.inmueble__form-contacto {
+  margin-bottom: 0;
+}
+
+.inmueble__form__description {
+  font-size: 2rem;
+  padding: 1rem 0;
+}
+
+.inmueble__form__separator {
+  margin: 2.4rem;
+  border-bottom: 1px solid #15050d;
+}
+
+.inmueble__form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+.inmueble__form-layout label {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 500;
+  margin-bottom: 1.2rem;
+}
+
+.inmueble__form-layout input,
+.inmueble__form-layout select,
+.inmueble__form-layout textarea {
+  width: 100%;
+  padding: 1.2rem;
+  font-size: 1.8rem;
+  font-family: inherit;
+  color: inherit;
+  border: none;
+  background-color: #fff;
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.inmueble__form-layout input::placeholder {
+  color: #aaa;
+}
+
+/**************************/
+/* INMUEBLE MAP */
+/**************************/
+
+.inmueble__block__map {
+  height: 55rem;
+  margin-bottom: 3.2rem;
+}
+/* .inmueble__block__map {
+  padding: 3.2rem 0 9.6rem 0;
+  margin-bottom: 9.6rem;
+} */

@@ -1,0 +1,13 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.desea-alquilar {
+  @include standard-section();
+  background-color: $atb-main;
+  color: $simple-white;
+  text-align: center;
+
+  > button {
+    margin-top: $slightly-larger-space;
+  }
+}

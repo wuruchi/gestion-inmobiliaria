@@ -1,0 +1,43 @@
+@import "variables";
+
+@mixin standard-section($flex-direction: column) {
+  color: $atb-grey;
+  padding: $larger-space 32rem;
+  display: flex;
+  flex-direction: $flex-direction;
+  align-items: center;
+  gap: $large-space;
+}
+
+@mixin card-wrapper($justify-content: center) {
+  display: flex;
+  flex-direction: row;
+  gap: $larger-space;
+  justify-content: $justify-content;
+  align-items: center;
+}
+
+@mixin skyline-white($bsize: 110%) {
+  content: " ";
+  // display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  transform: translate(0, 0);
+  // top: -10rem;
+  opacity: 0.1;
+  // padding: $large-space $extra-extra-largest-space;
+  background-image: url(../img/atb/skyline_white.png);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: $bsize;
+}
+
+@mixin product-subtitle() {
+  font-size: $font-size-medium;
+  color: $atb-main;
+  font-weight: $font-bold;
+  margin-bottom: $larger-space;
+}

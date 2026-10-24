@@ -1,0 +1,25 @@
+input,
+select,
+button {
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  line-height: 1;
+  font-weight: 400;
+  color: $atb-black;
+  border: 0;
+}
+
+.bold {
+  font-weight: $font-bold;
+}
+
+.mr-small {
+  margin-right: $small-space;
+}
+
+.mb-large {
+  margin-bottom: $large-space;
+}

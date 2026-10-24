@@ -1,0 +1,64 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.servicios-propietarios {
+  @include standard-section();
+  background-color: $atb-main;
+  color: $simple-white;
+
+  > p {
+    font-size: $font-size-medium;
+    font-weight: $font-light;
+  }
+
+  > button {
+    margin-top: $larger-space;
+  }
+
+  &__cards {
+    margin-top: $slightly-larger-space;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $slightly-larger-space;
+  }
+
+  &__card-gestion {
+    background-image: url(../img/atb/servicios/gestion.jpg);
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+  }
+
+  &__card-alquileres {
+    background-image: url(../img/atb/servicios/reformas.jpg);
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+  }
+
+  &__card-incidencias {
+    background-image: url(../img/atb/servicios/tour.jpg);
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+  }
+
+  &__card-inversion {
+    background-image: url(../img/atb/servicios/tour.jpg);
+  }
+
+  &__card {
+    padding: 0;
+    height: 48rem;
+  }
+
+  &__card-text {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    border-radius: 0 0 15px 15px;
+    font-size: $font-size-medium !important;
+    font-weight: $font-bold;
+    height: 14rem;
+  }
+}

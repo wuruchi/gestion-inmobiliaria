@@ -1,0 +1,57 @@
+@import "../abstracts/variables";
+
+@mixin btn() {
+  font-family: "Poppins", sans-serif;
+  padding: 0.6rem 1.6rem;
+  cursor: pointer;
+}
+
+.btn {
+  @include btn();
+}
+
+.btn--main {
+  background-color: $atb-main;
+  color: $simple-white;
+  border: 0.5mm solid $simple-white;
+  border-radius: 20px;
+}
+
+.btn--main:hover,
+.btn--main:active {
+  background-color: $simple-white;
+  color: $atb-main;
+  border: 0.5mm solid $atb-main;
+  transition: all 0.5s;
+}
+
+.btn--outline {
+  background-color: $simple-white;
+  color: $atb-main;
+  border: 0.5mm solid $atb-main;
+  border-radius: 20px;
+}
+
+.btn--outline:hover,
+.btn--outline:active {
+  background-color: $atb-main;
+  color: $simple-white;
+  border: 0.5mm solid $simple-white;
+  transition: all 0.5s;
+}
+
+.btn--yellow {
+  background-color: $atb-yellow;
+  color: $simple-white;
+  border: 0.5mm solid $atb-yellow;
+  border-radius: 20px;
+}
+
+.btn--big {
+  font-size: $font-size-normal;
+  padding: 1.6rem 9.8rem;
+}
+
+.btn--medium {
+  font-size: $font-size-normal;
+}

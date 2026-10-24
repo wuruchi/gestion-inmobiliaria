@@ -1,0 +1,159 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.search-control {
+    @include standard-section();
+
+    > h1 {
+        color: $atb-main;
+    }
+
+    &__filters {
+        font-size: $font-size-normal;
+        font-weight: $font-light;
+        color: $atb-main;
+        display: grid;
+        grid-template-columns: 32rem auto;
+        column-gap: $large-space;
+
+        // label {
+        //   // margin-top: $large-space;
+        //   margin-bottom: $normal-space;
+        // }
+
+        input,
+        select {
+            padding: 1rem $large-space;
+            border-radius: 20px;
+            font-size: $font-size-small;
+            font-weight: $font-light;
+            border: 3px solid $atb-main;
+            color: $atb-grey;
+            margin-bottom: $normal-space;
+            margin-top: $small-space;
+        }
+
+        select {
+            background: url(data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0Ljk1IDEwIj48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9LmNscy0ye2ZpbGw6IzQ0NDt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPmFycm93czwvdGl0bGU+PHJlY3QgY2xhc3M9ImNscy0xIiB3aWR0aD0iNC45NSIgaGVpZ2h0PSIxMCIvPjxwb2x5Z29uIGNsYXNzPSJjbHMtMiIgcG9pbnRzPSIxLjQxIDQuNjcgMi40OCAzLjE4IDMuNTQgNC42NyAxLjQxIDQuNjciLz48cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iMy41NCA1LjMzIDIuNDggNi44MiAxLjQxIDUuMzMgMy41NCA1LjMzIi8+PC9zdmc+)
+                no-repeat;
+            background-position: right 10px top; /* Change the px value here to change the distance */
+            -moz-appearance: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        &__left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        &__precio-mes {
+            display: flex;
+            flex-direction: row;
+            gap: $normal-space;
+
+            > span:last-child {
+                color: $atb-grey;
+            }
+        }
+
+        &__right {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        &__bottom {
+            grid-column-start: 1;
+            grid-column-end: 3;
+        }
+
+        &__busqueda-avanzada {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            gap: $large-space;
+            align-items: center;
+
+            > button {
+                font-size: $font-size-normal;
+                font-weight: $font-light;
+            }
+        }
+    }
+}
+
+.search-map {
+    height: 500px;
+    z-index: 2;
+
+    &__container {
+        position: relative;
+    }
+}
+
+.search-map__counter {
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 3rem;
+    position: absolute;
+    width: 3rem;
+    height: 3rem;
+    font-size: $font-size-small;
+    background-color: $atb-main;
+    color: $simple-white;
+    z-index: 3;
+    border-radius: 50%;
+}
+
+.counter-gracia {
+    left: 49%;
+    top: 31%;
+}
+
+.counter-les-corts {
+    left: 25%;
+    top: 25%;
+}
+
+.counter-eixample {
+    left: 38%;
+    top: 47%;
+}
+
+.counter-ciutat-vella {
+    left: 57%;
+    top: 65%;
+}
+
+.counter-sants-montjuic {
+    left: 18%;
+    top: 58%;
+}
+
+.counter-sant-marti {
+    left: 77%;
+    top: 50%;
+}
+
+.counter-sarria-sant-gervasi {
+    left: 35%;
+    top: 23%;
+}
+
+.counter-horta-guinardo {
+    left: 65%;
+    top: 31%;
+}
+
+@media screen and (max-width: $large-desktop) {
+    .search-control {
+        &__filters {
+            grid-template-columns: 24rem auto;
+        }
+    }
+    .search-map {
+        height: 460px;
+    }
+}

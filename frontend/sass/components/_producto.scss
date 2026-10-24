@@ -1,0 +1,40 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.producto-section {
+    color: $atb-grey;
+    padding: $slightly-larger-space $extra-largest-space-plus;
+
+    > h1 {
+        color: $atb-main;
+        font-weight: $font-light;
+        font-size: $font-size-medium;
+        margin-bottom: $large-space;
+    }
+}
+
+.producto-intro {
+    color: $atb-main;
+    font-size: $font-size-medium;
+    font-weight: $font-light;
+    padding: $slightly-larger-space;
+    line-height: 42px;
+    letter-spacing: 0.5px;
+}
+
+.producto-meta {
+    display: grid;
+    grid-template-columns: auto 25%;
+    column-gap: $normal-space;
+
+    &__bottom {
+        grid-column-start: 1;
+        grid-column-end: 3;
+    }
+}
+
+@media screen and (max-width: $large-desktop) {
+    .producto-section {
+        padding: $slightly-larger-space $large-space;
+    }
+}

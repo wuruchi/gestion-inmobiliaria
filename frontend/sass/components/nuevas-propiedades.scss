@@ -1,0 +1,57 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.nuevas-propiedades {
+    @include standard-section();
+
+    > h1 {
+        color: $atb-main;
+    }
+
+    > p {
+        font-size: $font-size-medium;
+    }
+
+    &__cards {
+        @include card-wrapper();
+        margin-top: $slightly-larger-space;
+    }
+
+    &__card {
+        cursor: pointer;
+    }
+
+    &__card-piso {
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+    }
+
+    &__card-text {
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+        gap: 0.8rem;
+
+        > header {
+            font-weight: $font-semibold;
+        }
+
+        > footer {
+            color: $atb-yellow;
+            font-weight: $font-semibold;
+        }
+    }
+}
+
+@media screen and (max-width: $large-desktop) {
+    .nuevas-propiedades {
+        &__cards {
+            gap: $large-space;
+        }
+        &__card {
+            width: 32rem;
+        }
+    }
+}

@@ -1,0 +1,24 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.producto-meta {
+  &__details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: $large-space;
+    column-gap: $large-space;
+    padding: $large-space 0;
+
+    &__item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $normal-space;
+      font-size: $font-size-normal;
+      ion-icon {
+        color: $atb-main;
+        font-size: 4rem;
+      }
+    }
+  }
+}

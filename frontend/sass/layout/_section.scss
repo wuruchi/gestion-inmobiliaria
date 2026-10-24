@@ -1,0 +1,13 @@
+@import "../abstracts/variables";
+
+.section-title {
+  font-weight: $font-semibold;
+  font-size: $font-size-big;
+}
+
+.section-content {
+  font-size: $font-size-normal-medium;
+  font-weight: $font-regular;
+  line-height: 32px;
+  text-align: center;
+}

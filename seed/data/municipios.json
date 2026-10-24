@@ -1,0 +1,2186 @@
+{
+ "sources": [
+  "https://analisi.transparenciacatalunya.cat/resource/9aju-tpwc.json?$limit=2000&$select=codi,nom,codi_comarca,nom_comarca,latitud,longitud",
+  "https://api.idescat.cat/emex/v1/nodes.json?tipus=mun&lang=ca"
+ ],
+ "retrieved": "2026-10-24",
+ "items": [
+  {
+   "codigo_ine": "08001",
+   "nombre": "Abrera",
+   "comarca": "11",
+   "latitud": 41.516258,
+   "longitud": 1.902238
+  },
+  {
+   "codigo_ine": "08002",
+   "nombre": "Aguilar de Segarra",
+   "comarca": "07",
+   "latitud": 41.738929,
+   "longitud": 1.630963
+  },
+  {
+   "codigo_ine": "08003",
+   "nombre": "Alella",
+   "comarca": "21",
+   "latitud": 41.49384,
+   "longitud": 2.295145
+  },
+  {
+   "codigo_ine": "08004",
+   "nombre": "Alpens",
+   "comarca": "43",
+   "latitud": 42.119261,
+   "longitud": 2.101142
+  },
+  {
+   "codigo_ine": "08005",
+   "nombre": "l'Ametlla del Vallès",
+   "comarca": "41",
+   "latitud": 41.669392,
+   "longitud": 2.261521
+  },
+  {
+   "codigo_ine": "08006",
+   "nombre": "Arenys de Mar",
+   "comarca": "21",
+   "latitud": 41.579534,
+   "longitud": 2.551624
+  },
+  {
+   "codigo_ine": "08007",
+   "nombre": "Arenys de Munt",
+   "comarca": "21",
+   "latitud": 41.61095,
+   "longitud": 2.539165
+  },
+  {
+   "codigo_ine": "08008",
+   "nombre": "Argençola",
+   "comarca": "06",
+   "latitud": 41.597532,
+   "longitud": 1.444155
+  },
+  {
+   "codigo_ine": "08009",
+   "nombre": "Argentona",
+   "comarca": "21",
+   "latitud": 41.555644,
+   "longitud": 2.400516
+  },
+  {
+   "codigo_ine": "08010",
+   "nombre": "Artés",
+   "comarca": "07",
+   "latitud": 41.798137,
+   "longitud": 1.954869
+  },
+  {
+   "codigo_ine": "08011",
+   "nombre": "Avià",
+   "comarca": "14",
+   "latitud": 42.077286,
+   "longitud": 1.825157
+  },
+  {
+   "codigo_ine": "08012",
+   "nombre": "Avinyó",
+   "comarca": "07",
+   "latitud": 41.863381,
+   "longitud": 1.970761
+  },
+  {
+   "codigo_ine": "08013",
+   "nombre": "Avinyonet del Penedès",
+   "comarca": "03",
+   "latitud": 41.360977,
+   "longitud": 1.779377
+  },
+  {
+   "codigo_ine": "08014",
+   "nombre": "Aiguafreda",
+   "comarca": "24",
+   "latitud": 41.768885,
+   "longitud": 2.249397
+  },
+  {
+   "codigo_ine": "08015",
+   "nombre": "Badalona",
+   "comarca": "13",
+   "latitud": 41.450026,
+   "longitud": 2.247792
+  },
+  {
+   "codigo_ine": "08016",
+   "nombre": "Bagà",
+   "comarca": "14",
+   "latitud": 42.252853,
+   "longitud": 1.862601
+  },
+  {
+   "codigo_ine": "08017",
+   "nombre": "Balenyà",
+   "comarca": "24",
+   "latitud": 41.815372,
+   "longitud": 2.235189
+  },
+  {
+   "codigo_ine": "08018",
+   "nombre": "Balsareny",
+   "comarca": "07",
+   "latitud": 41.863213,
+   "longitud": 1.87682
+  },
+  {
+   "codigo_ine": "08019",
+   "nombre": "Barcelona",
+   "comarca": "13",
+   "latitud": 41.382405,
+   "longitud": 2.177241
+  },
+  {
+   "codigo_ine": "08020",
+   "nombre": "Begues",
+   "comarca": "11",
+   "latitud": 41.330174,
+   "longitud": 1.924678
+  },
+  {
+   "codigo_ine": "08021",
+   "nombre": "Bellprat",
+   "comarca": "06",
+   "latitud": 41.517247,
+   "longitud": 1.434455
+  },
+  {
+   "codigo_ine": "08022",
+   "nombre": "Berga",
+   "comarca": "14",
+   "latitud": 42.103762,
+   "longitud": 1.845845
+  },
+  {
+   "codigo_ine": "08023",
+   "nombre": "Bigues i Riells del Fai",
+   "comarca": "41",
+   "latitud": 41.679322,
+   "longitud": 2.208272
+  },
+  {
+   "codigo_ine": "08024",
+   "nombre": "Borredà",
+   "comarca": "14",
+   "latitud": 42.135636,
+   "longitud": 1.993986
+  },
+  {
+   "codigo_ine": "08025",
+   "nombre": "el Bruc",
+   "comarca": "06",
+   "latitud": 41.580734,
+   "longitud": 1.780059
+  },
+  {
+   "codigo_ine": "08026",
+   "nombre": "el Brull",
+   "comarca": "24",
+   "latitud": 41.816741,
+   "longitud": 2.305489
+  },
+  {
+   "codigo_ine": "08027",
+   "nombre": "les Cabanyes",
+   "comarca": "03",
+   "latitud": 41.371736,
+   "longitud": 1.689614
+  },
+  {
+   "codigo_ine": "08028",
+   "nombre": "Cabrera d'Anoia",
+   "comarca": "06",
+   "latitud": 41.477666,
+   "longitud": 1.703544
+  },
+  {
+   "codigo_ine": "08029",
+   "nombre": "Cabrera de Mar",
+   "comarca": "21",
+   "latitud": 41.52601,
+   "longitud": 2.393309
+  },
+  {
+   "codigo_ine": "08030",
+   "nombre": "Cabrils",
+   "comarca": "21",
+   "latitud": 41.526224,
+   "longitud": 2.367716
+  },
+  {
+   "codigo_ine": "08031",
+   "nombre": "Calaf",
+   "comarca": "06",
+   "latitud": 41.734066,
+   "longitud": 1.511279
+  },
+  {
+   "codigo_ine": "08032",
+   "nombre": "Caldes d'Estrac",
+   "comarca": "21",
+   "latitud": 41.572542,
+   "longitud": 2.527516
+  },
+  {
+   "codigo_ine": "08033",
+   "nombre": "Caldes de Montbui",
+   "comarca": "41",
+   "latitud": 41.634591,
+   "longitud": 2.16224
+  },
+  {
+   "codigo_ine": "08034",
+   "nombre": "Calders",
+   "comarca": "42",
+   "latitud": 41.789276,
+   "longitud": 1.991323
+  },
+  {
+   "codigo_ine": "08035",
+   "nombre": "Calella",
+   "comarca": "21",
+   "latitud": 41.613271,
+   "longitud": 2.657218
+  },
+  {
+   "codigo_ine": "08036",
+   "nombre": "Calonge de Segarra",
+   "comarca": "06",
+   "latitud": 41.740492,
+   "longitud": 1.493839
+  },
+  {
+   "codigo_ine": "08037",
+   "nombre": "Calldetenes",
+   "comarca": "24",
+   "latitud": 41.924124,
+   "longitud": 2.28427
+  },
+  {
+   "codigo_ine": "08038",
+   "nombre": "Callús",
+   "comarca": "07",
+   "latitud": 41.781241,
+   "longitud": 1.783872
+  },
+  {
+   "codigo_ine": "08039",
+   "nombre": "Campins",
+   "comarca": "41",
+   "latitud": 41.724529,
+   "longitud": 2.463909
+  },
+  {
+   "codigo_ine": "08040",
+   "nombre": "Canet de Mar",
+   "comarca": "21",
+   "latitud": 41.588485,
+   "longitud": 2.582425
+  },
+  {
+   "codigo_ine": "08041",
+   "nombre": "Canovelles",
+   "comarca": "41",
+   "latitud": 41.621757,
+   "longitud": 2.27697
+  },
+  {
+   "codigo_ine": "08042",
+   "nombre": "Cànoves i Samalús",
+   "comarca": "41",
+   "latitud": 41.693919,
+   "longitud": 2.352944
+  },
+  {
+   "codigo_ine": "08043",
+   "nombre": "Canyelles",
+   "comarca": "17",
+   "latitud": 41.285756,
+   "longitud": 1.722358
+  },
+  {
+   "codigo_ine": "08044",
+   "nombre": "Capellades",
+   "comarca": "06",
+   "latitud": 41.530912,
+   "longitud": 1.685814
+  },
+  {
+   "codigo_ine": "08045",
+   "nombre": "Capolat",
+   "comarca": "14",
+   "latitud": 42.077237,
+   "longitud": 1.753178
+  },
+  {
+   "codigo_ine": "08046",
+   "nombre": "Cardedeu",
+   "comarca": "41",
+   "latitud": 41.638292,
+   "longitud": 2.355347
+  },
+  {
+   "codigo_ine": "08047",
+   "nombre": "Cardona",
+   "comarca": "07",
+   "latitud": 41.91311,
+   "longitud": 1.680328
+  },
+  {
+   "codigo_ine": "08048",
+   "nombre": "Carme",
+   "comarca": "06",
+   "latitud": 41.530898,
+   "longitud": 1.623045
+  },
+  {
+   "codigo_ine": "08049",
+   "nombre": "Casserres",
+   "comarca": "14",
+   "latitud": 42.01436,
+   "longitud": 1.841287
+  },
+  {
+   "codigo_ine": "08050",
+   "nombre": "Castellar del Riu",
+   "comarca": "14",
+   "latitud": 42.131049,
+   "longitud": 1.708727
+  },
+  {
+   "codigo_ine": "08051",
+   "nombre": "Castellar del Vallès",
+   "comarca": "40",
+   "latitud": 41.618557,
+   "longitud": 2.087635
+  },
+  {
+   "codigo_ine": "08052",
+   "nombre": "Castellar de n'Hug",
+   "comarca": "14",
+   "latitud": 42.282875,
+   "longitud": 2.017208
+  },
+  {
+   "codigo_ine": "08053",
+   "nombre": "Castellbell i el Vilar",
+   "comarca": "07",
+   "latitud": 41.629392,
+   "longitud": 1.860478
+  },
+  {
+   "codigo_ine": "08054",
+   "nombre": "Castellbisbal",
+   "comarca": "40",
+   "latitud": 41.474875,
+   "longitud": 1.981227
+  },
+  {
+   "codigo_ine": "08055",
+   "nombre": "Castellcir",
+   "comarca": "42",
+   "latitud": 41.760737,
+   "longitud": 2.1489
+  },
+  {
+   "codigo_ine": "08056",
+   "nombre": "Castelldefels",
+   "comarca": "11",
+   "latitud": 41.280269,
+   "longitud": 1.976233
+  },
+  {
+   "codigo_ine": "08057",
+   "nombre": "Castell de l'Areny",
+   "comarca": "14",
+   "latitud": 42.173216,
+   "longitud": 1.945197
+  },
+  {
+   "codigo_ine": "08058",
+   "nombre": "Castellet i la Gornal",
+   "comarca": "03",
+   "latitud": 41.2534,
+   "longitud": 1.590704
+  },
+  {
+   "codigo_ine": "08059",
+   "nombre": "Castellfollit del Boix",
+   "comarca": "07",
+   "latitud": 41.667189,
+   "longitud": 1.683366
+  },
+  {
+   "codigo_ine": "08060",
+   "nombre": "Castellfollit de Riubregós",
+   "comarca": "06",
+   "latitud": 41.776074,
+   "longitud": 1.437575
+  },
+  {
+   "codigo_ine": "08061",
+   "nombre": "Castellgalí",
+   "comarca": "07",
+   "latitud": 41.675209,
+   "longitud": 1.838589
+  },
+  {
+   "codigo_ine": "08062",
+   "nombre": "Castellnou de Bages",
+   "comarca": "07",
+   "latitud": 41.83413,
+   "longitud": 1.836911
+  },
+  {
+   "codigo_ine": "08063",
+   "nombre": "Castellolí",
+   "comarca": "06",
+   "latitud": 41.598316,
+   "longitud": 1.700318
+  },
+  {
+   "codigo_ine": "08064",
+   "nombre": "Castellterçol",
+   "comarca": "42",
+   "latitud": 41.751562,
+   "longitud": 2.120503
+  },
+  {
+   "codigo_ine": "08065",
+   "nombre": "Castellví de la Marca",
+   "comarca": "03",
+   "latitud": 41.326432,
+   "longitud": 1.61821
+  },
+  {
+   "codigo_ine": "08066",
+   "nombre": "Castellví de Rosanes",
+   "comarca": "11",
+   "latitud": 41.450055,
+   "longitud": 1.899511
+  },
+  {
+   "codigo_ine": "08067",
+   "nombre": "Centelles",
+   "comarca": "24",
+   "latitud": 41.797698,
+   "longitud": 2.2191
+  },
+  {
+   "codigo_ine": "08068",
+   "nombre": "Cervelló",
+   "comarca": "11",
+   "latitud": 41.396114,
+   "longitud": 1.958951
+  },
+  {
+   "codigo_ine": "08069",
+   "nombre": "Collbató",
+   "comarca": "11",
+   "latitud": 41.567296,
+   "longitud": 1.829521
+  },
+  {
+   "codigo_ine": "08070",
+   "nombre": "Collsuspina",
+   "comarca": "42",
+   "latitud": 41.825798,
+   "longitud": 2.175314
+  },
+  {
+   "codigo_ine": "08071",
+   "nombre": "Copons",
+   "comarca": "06",
+   "latitud": 41.636393,
+   "longitud": 1.518223
+  },
+  {
+   "codigo_ine": "08072",
+   "nombre": "Corbera de Llobregat",
+   "comarca": "11",
+   "latitud": 41.416102,
+   "longitud": 1.927701
+  },
+  {
+   "codigo_ine": "08073",
+   "nombre": "Cornellà de Llobregat",
+   "comarca": "11",
+   "latitud": 41.355171,
+   "longitud": 2.07016
+  },
+  {
+   "codigo_ine": "08074",
+   "nombre": "Cubelles",
+   "comarca": "17",
+   "latitud": 41.208251,
+   "longitud": 1.672526
+  },
+  {
+   "codigo_ine": "08075",
+   "nombre": "Dosrius",
+   "comarca": "21",
+   "latitud": 41.594675,
+   "longitud": 2.405854
+  },
+  {
+   "codigo_ine": "08076",
+   "nombre": "Esparreguera",
+   "comarca": "11",
+   "latitud": 41.538966,
+   "longitud": 1.870709
+  },
+  {
+   "codigo_ine": "08077",
+   "nombre": "Esplugues de Llobregat",
+   "comarca": "11",
+   "latitud": 41.377698,
+   "longitud": 2.087992
+  },
+  {
+   "codigo_ine": "08078",
+   "nombre": "l'Espunyola",
+   "comarca": "14",
+   "latitud": 42.053556,
+   "longitud": 1.767745
+  },
+  {
+   "codigo_ine": "08079",
+   "nombre": "l'Estany",
+   "comarca": "42",
+   "latitud": 41.868607,
+   "longitud": 2.112455
+  },
+  {
+   "codigo_ine": "08080",
+   "nombre": "Fígols",
+   "comarca": "14",
+   "latitud": 42.181006,
+   "longitud": 1.836762
+  },
+  {
+   "codigo_ine": "08081",
+   "nombre": "Fogars de Montclús",
+   "comarca": "41",
+   "latitud": 41.727637,
+   "longitud": 2.443167
+  },
+  {
+   "codigo_ine": "08082",
+   "nombre": "Fogars de la Selva",
+   "comarca": "34",
+   "latitud": 41.735099,
+   "longitud": 2.671433
+  },
+  {
+   "codigo_ine": "08083",
+   "nombre": "Folgueroles",
+   "comarca": "24",
+   "latitud": 41.938627,
+   "longitud": 2.318463
+  },
+  {
+   "codigo_ine": "08084",
+   "nombre": "Fonollosa",
+   "comarca": "07",
+   "latitud": 41.762934,
+   "longitud": 1.668696
+  },
+  {
+   "codigo_ine": "08085",
+   "nombre": "Font-rubí",
+   "comarca": "03",
+   "latitud": 41.41394,
+   "longitud": 1.651028
+  },
+  {
+   "codigo_ine": "08086",
+   "nombre": "les Franqueses del Vallès",
+   "comarca": "41",
+   "latitud": 41.636307,
+   "longitud": 2.297161
+  },
+  {
+   "codigo_ine": "08087",
+   "nombre": "Gallifa",
+   "comarca": "40",
+   "latitud": 41.693115,
+   "longitud": 2.115699
+  },
+  {
+   "codigo_ine": "08088",
+   "nombre": "la Garriga",
+   "comarca": "41",
+   "latitud": 41.685308,
+   "longitud": 2.285839
+  },
+  {
+   "codigo_ine": "08089",
+   "nombre": "Gavà",
+   "comarca": "11",
+   "latitud": 41.306119,
+   "longitud": 2.004774
+  },
+  {
+   "codigo_ine": "08090",
+   "nombre": "Gaià",
+   "comarca": "07",
+   "latitud": 41.916529,
+   "longitud": 1.925435
+  },
+  {
+   "codigo_ine": "08091",
+   "nombre": "Gelida",
+   "comarca": "03",
+   "latitud": 41.440929,
+   "longitud": 1.863168
+  },
+  {
+   "codigo_ine": "08092",
+   "nombre": "Gironella",
+   "comarca": "14",
+   "latitud": 42.033838,
+   "longitud": 1.882846
+  },
+  {
+   "codigo_ine": "08093",
+   "nombre": "Gisclareny",
+   "comarca": "14",
+   "latitud": 42.250037,
+   "longitud": 1.786465
+  },
+  {
+   "codigo_ine": "08094",
+   "nombre": "la Granada",
+   "comarca": "03",
+   "latitud": 41.376882,
+   "longitud": 1.719479
+  },
+  {
+   "codigo_ine": "08095",
+   "nombre": "Granera",
+   "comarca": "42",
+   "latitud": 41.725417,
+   "longitud": 2.057173
+  },
+  {
+   "codigo_ine": "08096",
+   "nombre": "Granollers",
+   "comarca": "41",
+   "latitud": 41.608087,
+   "longitud": 2.286822
+  },
+  {
+   "codigo_ine": "08097",
+   "nombre": "Gualba",
+   "comarca": "41",
+   "latitud": 41.732046,
+   "longitud": 2.50192
+  },
+  {
+   "codigo_ine": "08098",
+   "nombre": "Sant Salvador de Guardiola",
+   "comarca": "07",
+   "latitud": 41.679232,
+   "longitud": 1.766296
+  },
+  {
+   "codigo_ine": "08099",
+   "nombre": "Guardiola de Berguedà",
+   "comarca": "14",
+   "latitud": 42.233221,
+   "longitud": 1.878811
+  },
+  {
+   "codigo_ine": "08100",
+   "nombre": "Gurb",
+   "comarca": "24",
+   "latitud": 41.940489,
+   "longitud": 2.243276
+  },
+  {
+   "codigo_ine": "08101",
+   "nombre": "l'Hospitalet de Llobregat",
+   "comarca": "13",
+   "latitud": 41.35946,
+   "longitud": 2.099712
+  },
+  {
+   "codigo_ine": "08102",
+   "nombre": "Igualada",
+   "comarca": "06",
+   "latitud": 41.578716,
+   "longitud": 1.617581
+  },
+  {
+   "codigo_ine": "08103",
+   "nombre": "Jorba",
+   "comarca": "06",
+   "latitud": 41.601802,
+   "longitud": 1.548645
+  },
+  {
+   "codigo_ine": "08104",
+   "nombre": "la Llacuna",
+   "comarca": "06",
+   "latitud": 41.47248,
+   "longitud": 1.532021
+  },
+  {
+   "codigo_ine": "08105",
+   "nombre": "la Llagosta",
+   "comarca": "41",
+   "latitud": 41.51312,
+   "longitud": 2.193613
+  },
+  {
+   "codigo_ine": "08106",
+   "nombre": "Llinars del Vallès",
+   "comarca": "41",
+   "latitud": 41.639152,
+   "longitud": 2.40462
+  },
+  {
+   "codigo_ine": "08107",
+   "nombre": "Lliçà d'Amunt",
+   "comarca": "41",
+   "latitud": 41.608467,
+   "longitud": 2.239433
+  },
+  {
+   "codigo_ine": "08108",
+   "nombre": "Lliçà de Vall",
+   "comarca": "41",
+   "latitud": 41.586308,
+   "longitud": 2.239085
+  },
+  {
+   "codigo_ine": "08109",
+   "nombre": "Lluçà",
+   "comarca": "43",
+   "latitud": 42.068082,
+   "longitud": 2.073264
+  },
+  {
+   "codigo_ine": "08110",
+   "nombre": "Malgrat de Mar",
+   "comarca": "21",
+   "latitud": 41.645501,
+   "longitud": 2.740743
+  },
+  {
+   "codigo_ine": "08111",
+   "nombre": "Malla",
+   "comarca": "24",
+   "latitud": 41.886588,
+   "longitud": 2.234414
+  },
+  {
+   "codigo_ine": "08112",
+   "nombre": "Manlleu",
+   "comarca": "24",
+   "latitud": 41.999939,
+   "longitud": 2.283578
+  },
+  {
+   "codigo_ine": "08113",
+   "nombre": "Manresa",
+   "comarca": "07",
+   "latitud": 41.723055,
+   "longitud": 1.826929
+  },
+  {
+   "codigo_ine": "08114",
+   "nombre": "Martorell",
+   "comarca": "11",
+   "latitud": 41.474336,
+   "longitud": 1.93073
+  },
+  {
+   "codigo_ine": "08115",
+   "nombre": "Martorelles",
+   "comarca": "41",
+   "latitud": 41.525704,
+   "longitud": 2.242767
+  },
+  {
+   "codigo_ine": "08116",
+   "nombre": "les Masies de Roda",
+   "comarca": "24",
+   "latitud": 41.989567,
+   "longitud": 2.307719
+  },
+  {
+   "codigo_ine": "08117",
+   "nombre": "les Masies de Voltregà",
+   "comarca": "24",
+   "latitud": 42.022394,
+   "longitud": 2.234878
+  },
+  {
+   "codigo_ine": "08118",
+   "nombre": "el Masnou",
+   "comarca": "21",
+   "latitud": 41.479162,
+   "longitud": 2.319018
+  },
+  {
+   "codigo_ine": "08119",
+   "nombre": "Masquefa",
+   "comarca": "06",
+   "latitud": 41.501894,
+   "longitud": 1.811853
+  },
+  {
+   "codigo_ine": "08120",
+   "nombre": "Matadepera",
+   "comarca": "40",
+   "latitud": 41.596642,
+   "longitud": 2.026747
+  },
+  {
+   "codigo_ine": "08121",
+   "nombre": "Mataró",
+   "comarca": "21",
+   "latitud": 41.53981,
+   "longitud": 2.444897
+  },
+  {
+   "codigo_ine": "08122",
+   "nombre": "Mediona",
+   "comarca": "03",
+   "latitud": 41.476789,
+   "longitud": 1.611341
+  },
+  {
+   "codigo_ine": "08123",
+   "nombre": "Molins de Rei",
+   "comarca": "11",
+   "latitud": 41.413594,
+   "longitud": 2.015962
+  },
+  {
+   "codigo_ine": "08124",
+   "nombre": "Mollet del Vallès",
+   "comarca": "41",
+   "latitud": 41.535412,
+   "longitud": 2.210311
+  },
+  {
+   "codigo_ine": "08125",
+   "nombre": "Montcada i Reixac",
+   "comarca": "40",
+   "latitud": 41.485796,
+   "longitud": 2.18777
+  },
+  {
+   "codigo_ine": "08126",
+   "nombre": "Montgat",
+   "comarca": "21",
+   "latitud": 41.466945,
+   "longitud": 2.278682
+  },
+  {
+   "codigo_ine": "08127",
+   "nombre": "Monistrol de Montserrat",
+   "comarca": "07",
+   "latitud": 41.609791,
+   "longitud": 1.84276
+  },
+  {
+   "codigo_ine": "08128",
+   "nombre": "Monistrol de Calders",
+   "comarca": "42",
+   "latitud": 41.760323,
+   "longitud": 2.014632
+  },
+  {
+   "codigo_ine": "08129",
+   "nombre": "Muntanyola",
+   "comarca": "24",
+   "latitud": 41.87841,
+   "longitud": 2.177585
+  },
+  {
+   "codigo_ine": "08130",
+   "nombre": "Montclar",
+   "comarca": "14",
+   "latitud": 42.018209,
+   "longitud": 1.765072
+  },
+  {
+   "codigo_ine": "08131",
+   "nombre": "Montesquiu",
+   "comarca": "24",
+   "latitud": 42.109894,
+   "longitud": 2.209866
+  },
+  {
+   "codigo_ine": "08132",
+   "nombre": "Montmajor",
+   "comarca": "14",
+   "latitud": 42.017416,
+   "longitud": 1.734843
+  },
+  {
+   "codigo_ine": "08133",
+   "nombre": "Montmaneu",
+   "comarca": "06",
+   "latitud": 41.626136,
+   "longitud": 1.41442
+  },
+  {
+   "codigo_ine": "08134",
+   "nombre": "Figaró-Montmany",
+   "comarca": "41",
+   "latitud": 41.721699,
+   "longitud": 2.273366
+  },
+  {
+   "codigo_ine": "08135",
+   "nombre": "Montmeló",
+   "comarca": "41",
+   "latitud": 41.551517,
+   "longitud": 2.247899
+  },
+  {
+   "codigo_ine": "08136",
+   "nombre": "Montornès del Vallès",
+   "comarca": "41",
+   "latitud": 41.545261,
+   "longitud": 2.267314
+  },
+  {
+   "codigo_ine": "08137",
+   "nombre": "Montseny",
+   "comarca": "41",
+   "latitud": 41.759154,
+   "longitud": 2.395355
+  },
+  {
+   "codigo_ine": "08138",
+   "nombre": "Moià",
+   "comarca": "42",
+   "latitud": 41.812869,
+   "longitud": 2.096923
+  },
+  {
+   "codigo_ine": "08139",
+   "nombre": "Mura",
+   "comarca": "07",
+   "latitud": 41.699541,
+   "longitud": 1.976188
+  },
+  {
+   "codigo_ine": "08140",
+   "nombre": "Navarcles",
+   "comarca": "07",
+   "latitud": 41.751627,
+   "longitud": 1.90376
+  },
+  {
+   "codigo_ine": "08141",
+   "nombre": "Navàs",
+   "comarca": "07",
+   "latitud": 41.899841,
+   "longitud": 1.879337
+  },
+  {
+   "codigo_ine": "08142",
+   "nombre": "la Nou de Berguedà",
+   "comarca": "14",
+   "latitud": 42.165884,
+   "longitud": 1.885103
+  },
+  {
+   "codigo_ine": "08143",
+   "nombre": "Òdena",
+   "comarca": "06",
+   "latitud": 41.606742,
+   "longitud": 1.641589
+  },
+  {
+   "codigo_ine": "08144",
+   "nombre": "Olvan",
+   "comarca": "14",
+   "latitud": 42.056998,
+   "longitud": 1.906974
+  },
+  {
+   "codigo_ine": "08145",
+   "nombre": "Olèrdola",
+   "comarca": "03",
+   "latitud": 41.321018,
+   "longitud": 1.721134
+  },
+  {
+   "codigo_ine": "08146",
+   "nombre": "Olesa de Bonesvalls",
+   "comarca": "03",
+   "latitud": 41.351705,
+   "longitud": 1.850759
+  },
+  {
+   "codigo_ine": "08147",
+   "nombre": "Olesa de Montserrat",
+   "comarca": "11",
+   "latitud": 41.543506,
+   "longitud": 1.893901
+  },
+  {
+   "codigo_ine": "08148",
+   "nombre": "Olivella",
+   "comarca": "17",
+   "latitud": 41.310312,
+   "longitud": 1.812242
+  },
+  {
+   "codigo_ine": "08149",
+   "nombre": "Olost",
+   "comarca": "43",
+   "latitud": 41.985807,
+   "longitud": 2.095728
+  },
+  {
+   "codigo_ine": "08150",
+   "nombre": "Orís",
+   "comarca": "24",
+   "latitud": 42.058224,
+   "longitud": 2.239283
+  },
+  {
+   "codigo_ine": "08151",
+   "nombre": "Oristà",
+   "comarca": "43",
+   "latitud": 41.932366,
+   "longitud": 2.060358
+  },
+  {
+   "codigo_ine": "08152",
+   "nombre": "Orpí",
+   "comarca": "06",
+   "latitud": 41.529004,
+   "longitud": 1.606929
+  },
+  {
+   "codigo_ine": "08153",
+   "nombre": "Òrrius",
+   "comarca": "21",
+   "latitud": 41.555085,
+   "longitud": 2.35494
+  },
+  {
+   "codigo_ine": "08154",
+   "nombre": "Pacs del Penedès",
+   "comarca": "03",
+   "latitud": 41.361515,
+   "longitud": 1.66901
+  },
+  {
+   "codigo_ine": "08155",
+   "nombre": "Palafolls",
+   "comarca": "21",
+   "latitud": 41.667246,
+   "longitud": 2.749413
+  },
+  {
+   "codigo_ine": "08156",
+   "nombre": "Palau-solità i Plegamans",
+   "comarca": "40",
+   "latitud": 41.587543,
+   "longitud": 2.178421
+  },
+  {
+   "codigo_ine": "08157",
+   "nombre": "Pallejà",
+   "comarca": "11",
+   "latitud": 41.42258,
+   "longitud": 1.996775
+  },
+  {
+   "codigo_ine": "08158",
+   "nombre": "el Papiol",
+   "comarca": "11",
+   "latitud": 41.438024,
+   "longitud": 2.010961
+  },
+  {
+   "codigo_ine": "08159",
+   "nombre": "Parets del Vallès",
+   "comarca": "41",
+   "latitud": 41.573166,
+   "longitud": 2.233577
+  },
+  {
+   "codigo_ine": "08160",
+   "nombre": "Perafita",
+   "comarca": "43",
+   "latitud": 42.042267,
+   "longitud": 2.106999
+  },
+  {
+   "codigo_ine": "08161",
+   "nombre": "Piera",
+   "comarca": "06",
+   "latitud": 41.518136,
+   "longitud": 1.743364
+  },
+  {
+   "codigo_ine": "08162",
+   "nombre": "els Hostalets de Pierola",
+   "comarca": "06",
+   "latitud": 41.533798,
+   "longitud": 1.770752
+  },
+  {
+   "codigo_ine": "08163",
+   "nombre": "Pineda de Mar",
+   "comarca": "21",
+   "latitud": 41.627522,
+   "longitud": 2.68953
+  },
+  {
+   "codigo_ine": "08164",
+   "nombre": "el Pla del Penedès",
+   "comarca": "03",
+   "latitud": 41.418366,
+   "longitud": 1.710276
+  },
+  {
+   "codigo_ine": "08165",
+   "nombre": "la Pobla de Claramunt",
+   "comarca": "06",
+   "latitud": 41.555022,
+   "longitud": 1.675296
+  },
+  {
+   "codigo_ine": "08166",
+   "nombre": "la Pobla de Lillet",
+   "comarca": "14",
+   "latitud": 42.24338,
+   "longitud": 1.974683
+  },
+  {
+   "codigo_ine": "08167",
+   "nombre": "Polinyà",
+   "comarca": "40",
+   "latitud": 41.557609,
+   "longitud": 2.156245
+  },
+  {
+   "codigo_ine": "08168",
+   "nombre": "Pontons",
+   "comarca": "03",
+   "latitud": 41.415736,
+   "longitud": 1.516619
+  },
+  {
+   "codigo_ine": "08169",
+   "nombre": "el Prat de Llobregat",
+   "comarca": "11",
+   "latitud": 41.330736,
+   "longitud": 2.093045
+  },
+  {
+   "codigo_ine": "08170",
+   "nombre": "els Prats de Rei",
+   "comarca": "06",
+   "latitud": 41.705538,
+   "longitud": 1.542082
+  },
+  {
+   "codigo_ine": "08171",
+   "nombre": "Prats de Lluçanès",
+   "comarca": "43",
+   "latitud": 42.008647,
+   "longitud": 2.028591
+  },
+  {
+   "codigo_ine": "08172",
+   "nombre": "Premià de Mar",
+   "comarca": "21",
+   "latitud": 41.489809,
+   "longitud": 2.356786
+  },
+  {
+   "codigo_ine": "08174",
+   "nombre": "Puigdàlber",
+   "comarca": "03",
+   "latitud": 41.40428,
+   "longitud": 1.7011
+  },
+  {
+   "codigo_ine": "08175",
+   "nombre": "Puig-reig",
+   "comarca": "14",
+   "latitud": 41.974133,
+   "longitud": 1.878989
+  },
+  {
+   "codigo_ine": "08176",
+   "nombre": "Pujalt",
+   "comarca": "06",
+   "latitud": 41.717335,
+   "longitud": 1.422601
+  },
+  {
+   "codigo_ine": "08177",
+   "nombre": "la Quar",
+   "comarca": "14",
+   "latitud": 42.080888,
+   "longitud": 1.961488
+  },
+  {
+   "codigo_ine": "08178",
+   "nombre": "Rajadell",
+   "comarca": "07",
+   "latitud": 41.727696,
+   "longitud": 1.706227
+  },
+  {
+   "codigo_ine": "08179",
+   "nombre": "Rellinars",
+   "comarca": "40",
+   "latitud": 41.637431,
+   "longitud": 1.910775
+  },
+  {
+   "codigo_ine": "08180",
+   "nombre": "Ripollet",
+   "comarca": "40",
+   "latitud": 41.496502,
+   "longitud": 2.153492
+  },
+  {
+   "codigo_ine": "08181",
+   "nombre": "la Roca del Vallès",
+   "comarca": "41",
+   "latitud": 41.587569,
+   "longitud": 2.325764
+  },
+  {
+   "codigo_ine": "08182",
+   "nombre": "el Pont de Vilomara i Rocafort",
+   "comarca": "07",
+   "latitud": 41.700066,
+   "longitud": 1.870624
+  },
+  {
+   "codigo_ine": "08183",
+   "nombre": "Roda de Ter",
+   "comarca": "24",
+   "latitud": 41.980806,
+   "longitud": 2.309492
+  },
+  {
+   "codigo_ine": "08184",
+   "nombre": "Rubí",
+   "comarca": "40",
+   "latitud": 41.493485,
+   "longitud": 2.031335
+  },
+  {
+   "codigo_ine": "08185",
+   "nombre": "Rubió",
+   "comarca": "06",
+   "latitud": 41.644644,
+   "longitud": 1.570184
+  },
+  {
+   "codigo_ine": "08187",
+   "nombre": "Sabadell",
+   "comarca": "40",
+   "latitud": 41.546378,
+   "longitud": 2.108552
+  },
+  {
+   "codigo_ine": "08188",
+   "nombre": "Sagàs",
+   "comarca": "14",
+   "latitud": 42.050834,
+   "longitud": 1.961603
+  },
+  {
+   "codigo_ine": "08189",
+   "nombre": "Sant Pere Sallavinera",
+   "comarca": "06",
+   "latitud": 41.736524,
+   "longitud": 1.572465
+  },
+  {
+   "codigo_ine": "08190",
+   "nombre": "Saldes",
+   "comarca": "14",
+   "latitud": 42.22932,
+   "longitud": 1.736147
+  },
+  {
+   "codigo_ine": "08191",
+   "nombre": "Sallent",
+   "comarca": "07",
+   "latitud": 41.824063,
+   "longitud": 1.894675
+  },
+  {
+   "codigo_ine": "08192",
+   "nombre": "Santpedor",
+   "comarca": "07",
+   "latitud": 41.783273,
+   "longitud": 1.839178
+  },
+  {
+   "codigo_ine": "08193",
+   "nombre": "Sant Iscle de Vallalta",
+   "comarca": "21",
+   "latitud": 41.623866,
+   "longitud": 2.5693
+  },
+  {
+   "codigo_ine": "08194",
+   "nombre": "Sant Adrià de Besòs",
+   "comarca": "13",
+   "latitud": 41.430067,
+   "longitud": 2.217787
+  },
+  {
+   "codigo_ine": "08195",
+   "nombre": "Sant Agustí de Lluçanès",
+   "comarca": "24",
+   "latitud": 42.085605,
+   "longitud": 2.126789
+  },
+  {
+   "codigo_ine": "08196",
+   "nombre": "Sant Andreu de la Barca",
+   "comarca": "11",
+   "latitud": 41.45,
+   "longitud": 1.971404
+  },
+  {
+   "codigo_ine": "08197",
+   "nombre": "Sant Andreu de Llavaneres",
+   "comarca": "21",
+   "latitud": 41.574459,
+   "longitud": 2.483347
+  },
+  {
+   "codigo_ine": "08198",
+   "nombre": "Sant Antoni de Vilamajor",
+   "comarca": "41",
+   "latitud": 41.67357,
+   "longitud": 2.400661
+  },
+  {
+   "codigo_ine": "08199",
+   "nombre": "Sant Bartomeu del Grau",
+   "comarca": "24",
+   "latitud": 41.980285,
+   "longitud": 2.177152
+  },
+  {
+   "codigo_ine": "08200",
+   "nombre": "Sant Boi de Llobregat",
+   "comarca": "11",
+   "latitud": 41.347524,
+   "longitud": 2.042704
+  },
+  {
+   "codigo_ine": "08201",
+   "nombre": "Sant Boi de Lluçanès",
+   "comarca": "24",
+   "latitud": 42.058771,
+   "longitud": 2.151785
+  },
+  {
+   "codigo_ine": "08202",
+   "nombre": "Sant Celoni",
+   "comarca": "41",
+   "latitud": 41.689963,
+   "longitud": 2.492519
+  },
+  {
+   "codigo_ine": "08203",
+   "nombre": "Sant Cebrià de Vallalta",
+   "comarca": "21",
+   "latitud": 41.619471,
+   "longitud": 2.59941
+  },
+  {
+   "codigo_ine": "08204",
+   "nombre": "Sant Climent de Llobregat",
+   "comarca": "11",
+   "latitud": 41.337071,
+   "longitud": 1.99642
+  },
+  {
+   "codigo_ine": "08205",
+   "nombre": "Sant Cugat del Vallès",
+   "comarca": "40",
+   "latitud": 41.469853,
+   "longitud": 2.082392
+  },
+  {
+   "codigo_ine": "08206",
+   "nombre": "Sant Cugat Sesgarrigues",
+   "comarca": "03",
+   "latitud": 41.362615,
+   "longitud": 1.752362
+  },
+  {
+   "codigo_ine": "08207",
+   "nombre": "Sant Esteve de Palautordera",
+   "comarca": "41",
+   "latitud": 41.70354,
+   "longitud": 2.435178
+  },
+  {
+   "codigo_ine": "08208",
+   "nombre": "Sant Esteve Sesrovires",
+   "comarca": "11",
+   "latitud": 41.493245,
+   "longitud": 1.874366
+  },
+  {
+   "codigo_ine": "08209",
+   "nombre": "Sant Fost de Campsentelles",
+   "comarca": "41",
+   "latitud": 41.518757,
+   "longitud": 2.232937
+  },
+  {
+   "codigo_ine": "08210",
+   "nombre": "Sant Feliu de Codines",
+   "comarca": "41",
+   "latitud": 41.688918,
+   "longitud": 2.164547
+  },
+  {
+   "codigo_ine": "08211",
+   "nombre": "Sant Feliu de Llobregat",
+   "comarca": "11",
+   "latitud": 41.381953,
+   "longitud": 2.04623
+  },
+  {
+   "codigo_ine": "08212",
+   "nombre": "Sant Feliu Sasserra",
+   "comarca": "07",
+   "latitud": 41.944812,
+   "longitud": 2.022487
+  },
+  {
+   "codigo_ine": "08213",
+   "nombre": "Sant Fruitós de Bages",
+   "comarca": "07",
+   "latitud": 41.750675,
+   "longitud": 1.873274
+  },
+  {
+   "codigo_ine": "08214",
+   "nombre": "Vilassar de Dalt",
+   "comarca": "21",
+   "latitud": 41.516991,
+   "longitud": 2.359477
+  },
+  {
+   "codigo_ine": "08215",
+   "nombre": "Sant Hipòlit de Voltregà",
+   "comarca": "24",
+   "latitud": 42.015546,
+   "longitud": 2.236199
+  },
+  {
+   "codigo_ine": "08216",
+   "nombre": "Sant Jaume de Frontanyà",
+   "comarca": "14",
+   "latitud": 42.186416,
+   "longitud": 2.025487
+  },
+  {
+   "codigo_ine": "08217",
+   "nombre": "Sant Joan Despí",
+   "comarca": "11",
+   "latitud": 41.367822,
+   "longitud": 2.054955
+  },
+  {
+   "codigo_ine": "08218",
+   "nombre": "Sant Joan de Vilatorrada",
+   "comarca": "07",
+   "latitud": 41.745507,
+   "longitud": 1.804848
+  },
+  {
+   "codigo_ine": "08219",
+   "nombre": "Vilassar de Mar",
+   "comarca": "21",
+   "latitud": 41.502389,
+   "longitud": 2.392487
+  },
+  {
+   "codigo_ine": "08220",
+   "nombre": "Sant Julià de Vilatorta",
+   "comarca": "24",
+   "latitud": 41.922296,
+   "longitud": 2.324498
+  },
+  {
+   "codigo_ine": "08221",
+   "nombre": "Sant Just Desvern",
+   "comarca": "11",
+   "latitud": 41.385728,
+   "longitud": 2.075561
+  },
+  {
+   "codigo_ine": "08222",
+   "nombre": "Sant Llorenç d'Hortons",
+   "comarca": "03",
+   "latitud": 41.467859,
+   "longitud": 1.824413
+  },
+  {
+   "codigo_ine": "08223",
+   "nombre": "Sant Llorenç Savall",
+   "comarca": "40",
+   "latitud": 41.679383,
+   "longitud": 2.059727
+  },
+  {
+   "codigo_ine": "08224",
+   "nombre": "Sant Martí de Centelles",
+   "comarca": "24",
+   "latitud": 41.763891,
+   "longitud": 2.250971
+  },
+  {
+   "codigo_ine": "08225",
+   "nombre": "Sant Martí d'Albars",
+   "comarca": "43",
+   "latitud": 42.027966,
+   "longitud": 2.074149
+  },
+  {
+   "codigo_ine": "08226",
+   "nombre": "Sant Martí de Tous",
+   "comarca": "06",
+   "latitud": 41.5606,
+   "longitud": 1.523005
+  },
+  {
+   "codigo_ine": "08227",
+   "nombre": "Sant Martí Sarroca",
+   "comarca": "03",
+   "latitud": 41.385315,
+   "longitud": 1.610944
+  },
+  {
+   "codigo_ine": "08228",
+   "nombre": "Sant Martí Sesgueioles",
+   "comarca": "06",
+   "latitud": 41.702012,
+   "longitud": 1.488163
+  },
+  {
+   "codigo_ine": "08229",
+   "nombre": "Sant Mateu de Bages",
+   "comarca": "07",
+   "latitud": 41.796757,
+   "longitud": 1.732631
+  },
+  {
+   "codigo_ine": "08230",
+   "nombre": "Premià de Dalt",
+   "comarca": "21",
+   "latitud": 41.507311,
+   "longitud": 2.342461
+  },
+  {
+   "codigo_ine": "08231",
+   "nombre": "Sant Pere de Ribes",
+   "comarca": "17",
+   "latitud": 41.262303,
+   "longitud": 1.772115
+  },
+  {
+   "codigo_ine": "08232",
+   "nombre": "Sant Pere de Riudebitlles",
+   "comarca": "03",
+   "latitud": 41.453194,
+   "longitud": 1.701327
+  },
+  {
+   "codigo_ine": "08233",
+   "nombre": "Sant Pere de Torelló",
+   "comarca": "24",
+   "latitud": 42.075495,
+   "longitud": 2.296101
+  },
+  {
+   "codigo_ine": "08234",
+   "nombre": "Sant Pere de Vilamajor",
+   "comarca": "41",
+   "latitud": 41.685019,
+   "longitud": 2.39063
+  },
+  {
+   "codigo_ine": "08235",
+   "nombre": "Sant Pol de Mar",
+   "comarca": "21",
+   "latitud": 41.600223,
+   "longitud": 2.62116
+  },
+  {
+   "codigo_ine": "08236",
+   "nombre": "Sant Quintí de Mediona",
+   "comarca": "03",
+   "latitud": 41.46235,
+   "longitud": 1.663147
+  },
+  {
+   "codigo_ine": "08237",
+   "nombre": "Sant Quirze de Besora",
+   "comarca": "24",
+   "latitud": 42.100285,
+   "longitud": 2.222225
+  },
+  {
+   "codigo_ine": "08238",
+   "nombre": "Sant Quirze del Vallès",
+   "comarca": "40",
+   "latitud": 41.53284,
+   "longitud": 2.080999
+  },
+  {
+   "codigo_ine": "08239",
+   "nombre": "Sant Quirze Safaja",
+   "comarca": "42",
+   "latitud": 41.727307,
+   "longitud": 2.15308
+  },
+  {
+   "codigo_ine": "08240",
+   "nombre": "Sant Sadurní d'Anoia",
+   "comarca": "03",
+   "latitud": 41.424212,
+   "longitud": 1.787301
+  },
+  {
+   "codigo_ine": "08241",
+   "nombre": "Sant Sadurní d'Osormort",
+   "comarca": "24",
+   "latitud": 41.901857,
+   "longitud": 2.381389
+  },
+  {
+   "codigo_ine": "08242",
+   "nombre": "Marganell",
+   "comarca": "07",
+   "latitud": 41.640291,
+   "longitud": 1.793046
+  },
+  {
+   "codigo_ine": "08243",
+   "nombre": "Santa Cecília de Voltregà",
+   "comarca": "24",
+   "latitud": 41.992822,
+   "longitud": 2.222301
+  },
+  {
+   "codigo_ine": "08244",
+   "nombre": "Santa Coloma de Cervelló",
+   "comarca": "11",
+   "latitud": 41.368973,
+   "longitud": 2.01618
+  },
+  {
+   "codigo_ine": "08245",
+   "nombre": "Santa Coloma de Gramenet",
+   "comarca": "13",
+   "latitud": 41.452149,
+   "longitud": 2.207934
+  },
+  {
+   "codigo_ine": "08246",
+   "nombre": "Santa Eugènia de Berga",
+   "comarca": "24",
+   "latitud": 41.900359,
+   "longitud": 2.283148
+  },
+  {
+   "codigo_ine": "08247",
+   "nombre": "Santa Eulàlia de Riuprimer",
+   "comarca": "24",
+   "latitud": 41.91089,
+   "longitud": 2.188606
+  },
+  {
+   "codigo_ine": "08248",
+   "nombre": "Santa Eulàlia de Ronçana",
+   "comarca": "41",
+   "latitud": 41.652346,
+   "longitud": 2.229205
+  },
+  {
+   "codigo_ine": "08249",
+   "nombre": "Santa Fe del Penedès",
+   "comarca": "03",
+   "latitud": 41.38445,
+   "longitud": 1.721266
+  },
+  {
+   "codigo_ine": "08250",
+   "nombre": "Santa Margarida de Montbui",
+   "comarca": "06",
+   "latitud": 41.573828,
+   "longitud": 1.608066
+  },
+  {
+   "codigo_ine": "08251",
+   "nombre": "Santa Margarida i els Monjos",
+   "comarca": "03",
+   "latitud": 41.321375,
+   "longitud": 1.663059
+  },
+  {
+   "codigo_ine": "08252",
+   "nombre": "Barberà del Vallès",
+   "comarca": "40",
+   "latitud": 41.515796,
+   "longitud": 2.124669
+  },
+  {
+   "codigo_ine": "08253",
+   "nombre": "Santa Maria de Besora",
+   "comarca": "24",
+   "latitud": 42.127721,
+   "longitud": 2.257677
+  },
+  {
+   "codigo_ine": "08254",
+   "nombre": "l'Esquirol",
+   "comarca": "24",
+   "latitud": 42.035508,
+   "longitud": 2.368244
+  },
+  {
+   "codigo_ine": "08255",
+   "nombre": "Santa Maria de Merlès",
+   "comarca": "14",
+   "latitud": 42.000963,
+   "longitud": 1.978377
+  },
+  {
+   "codigo_ine": "08256",
+   "nombre": "Santa Maria de Martorelles",
+   "comarca": "41",
+   "latitud": 41.519576,
+   "longitud": 2.253349
+  },
+  {
+   "codigo_ine": "08257",
+   "nombre": "Santa Maria de Miralles",
+   "comarca": "06",
+   "latitud": 41.518035,
+   "longitud": 1.525444
+  },
+  {
+   "codigo_ine": "08258",
+   "nombre": "Santa Maria d'Oló",
+   "comarca": "42",
+   "latitud": 41.872176,
+   "longitud": 2.035572
+  },
+  {
+   "codigo_ine": "08259",
+   "nombre": "Santa Maria de Palautordera",
+   "comarca": "41",
+   "latitud": 41.692987,
+   "longitud": 2.446096
+  },
+  {
+   "codigo_ine": "08260",
+   "nombre": "Santa Perpètua de Mogoda",
+   "comarca": "40",
+   "latitud": 41.534576,
+   "longitud": 2.183445
+  },
+  {
+   "codigo_ine": "08261",
+   "nombre": "Santa Susanna",
+   "comarca": "21",
+   "latitud": 41.635504,
+   "longitud": 2.707069
+  },
+  {
+   "codigo_ine": "08262",
+   "nombre": "Sant Vicenç de Castellet",
+   "comarca": "07",
+   "latitud": 41.665552,
+   "longitud": 1.863616
+  },
+  {
+   "codigo_ine": "08263",
+   "nombre": "Sant Vicenç dels Horts",
+   "comarca": "11",
+   "latitud": 41.393337,
+   "longitud": 2.009713
+  },
+  {
+   "codigo_ine": "08264",
+   "nombre": "Sant Vicenç de Montalt",
+   "comarca": "21",
+   "latitud": 41.57902,
+   "longitud": 2.508766
+  },
+  {
+   "codigo_ine": "08265",
+   "nombre": "Sant Vicenç de Torelló",
+   "comarca": "24",
+   "latitud": 42.062601,
+   "longitud": 2.274015
+  },
+  {
+   "codigo_ine": "08266",
+   "nombre": "Cerdanyola del Vallès",
+   "comarca": "40",
+   "latitud": 41.491023,
+   "longitud": 2.140715
+  },
+  {
+   "codigo_ine": "08267",
+   "nombre": "Sentmenat",
+   "comarca": "40",
+   "latitud": 41.609259,
+   "longitud": 2.136193
+  },
+  {
+   "codigo_ine": "08268",
+   "nombre": "Cercs",
+   "comarca": "14",
+   "latitud": 42.14605,
+   "longitud": 1.861924
+  },
+  {
+   "codigo_ine": "08269",
+   "nombre": "Seva",
+   "comarca": "24",
+   "latitud": 41.838635,
+   "longitud": 2.280296
+  },
+  {
+   "codigo_ine": "08270",
+   "nombre": "Sitges",
+   "comarca": "17",
+   "latitud": 41.235085,
+   "longitud": 1.811838
+  },
+  {
+   "codigo_ine": "08271",
+   "nombre": "Sobremunt",
+   "comarca": "43",
+   "latitud": 42.036133,
+   "longitud": 2.16684
+  },
+  {
+   "codigo_ine": "08272",
+   "nombre": "Sora",
+   "comarca": "24",
+   "latitud": 42.110493,
+   "longitud": 2.159795
+  },
+  {
+   "codigo_ine": "08273",
+   "nombre": "Subirats",
+   "comarca": "03",
+   "latitud": 41.382414,
+   "longitud": 1.794653
+  },
+  {
+   "codigo_ine": "08274",
+   "nombre": "Súria",
+   "comarca": "07",
+   "latitud": 41.831467,
+   "longitud": 1.753565
+  },
+  {
+   "codigo_ine": "08275",
+   "nombre": "Tavèrnoles",
+   "comarca": "24",
+   "latitud": 41.952148,
+   "longitud": 2.326512
+  },
+  {
+   "codigo_ine": "08276",
+   "nombre": "Tagamanent",
+   "comarca": "41",
+   "latitud": 41.738444,
+   "longitud": 2.267717
+  },
+  {
+   "codigo_ine": "08277",
+   "nombre": "Talamanca",
+   "comarca": "07",
+   "latitud": 41.738099,
+   "longitud": 1.97714
+  },
+  {
+   "codigo_ine": "08278",
+   "nombre": "Taradell",
+   "comarca": "24",
+   "latitud": 41.873811,
+   "longitud": 2.286814
+  },
+  {
+   "codigo_ine": "08279",
+   "nombre": "Terrassa",
+   "comarca": "40",
+   "latitud": 41.562959,
+   "longitud": 2.010295
+  },
+  {
+   "codigo_ine": "08280",
+   "nombre": "Tavertet",
+   "comarca": "24",
+   "latitud": 41.996795,
+   "longitud": 2.418463
+  },
+  {
+   "codigo_ine": "08281",
+   "nombre": "Teià",
+   "comarca": "21",
+   "latitud": 41.499674,
+   "longitud": 2.319824
+  },
+  {
+   "codigo_ine": "08282",
+   "nombre": "Tiana",
+   "comarca": "21",
+   "latitud": 41.481728,
+   "longitud": 2.269019
+  },
+  {
+   "codigo_ine": "08283",
+   "nombre": "Tona",
+   "comarca": "24",
+   "latitud": 41.850022,
+   "longitud": 2.229176
+  },
+  {
+   "codigo_ine": "08284",
+   "nombre": "Tordera",
+   "comarca": "21",
+   "latitud": 41.699025,
+   "longitud": 2.718763
+  },
+  {
+   "codigo_ine": "08285",
+   "nombre": "Torelló",
+   "comarca": "24",
+   "latitud": 42.047132,
+   "longitud": 2.260585
+  },
+  {
+   "codigo_ine": "08286",
+   "nombre": "la Torre de Claramunt",
+   "comarca": "06",
+   "latitud": 41.533576,
+   "longitud": 1.65821
+  },
+  {
+   "codigo_ine": "08287",
+   "nombre": "Torrelavit",
+   "comarca": "03",
+   "latitud": 41.446345,
+   "longitud": 1.729906
+  },
+  {
+   "codigo_ine": "08288",
+   "nombre": "Torrelles de Foix",
+   "comarca": "03",
+   "latitud": 41.388472,
+   "longitud": 1.56894
+  },
+  {
+   "codigo_ine": "08289",
+   "nombre": "Torrelles de Llobregat",
+   "comarca": "11",
+   "latitud": 41.359048,
+   "longitud": 1.981109
+  },
+  {
+   "codigo_ine": "08290",
+   "nombre": "Ullastrell",
+   "comarca": "40",
+   "latitud": 41.526904,
+   "longitud": 1.956888
+  },
+  {
+   "codigo_ine": "08291",
+   "nombre": "Vacarisses",
+   "comarca": "40",
+   "latitud": 41.605937,
+   "longitud": 1.918781
+  },
+  {
+   "codigo_ine": "08292",
+   "nombre": "Vallbona d'Anoia",
+   "comarca": "06",
+   "latitud": 41.519985,
+   "longitud": 1.709449
+  },
+  {
+   "codigo_ine": "08293",
+   "nombre": "Vallcebre",
+   "comarca": "14",
+   "latitud": 42.203333,
+   "longitud": 1.818586
+  },
+  {
+   "codigo_ine": "08294",
+   "nombre": "Vallgorguina",
+   "comarca": "41",
+   "latitud": 41.64726,
+   "longitud": 2.511523
+  },
+  {
+   "codigo_ine": "08295",
+   "nombre": "Vallirana",
+   "comarca": "11",
+   "latitud": 41.388056,
+   "longitud": 1.931881
+  },
+  {
+   "codigo_ine": "08296",
+   "nombre": "Vallromanes",
+   "comarca": "41",
+   "latitud": 41.531843,
+   "longitud": 2.298354
+  },
+  {
+   "codigo_ine": "08297",
+   "nombre": "Veciana",
+   "comarca": "06",
+   "latitud": 41.655977,
+   "longitud": 1.488663
+  },
+  {
+   "codigo_ine": "08298",
+   "nombre": "Vic",
+   "comarca": "24",
+   "latitud": 41.929968,
+   "longitud": 2.254264
+  },
+  {
+   "codigo_ine": "08299",
+   "nombre": "Vilada",
+   "comarca": "14",
+   "latitud": 42.136867,
+   "longitud": 1.931743
+  },
+  {
+   "codigo_ine": "08300",
+   "nombre": "Viladecavalls",
+   "comarca": "40",
+   "latitud": 41.55533,
+   "longitud": 1.954375
+  },
+  {
+   "codigo_ine": "08301",
+   "nombre": "Viladecans",
+   "comarca": "11",
+   "latitud": 41.315897,
+   "longitud": 2.019652
+  },
+  {
+   "codigo_ine": "08302",
+   "nombre": "Vilanova del Camí",
+   "comarca": "06",
+   "latitud": 41.572259,
+   "longitud": 1.634199
+  },
+  {
+   "codigo_ine": "08303",
+   "nombre": "Vilanova de Sau",
+   "comarca": "24",
+   "latitud": 41.947116,
+   "longitud": 2.384825
+  },
+  {
+   "codigo_ine": "08304",
+   "nombre": "Vilobí del Penedès",
+   "comarca": "03",
+   "latitud": 41.390245,
+   "longitud": 1.663623
+  },
+  {
+   "codigo_ine": "08305",
+   "nombre": "Vilafranca del Penedès",
+   "comarca": "03",
+   "latitud": 41.346498,
+   "longitud": 1.697223
+  },
+  {
+   "codigo_ine": "08306",
+   "nombre": "Vilalba Sasserra",
+   "comarca": "41",
+   "latitud": 41.652859,
+   "longitud": 2.441121
+  },
+  {
+   "codigo_ine": "08307",
+   "nombre": "Vilanova i la Geltrú",
+   "comarca": "17",
+   "latitud": 41.224111,
+   "longitud": 1.72618
+  },
+  {
+   "codigo_ine": "08308",
+   "nombre": "Viver i Serrateix",
+   "comarca": "14",
+   "latitud": 41.946729,
+   "longitud": 1.778623
+  },
+  {
+   "codigo_ine": "08901",
+   "nombre": "Rupit i Pruit",
+   "comarca": "24",
+   "latitud": 42.02331,
+   "longitud": 2.464658
+  },
+  {
+   "codigo_ine": "08902",
+   "nombre": "Vilanova del Vallès",
+   "comarca": "41",
+   "latitud": 41.554057,
+   "longitud": 2.288999
+  },
+  {
+   "codigo_ine": "08903",
+   "nombre": "Sant Julià de Cerdanyola",
+   "comarca": "14",
+   "latitud": 42.223843,
+   "longitud": 1.892918
+  },
+  {
+   "codigo_ine": "08904",
+   "nombre": "Badia del Vallès",
+   "comarca": "40",
+   "latitud": 41.50903,
+   "longitud": 2.113905
+  },
+  {
+   "codigo_ine": "08905",
+   "nombre": "la Palma de Cervelló",
+   "comarca": "11",
+   "latitud": 41.411203,
+   "longitud": 1.971238
+  }
+ ]
+}

@@ -1,0 +1,31 @@
+@import "../abstracts/variables";
+
+.tab {
+  &__control--selected {
+    background-color: $atb-main;
+    color: $simple-white;
+  }
+
+  &__control {
+    background-color: $simple-white;
+    color: $atb-main;
+  }
+
+  &__controls {
+    display: flex;
+    flex-direction: row;
+    font-size: $font-size-normal;
+
+    li {
+      display: inline-block;
+      border: 1px solid $atb-main;
+      padding: $normal-space $large-space;
+
+      flex-grow: 1;
+    }
+  }
+
+  &__content {
+    height: 60rem;
+  }
+}

@@ -1,0 +1,33 @@
+@import "../abstracts/variables";
+
+@mixin standard-card($std-width: 32rem) {
+  width: $std-width;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.card {
+  @include standard-card();
+  position: relative;
+  border-radius: 15px;
+  padding: $large-space;
+  height: 36rem;
+  justify-content: end;
+
+  &__text {
+    font-size: $font-size-normal;
+    padding: $large-space $large-space;
+  }
+}
+
+.card--ribbon {
+  width: 10rem;
+  height: 6rem;
+  margin-right: -2rem;
+  clip-path: polygon(0% 0%, 100% 0%, calc(100% - 20px) 50%, 100% 100%, 0% 100%);
+  transform: translate(-25%, 0) rotate(90deg);
+  position: absolute;
+  top: 0;
+  right: 0;
+}

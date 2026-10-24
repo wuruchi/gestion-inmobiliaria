@@ -1,0 +1,57 @@
+@import "../abstracts/variables";
+@import "../abstracts/mixins";
+
+.condiciones-wrapper {
+  position: relative;
+}
+
+.condiciones-wrapper:before {
+  @include skyline-white();
+}
+
+.condiciones {
+  @include standard-section();
+  align-items: flex-start;
+  background-color: $atb-main;
+  color: $simple-white;
+  gap: $extra-larger-space;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $normal-space;
+
+    > h2 {
+      font-size: $font-size-medium;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $normal-space;
+  }
+
+  &__card {
+    z-index: 1;
+    border-radius: 10px;
+    background-color: $atb-main;
+    border: 0.5mm solid $simple-white;
+    padding: $normal-space $large-space;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 18rem;
+    height: 12rem;
+    text-align: center;
+    ion-icon {
+      color: $simple-white;
+      font-size: 4rem;
+    }
+    span {
+      font-size: $font-size-small;
+    }
+    cursor: pointer;
+  }
+}
