@@ -1,11 +1,10 @@
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Value
 from django.db.models.functions import Coalesce
-from base.models.ubicacion import Provincia, Municipio, Distrito, Barrio
-from base.models.condiciones import CondicionesAlquiler
+from base.models.ubicacion import Municipio, Distrito, Barrio
 from base.models.modalidad import Modalidad
 
 
@@ -13,7 +12,7 @@ from base.models.modalidad import Modalidad
 NO_NEGATIVOS = (
     'sup_construida', 'sup_cont_comun', 'sup_util', 'gtos_comunidad', 'ibi',
     'ultima_renta', 'indice_referencia_min', 'indice_referencia_max',
-    'consumo_energetico',
+    'consumo_energetico', 'emisiones_co2', 'sup_parcela',
 )
 
 
@@ -23,8 +22,7 @@ class InmuebleQuerySet(models.QuerySet):
         return self.annotate(
             habitaciones_total=Coalesce(
                 F('dormitorios__dobles')
-                + F('dormitorios__individuales')
-                + F('dormitorios__suites'),
+                + F('dormitorios__individuales'),
                 Value(0),
             )
         )
@@ -38,20 +36,32 @@ class Inmueble(models.Model):
         ('Parking', ('Parking')),
         ('Otro', ('Otro')),
     )
+    # Kinds of dwelling. Only a `Vivienda` has a subtipo; the other tipos have none.
+    SUBTIPOS = (
+        ('piso', 'Piso'),
+        ('atico', 'Ático'),
+        ('duplex', 'Dúplex'),
+        ('estudio', 'Estudio'),
+        ('chalet_adosado', 'Chalet adosado'),
+        ('chalet_independiente', 'Chalet independiente'),
+        ('otro', 'Otro'),
+    )
+    SUBTIPOS_POR_TIPO = {'Vivienda': {codigo for codigo, _ in SUBTIPOS}}
+    CONSERVACIONES = (
+        ('obra_nueva', 'Obra nueva'),
+        ('buen_estado', 'Buen estado'),
+        ('a_reformar', 'A reformar'),
+    )
     ESTADOS = (
         ('Disponible', ('Disponible')),
         ('Alquilado', ('Alquilado')),
         ('Reservado', ('Reservado')),
     )
     _id = models.AutoField(primary_key=True, editable=False)
-    provincia = models.ForeignKey(
-        Provincia, on_delete=models.PROTECT, null=True
-    )
-    municipio = models.ForeignKey(
-        Municipio, on_delete=models.PROTECT, null=True
-    )
+    # The province is `municipio.provincia` (see the `provincia` property).
+    municipio = models.ForeignKey(Municipio, on_delete=models.PROTECT)
     distrito = models.ForeignKey(
-        Distrito, on_delete=models.PROTECT, null=True
+        Distrito, on_delete=models.PROTECT, null=True, blank=True
     )
     barrio = models.ForeignKey(
         Barrio, on_delete=models.PROTECT, null=True, blank=True
@@ -65,6 +75,28 @@ class Inmueble(models.Model):
     tipo = models.CharField(
         max_length=50, blank=True, choices=TIPOS, default='Otro'
     )
+    subtipo = models.CharField(
+        max_length=30, blank=True, choices=SUBTIPOS, default='',
+        help_text='Solo para viviendas.',
+    )
+    conservacion = models.CharField(
+        max_length=20, blank=True, choices=CONSERVACIONES, default='',
+        verbose_name='Estado de conservación',
+    )
+    anio_construccion = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='Año de construcción',
+        validators=[MinValueValidator(1000), MaxValueValidator(2100)],
+    )
+    planta = models.SmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(-5), MaxValueValidator(100)],
+        help_text='Planta del piso en el edificio: 0 es la planta baja, negativo un sótano.',
+    )
+    n_plantas = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='Número de plantas',
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text='Plantas de la propiedad (por ejemplo, un chalet de 2 plantas).',
+    )
     modalidades = models.ManyToManyField(
         Modalidad,
         through='InmuebleModalidad',
@@ -75,6 +107,10 @@ class Inmueble(models.Model):
     direccion = models.CharField(max_length=200, null=False, blank=True)
     direccion_short = models.CharField(max_length=200, null=False, blank=True)
     dir_descripcion = models.TextField(blank=True, default='')
+    ocultar_direccion = models.BooleanField(
+        default=False,
+        help_text='La API no devuelve la dirección ni su descripción.',
+    )
     geo_latitude = models.FloatField(null=True, blank=True)
     geo_longitude = models.FloatField(null=True, blank=True)
 
@@ -95,6 +131,14 @@ class Inmueble(models.Model):
         verbose_name='Superficie Construida',
         validators=[MinValueValidator(0)],
     )
+    sup_parcela = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Superficie de la parcela',
+        validators=[MinValueValidator(0)],
+    )
     sup_cont_comun = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -111,7 +155,6 @@ class Inmueble(models.Model):
         verbose_name='Superficie Util',
         validators=[MinValueValidator(0)],
     )
-    cedula = models.CharField(max_length=20, blank=True, default='')
 
     publicar_web = models.BooleanField(default=False, null=False, blank=False)
 
@@ -126,6 +169,14 @@ class Inmueble(models.Model):
         validators=[MinValueValidator(0)],
     )
 
+    emisiones_co2 = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Emisiones (kg CO₂/m²/año)',
+        validators=[MinValueValidator(0)],
+    )
     # Datos exigidos por la normativa de alquiler de Cataluña.
     ultima_renta = models.DecimalField(
         max_digits=9,
@@ -164,15 +215,6 @@ class Inmueble(models.Model):
     zona_tensionada = models.BooleanField(
         default=False, verbose_name='Zona de mercado residencial tensionado'
     )
-    condiciones = models.ForeignKey(
-        CondicionesAlquiler,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='inmuebles',
-        help_text='Vacío = se usan las condiciones por defecto.',
-    )
-
     descripcion_es = models.TextField(blank=True, default='')
     descripcion_en = models.TextField(blank=True, default='')
     descripcion_cat = models.TextField(blank=True, default='')
@@ -181,7 +223,6 @@ class Inmueble(models.Model):
         max_digits=9, decimal_places=2, null=True,
         validators=[MinValueValidator(0)], blank=True,
     )
-    ibi_incluido = models.BooleanField(default=False, null=False, blank=False)
     ibi = models.DecimalField(max_digits=9, decimal_places=2, null=True, validators=[MinValueValidator(0)], blank=True)
     situacion_actual = models.CharField(max_length=100, blank=True, default='')
 
@@ -198,9 +239,6 @@ class Inmueble(models.Model):
         blank=True,
         editable=False,
         related_name='+',
-    )
-    matterport_url = models.CharField(
-        max_length=500, blank=True, default=''
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.ForeignKey(
@@ -223,6 +261,25 @@ class Inmueble(models.Model):
                 | models.Q(indice_referencia_min__lte=models.F('indice_referencia_max')),
                 name='inmueble_indice_referencia_min_max',
             ),
+            models.CheckConstraint(
+                condition=models.Q(anio_construccion__isnull=True)
+                | models.Q(anio_construccion__gte=1000, anio_construccion__lte=2100),
+                name='inmueble_anio_construccion_rango',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(planta__isnull=True)
+                | models.Q(planta__gte=-5, planta__lte=100),
+                name='inmueble_planta_rango',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(n_plantas__isnull=True)
+                | models.Q(n_plantas__gte=1, n_plantas__lte=100),
+                name='inmueble_n_plantas_rango',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(subtipo='') | models.Q(tipo='Vivienda'),
+                name='inmueble_subtipo_solo_vivienda',
+            ),
             *(
                 models.CheckConstraint(
                     condition=models.Q(**{f'{name}__isnull': True})
@@ -234,7 +291,7 @@ class Inmueble(models.Model):
         ]
         indexes = [
             models.Index(
-                fields=['publicar_web', 'municipio', 'distrito'],
+                fields=['publicar_web', 'municipio', 'distrito', 'barrio'],
                 name='inm_web_loc',
             ),
             models.Index(
@@ -253,14 +310,18 @@ class Inmueble(models.Model):
             raise ValidationError(
                 {'indice_referencia_min': 'El mínimo supera al máximo.'}
             )
-        if (
-            self.municipio_id
-            and self.provincia_id
-            and self.municipio.provincia_id != self.provincia_id
-        ):
+        self.validate_location()
+        self.validate_subtipo()
+
+    def validate_subtipo(self):
+        """A subtipo only makes sense for the tipo it belongs to."""
+        if self.subtipo and self.subtipo not in self.SUBTIPOS_POR_TIPO.get(self.tipo, ()):
             raise ValidationError(
-                {'municipio': 'El municipio no pertenece a la provincia.'}
+                {'subtipo': 'Solo las viviendas tienen subtipo.'}
             )
+
+    def validate_location(self):
+        """The distrito must belong to the municipio and the barrio to the distrito."""
         if (
             self.distrito_id
             and self.municipio_id
@@ -270,11 +331,12 @@ class Inmueble(models.Model):
                 {'distrito': 'El distrito no pertenece al municipio.'}
             )
         if self.barrio_id:
-            if self.distrito_id and self.barrio.distrito_id != self.distrito_id:
-                raise ValidationError(
-                    {'barrio': 'El barrio no pertenece al distrito.'}
-                )
-            if (
+            if self.distrito_id:
+                if self.barrio.distrito_id != self.distrito_id:
+                    raise ValidationError(
+                        {'barrio': 'El barrio no pertenece al distrito.'}
+                    )
+            elif (
                 self.municipio_id
                 and self.barrio.distrito.municipio_id != self.municipio_id
             ):
@@ -282,9 +344,18 @@ class Inmueble(models.Model):
                     {'barrio': 'El barrio no pertenece al municipio.'}
                 )
 
+    def save(self, *args, **kwargs):
+        self.validate_location()
+        self.validate_subtipo()
+        super().save(*args, **kwargs)
+
+    @property
+    def provincia(self):
+        return self.municipio.provincia
+
     @property
     def n_habitaciones(self):
-        """Bedrooms: dobles + individuales + suites (`exteriores` is not extra rooms)."""
+        """Bedrooms: dobles + individuales (`suites` and `exteriores` are subsets, not extra rooms)."""
         total = getattr(self, 'habitaciones_total', None)
         if total is not None:
             return total

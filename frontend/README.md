@@ -31,4 +31,4 @@ The compiled bundle in `backend/staticfiles/static/js/` is committed, so rebuild
 ## API types
 `src/features/interfaces.ts` describes the API responses (listing, detail tables, locations,
 modalidades, rental conditions, reservation request). Keep it in step with the backend serializers.
-The detail page does not yet show every section the API returns; see [`../TODO.md`](../TODO.md).
+The detail page does not yet show every section the API returns.

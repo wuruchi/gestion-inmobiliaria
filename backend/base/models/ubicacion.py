@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 
@@ -77,6 +78,27 @@ class Municipio(SlugMixin):
                 fields=['provincia', 'slug'], name='uniq_municipio_slug'
             ),
         ]
+
+    def validate_location(self):
+        """The code starts with the province's and the comarca is in the same province."""
+        if self.provincia_id and not self.codigo_ine.startswith(
+            self.provincia.codigo_ine
+        ):
+            raise ValidationError(
+                {'codigo_ine': 'El código INE no empieza por el de la provincia.'}
+            )
+        if self.comarca_id and self.comarca.provincia_id != self.provincia_id:
+            raise ValidationError(
+                {'comarca': 'La comarca no pertenece a la provincia.'}
+            )
+
+    def clean(self):
+        super().clean()
+        self.validate_location()
+
+    def save(self, *args, **kwargs):
+        self.validate_location()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.nombre

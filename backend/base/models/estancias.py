@@ -1,5 +1,16 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from base.models.inmueble import Inmueble
+
+
+SUPERFICIES = ('salon_m2', 'terraza_m2', 'balcones_m2')
+
+
+def _superficie(nombre):
+    return models.DecimalField(
+        max_digits=7, decimal_places=2, null=True, blank=True,
+        verbose_name=nombre, validators=[MinValueValidator(0)],
+    )
 
 
 class Estancias(models.Model):
@@ -8,19 +19,29 @@ class Estancias(models.Model):
     inmueble = models.OneToOneField(
         Inmueble, on_delete=models.CASCADE, null=False
     )
-    salon = models.PositiveIntegerField(default=0)
-    terraza = models.PositiveIntegerField(default=0)
-    balcones = models.PositiveIntegerField(default=0)
+    salon_m2 = _superficie('Salón (m²)')
+    terraza = models.PositiveIntegerField(default=0, help_text='Número de terrazas.')
+    terraza_m2 = _superficie('Terrazas (m²)')
+    balcones = models.PositiveIntegerField(default=0, help_text='Número de balcones.')
+    balcones_m2 = _superficie('Balcones (m²)')
     descripcion = models.CharField(max_length=150, blank=True, default='')
     cocina = models.BooleanField(default=False)
     cocina_amueblada = models.BooleanField(default=False)
     tipo_cocina = models.CharField(max_length=150, blank=True, default='')
     suelo_cocina = models.CharField(max_length=150, blank=True, default='')
-    carpinteria_interior = models.BooleanField(default=False)
-    carpinteria_exterior = models.BooleanField(default=False)
+    carpinteria_interior = models.CharField(max_length=150, blank=True, default='')
+    carpinteria_exterior = models.CharField(max_length=150, blank=True, default='')
 
     class Meta:
         verbose_name_plural = 'estancias'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(**{f'{name}__isnull': True})
+                | models.Q(**{f'{name}__gte': 0}),
+                name=f'estancias_{name}_no_negativo',
+            )
+            for name in SUPERFICIES
+        ]
 
     def __str__(self) -> str:
         return f'{self.inmueble.referencia} - Estancias'

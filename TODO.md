@@ -1,75 +1,89 @@
-# Pending model tasks
+# TODO: normalization of the models
 
-Scope: the Django models in `backend/base/models/` and what depends on them.
-Numbers 1 to 16 match the improvement list from the model review; 17 onward were added afterwards.
-Rule of thumb: a value that can be derived from other rows is a computed property, not a stored column.
+Source: database normalization review of `backend/base/models/` (section numbers like 1.2 refer to that review).
+Earlier decisions are in `docs/adr/0001-model-changes-from-platform-examples.md`; where an item below revises one,
+write a new ADR.
 
-## Done
-- [x] 1. One source for each duplicated fact (equipment, stay limits, maximum people)
-- [x] 2. `Modalidad` model (temporal, habitual, venta) with several per listing
-- [x] 3. Public detail output is an allow-list, with a test that classifies every column
-- [x] 4. Indexes for the search filters, fewer queries on the list endpoints
-- [x] Regulatory fields, balconies, energy consumption, `CondicionesAlquiler`, `SolicitudReserva`
-- [x] `Barrio`, and the 73 Barcelona barrios in the seed tool
-- [x] Detail tables exposed in the API, yes/no integers turned into booleans, typos renamed
+Every item that changes a column or an API field also needs: migration, admin, serializer allow-list, seed (if
+reference data), tests, and an update of `MODELS.md`.
 
-## Data quality (done)
-- [x] 5. Text that should be numbers: `Otros.estancia_minima_meses` / `estancia_maxima_meses` (months), `Entorno.distancia_playa_m` / `distancia_poblacion_m` / `distancia_ciudad_m` (metres), `Otros.altura_real_m` (metres). The migration converts what it can read ("2 meses", "1,5 km", "2,70") and stops, listing the values, on anything it would have to guess (bare distances, "32 días")
-- [x] 6. Location stored once: `poblacion`, `ubicacion`, `zona`, `zona_ref` removed; the API's `zona` (barrio, else district) and `zona_ref` (district) are computed. The migration stops if a listing has that text but no municipio / distrito link. `direccion`, `direccion_short`, `dir_descripcion` and `codigo_postal` stay
-- [x] 7. Database rules: prices, surfaces and energy use cannot be negative (validator + `CheckConstraint`), detail-table counts are `PositiveIntegerField`, reference-index min <= max is a `CheckConstraint`. The at-least-one-modalidad rule lives in the admin inline; the venta / rent price rule is item 17. Left: enforce the modalidad rule in any future write API
-- [x] 8. Types: `fecha_disponibilidad`, `fecha_alta`, `fecha_baja`, `fecha_entrega` are dates; `sup_construida`, `sup_cont_comun`, `sup_util` allow up to 999,999.99 m²
+Rules: frontend is out of scope; the dev database is disposable, so data migrations may be skipped.
 
-## Structure (done)
-- [x] 9. Merged `Salon`, `Terraza`, `Cocina` and `Carpinteria` into `Estancias` with a single `descripcion`; the API keeps the four nested keys
-- [x] 10. Photos: `ImageField`, `posicion`, `alt_text` (renamed from `label`), one default photo per listing, required link, redundant `unique_together` dropped
-- [x] 11. `Propietario` model; `DatosInternos` (one per listing) holds the owner link, `notas_internas`, `otros_datos`, `cat_nrc`, `fecha_firma`. `fecha_entrega`, `situacion_actual` and `cedula` stay on `Inmueble` (review later)
-- [x] 12. Audit: `created_by` / `updated_by` set by the admin; `HistorialRenta` (private). `ultima_renta` stays a stored, public field
+## Open decisions (settle before the item that depends on them)
 
-## Naming and housekeeping (done)
-- [x] 13. Naming: every link to a listing is `inmueble` (was `modulo`; the API key changes with it); `original_id`, `matterport_url`, `n_banios` (API), `cristales_blindados`; `Transporte` has its own `id` like the other detail tables
-- [x] 14. One empty state per field: text columns are `blank=True, default=''` (no NULL), booleans are never null, `sup_*`, `ibi`, `gtos_comunidad`, `geo_*` are optional in forms too. Numbers and dates that can be unknown stay nullable (unknown is not 0)
-- [x] 15. The migrations are squashed into one `0001_initial` (no real data existed). The old files are not kept in the repo; `backend/db.sqlite3` was rebuilt from it and seeded (the previous file is `backend/db.sqlite3.bak`, ignored by git)
-- [x] 16. Reservation requests: `estado` (pendiente, contactada, cerrada, descartada) replaces `atendida`; `python manage.py purgar_solicitudes [--meses 12] [--dry-run]` blanks name, email and phone on older requests and keeps the row. Left: run it on a schedule (cron) once deployed
+- [ ] Current price: keep `InmuebleModalidad.precio` and append to `HistorialPrecio` on every change, or make
+      the history the source and derive the current price? (1.4)
+- [ ] Location: keep `municipio` + optional `barrio` and derive `distrito`, or keep the three FKs with a DB-level
+      guarantee? (1.1)
+- [ ] `estado` per listing or per modalidad? (4)
+- [ ] Equipment catalogue (2.4): do it, or keep the wide typed tables? Default: keep, and only unify the
+      count-vs-boolean convention.
 
-## Pricing, parking and computed values
-- [x] 17. Price per modalidad (`InmuebleModalidad`)
-  - Required, non-negative `precio` per (listing, modalidad), unique; `Modalidad` link is `PROTECT`; `Modalidad.unidad_precio` (Monthly or Total) set by the seed tool
-  - The `otros` modalidad is removed (3 modalidades left); `importe_alquiler` and `importe_venta` columns are gone, migrated into the new rows (the migration stops if a linked modalidad has no price)
-  - Admin: inline on `Inmueble` that needs at least one modalidad with a price
-  - API: `modalidades` is `[{codigo, nombre, unidad_precio, precio}]`; `importe_alquiler` (lowest monthly price) and `importe_venta` stay as derived fields so the frontend keeps working. `max_precio` compares that modalidad's price (monthly prices on `inmuebles/`)
-  - Left: the frontend still reads `importe_*`; switch it to `modalidades[].precio` and show the unit (frontend follow-ups)
-- [x] 18. `PlazaAparcamiento` model (many per listing)
-  - Fields: `inmueble` (`CASCADE`), `numero` (unique per listing when given), `tipo` (coche or moto), `superficie`, `valor`, `renta`, `notas`; amounts cannot be negative
-  - Removed `n_plz_garaje`, `sup_parking`, `valor_plz`, `renta_plz` from `Inmueble` and `Otros.plazas_aparcamiento`; the migration creates one plaza per counted space (it stops if a listing has several spaces and one set of figures)
-  - `n_plz_garaje` is computed (count of plazas) and still returned by the detail endpoint; `plazas` is returned too (public: `numero`, `tipo`, `superficie`, `notas`). `valor` and `renta` stay private, as `valor_plz` and `renta_plz` were
-  - A `tipo='Parking'` listing may also have plazas (optional, not hidden in the admin)
-- [x] 19. Computed `n_habitaciones`
-  - The stored column is gone; `Inmueble.n_habitaciones` is a property: `dobles + individuales + suites` of `Dormitorios` (`exteriores` left out), 0 without a `Dormitorios` row
-  - List and detail still return `n_habitaciones`. The `habitaciones` filter runs in SQL on an annotation (`Inmueble.objects.con_habitaciones()`), with no extra queries
-  - The migration stops, listing the offenders, if a stored number differs from the dormitorios total
+## 1. Correctness: facts in the wrong place
 
-## Decisions taken from this review
-- [x] Deleting a `Modalidad` must not unlink it silently: `PROTECT` on the link, see 17
-- [x] A listing with the "venta" modalidad needs a sale price: the price is required on the modalidad link, see 17
-- [x] Parking gets its own model, see 18 (the dropped `parking` flag and `Otros.plazas_aparcamiento` are not enough)
-- [x] Derived values are computed properties, not stored columns: `n_habitaciones` (19) and `n_plz_garaje` (18)
+- [ ] Move `gran_tenedor` from `Inmueble` to `Propietario`; expose it in the API only if needed. (1.2)
+- [ ] Decide where `zona_tensionada` comes from (location plus date) and stop storing it per listing. (1.2)
+- [ ] Single source of truth for the current price, per the decision above; remove the possible drift between
+      `InmuebleModalidad.precio` and `HistorialPrecio`. (1.4)
+- [ ] Rent-only regulatory columns (`ultima_renta`, `indice_referencia_min/max`, `actualizacion_renta`,
+      `situacion_5_anios`) move to the rental offer (on or under `InmuebleModalidad`). (1.3)
+- [ ] Move `Otros.estancia_*` and `acepta_animales` to the rental conditions. (3)
+- [ ] `CertificadoEnergetico` table: `eficiencia`, `nombre_eficiencia`, `consumo_energetico`, `emisiones_co2`
+      and the certificate number from `RegistroLegal`; check whether `eficiencia` and `nombre_eficiencia` are the
+      same fact. (1.8)
+- [ ] Group community fees and IBI (amount, included flag, text in `Condiciones.incluido`) under one owner. (1.9)
 
-## Data and setup that depend on the models
-- [x] Migrations applied to the local `db.sqlite3` and `python seed.py locations` / `modalidades` run (re-create your admin user with `createsuperuser`)
-- [ ] Create the default "Condiciones de alquiler" record in the admin
-- [ ] Districts and barrios for cities other than Barcelona (L'Hospitalet, Badalona, Terrassa) have no uniform official source yet
-- [ ] Property importer (`import-inmuebles`) in `seed`
-  - Quoted-TSV parser and `NULL` handling
-  - Dry run, upsert on `referencia`
-  - Match districts and barrios by slug
-  - Skip the junk rows (`aulasbcn`, `NULL`)
-  - Create `InmuebleModalidad` rows (with prices) and `PlazaAparcamiento` rows instead of the old price and parking columns (17, 18)
-  - Needs answers: is the sample export real client data, and is there a fuller export?
+## 2. Remove derivable data
 
-## Frontend follow-ups
-- [ ] Detail page sections for the new data (kitchen, security, surroundings, transport, regulatory, conditions)
-- [ ] Reservation request form posting to `/api/inmuebles/<id>/reservas/`
-- [ ] Show the price and unit of each modalidad on the list and detail pages, reading `modalidades[].precio` instead of `importe_*` (17)
-- [ ] Barrio and modalidad filters in the search
-- [ ] Rebuild with `./publish.sh` (the compiled bundle still contains the old Heroku URL)
-- [ ] Compile the frontend with the new types (`node_modules` is not installed, so it has not been type-checked)
+- [ ] Drop `InmuebleModalidad.mas_iva`; keep `tipo_iva` and expose `mas_iva` as a property. Update the
+      constraint and the API. (1.5)
+- [ ] Same for `PlazaAparcamiento.precio_opcional_*`; drop `precio_opcional_unidad` and tie the optional price
+      to a modalidad. (1.5, 1.6)
+- [ ] Location columns on `Inmueble` per the decision above; add a DB guarantee for the hierarchy. (1.1)
+- [ ] Review `Municipio.provincia` / `Comarca.provincia` / `codigo_ine` prefix redundancy. (1.1)
+- [ ] Decide whether `direccion_short` is computed or a documented display override. (1.10)
+- [ ] DB-level check that `Condiciones.modalidad` equals `InmuebleModalidad.modalidad` (composite FK via
+      `RunSQL`, or document `clean()` as the only guard). (1.7)
+
+## 3. Repeating groups
+
+- [ ] `Transporte` to one row per mode: `TransporteInmueble(inmueble, tipo, descripcion)`. (2.1)
+- [ ] `Instalaciones`: `Suministro(inmueble, tipo, contador, compania, tipo_suministro)` for water, electricity
+      and gas; heating type/subtype as choices. (2.2)
+- [ ] `descripcion_es/en/cat` to `DescripcionInmueble(inmueble, idioma, texto)`; the API keeps flattening. (2.3)
+- [ ] Free text with a closed domain to choices or lookups: `orientacion`, `tipo_fachada`, `office`, the three
+      floor fields, `tipo_cocina`, `tipo_gas`, `situacion_actual`, `situacion_5_anios`, `usos`. (2.5)
+- [ ] One convention for count vs boolean in `Dotacion`, `Estancias`, `OtrosEspacios`. (2.4)
+
+## 4. Detail tables
+
+- [ ] Merge `Banios` into `Dormitorios` (or one "distribution" table). (3)
+- [ ] Split what is left of `Otros` by concern; move `anio_ultima_reforma` next to `anio_construccion`. (3)
+- [ ] Define the meaning of a missing row versus a row of zeros; consider null for "unknown". (3)
+- [ ] Add checks: `exteriores <= dobles + individuales`, `sup_util <= sup_construida`,
+      `fecha_baja >= fecha_alta`. (3)
+
+## 5. Missing entities
+
+- [ ] Co-ownership: `InmueblePropietario(inmueble, propietario, porcentaje)`; make `Propietario.nif` unique when
+      set. (4)
+- [ ] `DatosInternos`: move `cat_nrc` to `RegistroLegal`; extract the management agreement (`fecha_firma`,
+      `exclusiva`, `gestion_comercial`, `administracion`) into its own model with dates. (4)
+- [ ] Date the owner valuation (`tasacion_propietario`) or keep a history. (4)
+- [ ] Audit columns (`created_by/at`, `updated_by/at`) on `InmuebleModalidad` and `Condiciones`. (4)
+- [ ] Parking: decide whether `PlazaAparcamiento.valor` / `renta` fit the price model. (4)
+
+## 6. Naming consistency
+
+- [ ] Replace the `_id` primary key on `Inmueble`, `ImageInmueble` and the location models with `id`; check
+      every `inmueble_id`, serializer and test that relies on it. (5)
+- [ ] `Inmueble.TIPOS` values to lowercase snake_case like the other choice lists. (5)
+- [ ] Rename `Banios.banios` and unify count-vs-area naming (`terraza` vs `terraza_m2`). (5)
+
+## 7. Cross-cutting (after each group lands)
+
+- [ ] Update `MODELS.md` and the ER diagram.
+- [ ] Update `seed/` and its tests for any changed reference data.
+- [ ] Re-pin the public API with the allow-list tests; the fixtures in `backend/base/tests_ejemplos.py` must
+      still load.
+- [ ] Write an ADR for each decision that revises ADR 0001.

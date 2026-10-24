@@ -8,7 +8,6 @@ listings in the province of Barcelona, and an admin to manage them.
 | [`backend/`](backend/README.md) | Django REST API and admin. Owns the data model and serves the built frontend. |
 | [`frontend/`](frontend/README.md) | React site (search, results, listing detail, map). |
 | [`seed/`](seed/README.md) | Standalone tool that loads reference data (locations, modalidades) into the backend's database. |
-| [`TODO.md`](TODO.md) | Pending model and follow-up tasks. |
 
 These are plain folders of one repository, not separate repositories.
 

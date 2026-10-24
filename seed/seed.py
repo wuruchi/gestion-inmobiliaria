@@ -4,7 +4,8 @@
     python seed.py migrate            apply the backend's migrations
     python seed.py locations          load provincias/comarcas/municipios/distritos/barrios
     python seed.py locations --dry-run
-    python seed.py modalidades        load the four Modalidad rows (also supports --dry-run)
+    python seed.py modalidades        load the three Modalidad rows (also supports --dry-run)
+    python seed.py condiciones        create the default Condiciones of each modalidad (also supports --dry-run)
     python seed.py status             row counts
     python seed.py fetch-locations    refresh data/*.json from the official sources
 
@@ -39,6 +40,8 @@ def main():
     loc.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
     mod = sub.add_parser('modalidades')
     mod.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
+    con = sub.add_parser('condiciones')
+    con.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
     sub.add_parser('status')
     sub.add_parser('fetch-locations')
     args = parser.parse_args()
@@ -65,9 +68,15 @@ def main():
             print(f'{model:10} created {created:4}  updated {updated:4}')
         if args.dry_run:
             print('dry run: nothing was written')
+    elif args.command == 'condiciones':
+        from seedlib.condiciones import seed_condiciones
+        for model, (created, kept) in seed_condiciones(args.dry_run).items():
+            print(f'{model:12} created {created:4}  kept {kept:4}')
+        if args.dry_run:
+            print('dry run: nothing was written')
     elif args.command == 'status':
-        from base.models import Barrio, Comarca, Distrito, Inmueble, Modalidad, Municipio, Provincia
-        for model in (Provincia, Comarca, Municipio, Distrito, Barrio, Modalidad, Inmueble):
+        from base.models import Barrio, Comarca, Condiciones, Distrito, Inmueble, Modalidad, Municipio, Provincia
+        for model in (Provincia, Comarca, Municipio, Distrito, Barrio, Modalidad, Condiciones, Inmueble):
             print(f'{model.__name__:10} {model.objects.count()}')
 
 

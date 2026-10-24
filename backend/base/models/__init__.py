@@ -13,10 +13,12 @@ from .seguridad import Seguridad
 from .area_recreo import AreaRecreo
 from .transporte import Transporte
 from .otros import Otros
-from .condiciones import CondicionesAlquiler
+from .condiciones import Condiciones
 from .solicitud_reserva import SolicitudReserva
-from .historial_renta import HistorialRenta
+from .historial_precio import HistorialPrecio
 from .propietario import Propietario
 from .datos_internos import DatosInternos
 from .estancias import Estancias
 from .plaza_aparcamiento import PlazaAparcamiento
+from .registro_legal import RegistroLegal
+from .media_inmueble import MediaInmueble

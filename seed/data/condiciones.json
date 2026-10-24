@@ -1,0 +1,44 @@
+{
+ "sources": [],
+ "note": "Default conditions per modalidad, maintained by hand and modelled on the AT Barcelona and idealista listings. Review the legal wording and the tax rates before publishing: they change.",
+ "items": [
+  {
+   "modalidad": "temporal",
+   "nombre": "Alquiler de temporada",
+   "fianza": "Mínimo 2 mensualidades de alquiler. Se devuelve por transferencia bancaria en un plazo máximo de 30 días, una vez desocupado el piso, comprobado el estado de conservación y pagados los suministros (agua, luz y gas). El número de fianzas está sujeto a la decisión final del propietario.",
+   "honorarios": "1 mensualidad + IVA (estancias de 2 a 11 meses). Gastos de contrato incluidos. IVA no incluido.",
+   "pago_adelantado": "El alquiler del primer mes o anticipado de todo el periodo.",
+   "itp": "Contrato de alquiler de temporada: 0,5 % del importe del alquiler de todo el periodo (pago único).",
+   "suministros": "Cada mes se cobra una cuota fija en concepto de provisión de fondos, que se regulariza al finalizar el contrato según el consumo realizado. La cuota depende del tamaño del piso y del número de inquilinos.",
+   "limpieza_final": "Obligatoria y a cargo del inquilino. El coste depende de cada vivienda y del estado en que se devuelva. La vivienda se entrega limpia.",
+   "incluido": "Gastos de comunidad y seguro.",
+   "no_incluido": "Honorarios de la agencia, ITP y consumos de suministros (agua, luz y gas).",
+   "requisitos": "Trabajador por cuenta ajena: fotocopia del DNI/NIE de todos los inquilinos; contrato de trabajo y 3 últimas nóminas (según el caso, también última declaración de la renta, aval solidario, pago por adelantado y/o ampliación de fianza); certificado de titularidad o recibo bancario con IBAN de un banco en España.\nTrabajador por cuenta propia (autónomo): fotocopia del DNI/NIE de todos los inquilinos; última declaración de la renta y 4 últimas declaraciones trimestrales de IVA e IRPF (según el caso, también aval solidario, pago por adelantado y/o ampliación de fianza); certificado de titularidad o recibo bancario con IBAN de un banco en España.\nLa formalización definitiva del contrato está sujeta a la decisión final de la propiedad.\nAdemás, en el alquiler de temporada: justificante de temporalidad (trabajo, tratamiento médico, reformas, etc.) y dirección habitual en la ciudad de origen."
+  },
+  {
+   "modalidad": "habitual",
+   "nombre": "Alquiler de vivienda habitual",
+   "fianza": "Mínimo 2 mensualidades de alquiler. Se devuelve por transferencia bancaria en un plazo máximo de 30 días, una vez desocupado el piso, comprobado el estado de conservación y pagados los suministros (agua, luz y gas). El número de fianzas está sujeto a la decisión final del propietario.",
+   "honorarios": "10 % de la anualidad + 150 € de gastos de contrato, más IVA (estancias de 1 a 5 años).",
+   "pago_adelantado": "El alquiler del primer mes o anticipado de todo el periodo.",
+   "itp": "Contrato de vivienda habitual: exento.",
+   "suministros": "Las compañías cobran el consumo directamente a la cuenta bancaria del inquilino.",
+   "limpieza_final": "Obligatoria y a cargo del inquilino. El coste depende de cada vivienda y del estado en que se devuelva. La vivienda se entrega limpia.",
+   "incluido": "Gastos de comunidad.",
+   "no_incluido": "Honorarios de la agencia y consumos de suministros (agua, luz y gas).",
+   "requisitos": "Trabajador por cuenta ajena: fotocopia del DNI/NIE de todos los inquilinos; contrato de trabajo y 3 últimas nóminas (según el caso, también última declaración de la renta, aval solidario, pago por adelantado y/o ampliación de fianza); certificado de titularidad o recibo bancario con IBAN de un banco en España.\nTrabajador por cuenta propia (autónomo): fotocopia del DNI/NIE de todos los inquilinos; última declaración de la renta y 4 últimas declaraciones trimestrales de IVA e IRPF (según el caso, también aval solidario, pago por adelantado y/o ampliación de fianza); certificado de titularidad o recibo bancario con IBAN de un banco en España.\nLa formalización definitiva del contrato está sujeta a la decisión final de la propiedad."
+  },
+  {
+   "modalidad": "venta",
+   "nombre": "Compraventa",
+   "honorarios": "Honorarios de la agencia del vendedor: incluidos en el precio de venta.",
+   "itp": "No incluido en el precio. Se aplica el tipo vigente en la comunidad autónoma; en Cataluña, por tramos del valor del inmueble (10 % hasta 600.000 €, 11 % hasta 900.000 €, 12 % hasta 1.500.000 € y 13 % por encima), sin perjuicio de los tipos reducidos del 5 % y el 7 % según las circunstancias del comprador o del inmueble.",
+   "incluido": "Honorarios de la agencia del vendedor.",
+   "no_incluido": "ITP, notaría, registro y gestoría.",
+   "notaria": "Honorarios según el arancel notarial oficial (Real Decreto 1426/1989).",
+   "registro": "Inscripción en el Registro de la Propiedad según el arancel oficial (Real Decreto 1427/1989).",
+   "gestoria": "Tramitación administrativa, liquidación de impuestos e inscripción registral: aproximadamente 350 € más IVA.",
+   "honorarios_comprador": "Solo si el comprador contrata un servicio de encargo de compra (personal shopper inmobiliario); no están vinculados al precio de compra."
+  }
+ ]
+}

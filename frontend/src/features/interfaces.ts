@@ -282,7 +282,9 @@ export interface Producto {
     sup_util: string;
     n_plz_garaje: number;
     plazas: PlazaAparcamiento[];
-    cedula: string | null;
+    registros_legales: RegistroLegal[];
+    ocultar_direccion: boolean;
+    emisiones_co2: string | null;
     importe_alquiler: string;
     importe_venta: string;
     publicar_web: boolean;
@@ -317,7 +319,6 @@ export interface ListProducto {
     tipo: string;
     estado: string;
     sup_util: string;
-    cedula: string;
     importe_alquiler: string;
     importe_venta: string;
     n_habitaciones: number;
@@ -380,4 +381,10 @@ export interface DistritoCounter {
     distrito: string;
     modalidad: string;
     count: number;
+}
+
+export interface RegistroLegal {
+    tipo: 'aicat' | 'cedula_habitabilidad' | 'certificado_energetico' | 'licencia_turistica' | 'otro';
+    numero: string;
+    organismo: string;
 }

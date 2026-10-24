@@ -35,9 +35,9 @@ The database settings live in `backend/database.py`, shared with the seed tool.
 - **Locations:** `Provincia` > `Comarca` / `Municipio` > `Distrito` > `Barrio`. Official codes
   (`codigo_ine`), slugs and unique constraints; all links are `PROTECT`.
 - **`Inmueble`:** the listing. Links to the locations, to `Modalidad` through `InmuebleModalidad`
-  (several allowed: temporal, habitual, venta) and to optional `CondicionesAlquiler`. Carries the regulatory fields
+  (several allowed: temporal, habitual, venta) (each with its price, VAT and optional `Condiciones`). Carries the regulatory fields
   (last rent, reference index, tensioned zone, large holder) and the energy label.
-  `clean()` rejects a barrio, district or municipality that does not nest. The town and zone are not stored:
+  `municipio` is required and `provincia` is derived from it; `clean()` and `save()` reject a barrio or district that does not nest. The town and zone are not stored:
   the API's `zona` / `zona_ref` are the barrio and district names. Dates are dates (no time); prices, surfaces
   and counts cannot be negative (validators and database constraints). Stay limits are in months
   (`estancia_*_meses`), distances in metres (`distancia_*_m`), the real height in metres (`altura_real_m`).
@@ -48,13 +48,13 @@ The database settings live in `backend/database.py`, shared with the seed tool.
   `Modalidad.unidad_precio` says whether it is monthly or a total. A modalidad in use cannot be deleted.
   The API returns `modalidades: [{codigo, nombre, unidad_precio, precio}]`; `importe_alquiler` (lowest monthly
   price) and `importe_venta` are derived from it for the frontend.
-- **Rooms:** `n_habitaciones` is computed (`Dormitorios`: dobles + individuales + suites), not stored.
-- **Parking:** `PlazaAparcamiento` (many per listing: number, type, surface, notes; value and rent are private).
+- **Rooms:** `n_habitaciones` is computed (`Dormitorios`: dobles + individuales; suites are a subset), not stored.
+- **Parking:** `PlazaAparcamiento` (many per listing: number, type, surface, notes, optional price; value and rent are private).
   `n_plz_garaje` in the API is the count of plazas. A parking space on its own is a listing with `tipo='Parking'`.
-- **Photos:** `ImageInmueble` (`ImageField`, `posicion`, `alt_text`, one `default` photo per listing).
+- **Photos:** `ImageInmueble` (`ImageField`, `tipo`, `posicion`, `alt_text`, one `default` photo per listing; floor plans are `tipo='plano'`). `MediaInmueble`: videos and virtual tours by link.
 - **Private (never in the API):** `Propietario` (owners), `DatosInternos` (one per listing: owner link, internal
-  notes, `cat_nrc`, signing date), `HistorialRenta` (rent by date). `Inmueble.created_by` / `updated_by` are set by the admin.
-- **Other:** `SolicitudReserva` (reservation requests; `estado` pendiente / contactada / cerrada / descartada).
+  notes, `cat_nrc`, signing date), `HistorialPrecio` (price by date and modalidad). `Inmueble.created_by` / `updated_by` are set by the admin.
+- **Other:** `SolicitudReserva` (reservation, visit or information requests: `tipo`, optional `mensaje`; `estado` pendiente / contactada / cerrada / descartada).
   Personal data is kept 12 months: schedule `python manage.py purgar_solicitudes` (options `--meses N`, `--dry-run`),
   which blanks name, email and phone on older requests and keeps the rest of the row.
 
@@ -64,7 +64,7 @@ The database settings live in `backend/database.py`, shared with the seed tool.
 | `GET inmuebles/` | Published listings, paginated (5 per page). |
 | `GET inmuebles/modalidad/{temporales,habituales,ventas}/` | Same, filtered by modalidad. |
 | `GET inmuebles/<id>/` | Listing detail, including the detail tables and rental conditions. |
-| `POST inmuebles/<id>/reservas/` | Reservation request (limited to 10 per hour per client). |
+| `POST inmuebles/<id>/reservas/` | Reservation, visit or information request (`tipo`, optional `mensaje`; limited to 10 per hour per client). |
 | `GET inmuebles/modalidad/<modalidad>/distrito/<id>/count/` | Number of published listings. |
 | `GET provincias/`, `municipios/`, `distritos/`, `modalidades/` | Reference lists. |
 | `GET provincias/<id>/municipios`, `municipios/<id>/distritos`, `distritos/<id>/barrios` | Children of a location. |

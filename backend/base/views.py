@@ -16,7 +16,7 @@ INMUEBLES_PER_PAGE = 5
 # Everything InmuebleSerializer reads, fetched in 2 queries instead of ~15 per listing.
 def inmuebles_publicados(**filters):
   return Inmueble.objects.con_habitaciones().filter(publicar_web=True, **filters).select_related(
-    'provincia', 'municipio__provincia', 'distrito__municipio__provincia', 'barrio',
+    'municipio__provincia', 'distrito__municipio__provincia', 'barrio',
     'otros', 'banios', 'dormitorios', 'instalaciones', 'arearecreo', 'dotacion',
     'estancias',
   ).prefetch_related(
@@ -30,7 +30,15 @@ def parse_request(request, modalidad=None):
   distrito = request.query_params.get('distrito')
   barrio = request.query_params.get('barrio')
   referencia = request.query_params.get('referencia')
+  tipo = request.query_params.get('tipo')
+  subtipo = request.query_params.get('subtipo')
+  if tipo and tipo not in dict(Inmueble.TIPOS):
+    raise ParseError('Invalid tipo')
+  if subtipo and subtipo not in dict(Inmueble.SUBTIPOS):
+    raise ParseError('Invalid subtipo')
   try:
+    sup_min = float(request.query_params.get('sup_min', 0.0))
+    sup_max = float(request.query_params.get('sup_max', 0.0))
     habitaciones = int(request.query_params.get('habitaciones', 0))
     max_precio = float(request.query_params.get('max_precio', 0.0))
     provincia = int(provincia) if provincia else 0
@@ -43,13 +51,22 @@ def parse_request(request, modalidad=None):
   if fecha_entradata is not None and len(fecha_entradata) > 0:
     kwargs['fecha_disponibilidad__lte'] = fecha_entradata
   if provincia > 0:
-    kwargs['provincia'] = provincia
+    kwargs['municipio__provincia'] = provincia
   if municipio > 0:
     kwargs['municipio'] = municipio
   if distrito > 0:
     kwargs['distrito'] = distrito
   if barrio > 0:
     kwargs['barrio'] = barrio
+  if tipo:
+    kwargs['tipo'] = tipo
+  if subtipo:
+    kwargs['subtipo'] = subtipo
+  # Built surface in m².
+  if sup_min > 0:
+    kwargs['sup_construida__gte'] = sup_min
+  if sup_max > 0:
+    kwargs['sup_construida__lte'] = sup_max
   if referencia is not None and len(referencia) > 0:
     kwargs['referencia__icontains'] = referencia
   if habitaciones > 0:
@@ -117,13 +134,13 @@ def getInmueblesVenta(request):
 def getInmueble(request, pk):
   inmueble = get_object_or_404(
     Inmueble.objects.select_related(
-      'provincia', 'municipio', 'distrito', 'barrio', 'condiciones', 'otros', 'banios',
+      'municipio__provincia', 'distrito', 'barrio', 'otros', 'banios',
       'dormitorios', 'instalaciones', 'arearecreo', 'dotacion', 'estancias',
       'otrosespacios', 'seguridad',
       'entorno', 'transporte',
     ).prefetch_related(
-      'images', 'plazas',
-      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
+      'images', 'plazas', 'registros_legales', 'medios',
+      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones')),
     ),
     _id=pk, publicar_web=True)
   serializer = SingleInmuebleSerializer(inmueble, many=False, context={'request': request})
