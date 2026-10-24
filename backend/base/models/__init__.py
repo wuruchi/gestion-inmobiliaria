@@ -1,6 +1,7 @@
 from .modalidad import Modalidad
 from .inmueble import Inmueble
 from .inmueble_modalidad import InmuebleModalidad
+from .regulacion_alquiler import RegulacionAlquiler
 from .ubicacion import Barrio, Comarca, Distrito, Provincia, Municipio
 from .banios import Banios
 from .dormitorios import Dormitorios

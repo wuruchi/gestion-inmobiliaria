@@ -139,9 +139,9 @@ def getInmueble(request, pk):
       'otrosespacios', 'seguridad',
       'entorno', 'transporte',
     ).prefetch_related(
-      'images', 'plazas', 'registros_legales', 'medios', 'propietarios', 'historial_precios',
+      'images', 'plazas', 'registros_legales', 'medios', 'propietarios',
       'municipio__declaraciones_tensionada',
-      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones')),
+      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones', 'regulacion')),
     ),
     _id=pk, publicar_web=True)
   serializer = SingleInmuebleSerializer(inmueble, many=False, context={'request': request})

@@ -32,8 +32,10 @@ Django only serves `/media/` and `/img/` while `DEBUG` is on. Behind a real web 
 The database settings live in `backend/database.py`, shared with the seed tool.
 
 ## Data model (`base/models/`)
-- **Locations:** `Provincia` > `Comarca` / `Municipio` > `Distrito` > `Barrio`. Official codes
-  (`codigo_ine`), slugs and unique constraints; all links are `PROTECT`.
+- **Locations:** `Provincia` > `Municipio` > `Distrito` > `Barrio`; a `Comarca` only groups municipios (it has no
+  province: Cerdanya spans two). Official codes (`codigo_ine`), slugs and unique constraints; all links are `PROTECT`.
+  The listing's municipio/distrito/barrio must nest; `python manage.py comprobar_ubicaciones` scans for violations
+  (bulk writes skip the model checks) and fails if it finds any.
 - **`Inmueble`:** the listing. Links to the locations, to `Modalidad` through `InmuebleModalidad`
   (several allowed: temporal, habitual, venta) (each with its price, VAT and optional `Condiciones`). Carries the regulatory fields
   (last rent, reference index, tensioned zone, large holder) and the energy label.
@@ -46,14 +48,14 @@ The database settings live in `backend/database.py`, shared with the seed tool.
   `Transporte`, `AreaRecreo`, `Otros`. They are the single source for equipment and stay limits.
 - **Prices:** `InmuebleModalidad` holds one required, non-negative `precio` per listing and modalidad.
   `Modalidad.unidad_precio` says whether it is monthly or a total. A modalidad in use cannot be deleted.
-  The API returns `modalidades: [{codigo, nombre, unidad_precio, precio}]` (the detail also has `ultima_renta` per rental modalidad, from the price history); `importe_alquiler` (lowest monthly
+  The API returns `modalidades: [{codigo, nombre, unidad_precio, precio}]` (the detail also has `regulacion` per rental modalidad: reference index and last rent, see `RegulacionAlquiler`); `importe_alquiler` (lowest monthly
   price) and `importe_venta` are derived from it for the frontend.
 - **Rooms:** `n_habitaciones` is computed (`Dormitorios`: dobles + individuales; suites are a subset), not stored.
 - **Parking:** `PlazaAparcamiento` (many per listing: number, type, surface, notes, optional price; value and rent are private).
   `n_plz_garaje` in the API is the count of plazas. A parking space on its own is a listing with `tipo='Parking'`.
 - **Photos:** `ImageInmueble` (`ImageField`, `tipo`, `posicion`, `alt_text`, one `default` photo per listing; floor plans are `tipo='plano'`). `MediaInmueble`: videos and virtual tours by link.
 - **Private (never in the API):** `Propietario` (owners, with `gran_tenedor`), `InmueblePropietario` (listing ↔ owners, many to many), `DatosInternos` (one per listing: internal
-  notes, `cat_nrc`, signing date), `HistorialPrecio` (price by date and modalidad). `Inmueble.created_by` / `updated_by` are set by the admin.
+  notes, `cat_nrc`, signing date), `HistorialPrecio` (price by date and modalidad; our own price log). `Inmueble.created_by` / `updated_by` are set by the admin.
 - **Other:** `SolicitudReserva` (reservation, visit or information requests: `tipo`, optional `mensaje`; `estado` pendiente / contactada / cerrada / descartada).
   Personal data is kept 12 months: schedule `python manage.py purgar_solicitudes` (options `--meses N`, `--dry-run`),
   which blanks name, email and phone on older requests and keeps the rest of the row.

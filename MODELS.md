@@ -11,9 +11,8 @@ How to read the rules: each one says where it is enforced.
 
 ```mermaid
 erDiagram
-    Provincia ||--o{ Comarca : has
     Provincia ||--o{ Municipio : has
-    Comarca |o--o{ Municipio : groups
+    Comarca |o--o{ Municipio : "groups (may span provinces)"
     Municipio ||--o{ Distrito : has
     Municipio ||--o{ DeclaracionZonaTensionada : "declared stressed"
     Distrito ||--o{ Barrio : has
@@ -26,6 +25,7 @@ erDiagram
     Modalidad ||--o{ InmuebleModalidad : "used by"
     Modalidad ||--o{ Condiciones : "conditions of"
     InmuebleModalidad }o--o| Condiciones : "own conditions"
+    InmuebleModalidad ||--o| RegulacionAlquiler : "rent regulation (rentals)"
     Inmueble ||--o{ HistorialPrecio : "price history"
     Modalidad ||--o{ HistorialPrecio : "of"
 
@@ -56,7 +56,7 @@ The model groups:
 | Group | Models | Public in the API? |
 |---|---|---|
 | Locations | `Provincia`, `Comarca`, `Municipio`, `Distrito`, `Barrio` | Yes (reference lists, nested in a listing) |
-| Offer | `Modalidad`, `InmuebleModalidad`, `Condiciones` | Yes |
+| Offer | `Modalidad`, `InmuebleModalidad`, `Condiciones`, `RegulacionAlquiler` | Yes |
 | Listing | `Inmueble` | Only published listings, only allow-listed columns |
 | Detail tables | `Dormitorios`, `Banios`, `Estancias`, `OtrosEspacios`, `Dotacion`, `Instalaciones`, `Seguridad`, `Entorno`, `Transporte`, `AreaRecreo`, `Otros` | Yes |
 | Media and parking | `ImageInmueble`, `MediaInmueble`, `PlazaAparcamiento` | Yes (parking value and rent are private; the optional price is public) |
@@ -70,7 +70,7 @@ Direction: "A → B" means A holds the foreign key to B.
 
 | From | To | On delete of the target |
 |---|---|---|
-| `Comarca`, `Municipio` → `Provincia` | | `PROTECT` |
+| `Municipio` → `Provincia` | | `PROTECT` |
 | `Municipio` → `Comarca` (optional) | | `PROTECT` |
 | `Distrito` → `Municipio`, `Barrio` → `Distrito` | | `PROTECT` |
 | `Inmueble` → `Municipio` (required), `Distrito`, `Barrio` (optional) | | `PROTECT` |
@@ -92,18 +92,21 @@ parking spaces, rent history, internal data and detail rows, but keeps its reser
 
 ## 3. Locations (`ubicacion.py`)
 
-Hierarchy: `Provincia` → `Municipio` (also optionally in a `Comarca`) → `Distrito` → `Barrio`.
+Hierarchy: `Provincia` → `Municipio` → `Distrito` → `Barrio`. A `Comarca` is not a level of that chain: it only groups
+municipios and has no province, because a comarca can span two (Cerdanya, Lleida and Girona). Districts and
+neighborhoods are defined by each city; only Barcelona's are loaded, and `Barrio` requires its `Distrito`.
 
 | Model | Key fields | Rules |
 |---|---|---|
 | `Provincia` | `codigo_ine` (2 digits), `nombre`, `slug` | `codigo_ine`, `nombre` and `slug` unique (DB) |
-| `Comarca` | `provincia`, `codigo`, `nombre`, `slug` | `codigo` and `slug` unique within the province (DB) |
+| `Comarca` | `codigo`, `nombre`, `slug` | `codigo` and `slug` unique (DB). No province: it is on each `Municipio` |
 | `Municipio` | `provincia`, `comarca`, `codigo_ine` (5 digits: province + municipality), `nombre`, `slug`, `latitud`, `longitud` | `codigo_ine` unique; `slug` unique within the province (DB) |
 | `Distrito` | `municipio`, `codigo`, `nombre`, `slug` | `codigo` and `slug` unique within the municipality (DB); ordered by `codigo` |
 | `Barrio` | `distrito`, `codigo`, `nombre`, `slug` | `codigo` and `slug` unique within the district (DB); ordered by `codigo` |
 
 - `slug` is filled from `nombre` on save when left empty (model).
-- A `Municipio` code must start with its province's code, and its `comarca` must be in the same province (model, checked on every save).
+- A `Municipio` code must start with its province's code (model, checked on every save). Its `comarca` may be in another province.
+- A listing's `municipio`, `distrito` and `barrio` must nest: the distrito belongs to the municipio and the barrio to the distrito (model, checked on every save). The database cannot express this, and `bulk_create()`, `QuerySet.update()` and raw SQL skip the model checks, so `python manage.py comprobar_ubicaciones` scans for violations (and for municipio codes that do not match their province), lists the offenders and fails if there are any. It is read only; run it after a bulk import or from cron. `python seed.py locations` and `python seed.py check-locations` run it too.
 - The province of a listing is not stored: `Inmueble.provincia` is a property (`municipio.provincia`). The API still returns `provincia`, and the `provincia` filter matches `municipio__provincia`.
 - Loaded by the seed tool: 1 province, 14 comarcas, 311 municipios, 10 Barcelona districts and 73 barrios
   (seed). Districts and barrios of other cities are not loaded yet.
@@ -141,14 +144,30 @@ closed), then by `fecha_disponibilidad`.
 
 Because the price is required, a listing offered for sale always has a sale price, and a rental always has a
 rent price. `precio` is always the amount as advertised: with `mas_iva` it is the net price. The API returns
-`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva}]` (the detail adds `ultima_renta` and `condiciones`)
+`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva}]` (the detail adds `regulacion` and `condiciones`)
 and keeps two derived fields for the frontend: `importe_venta` (the venta price) and `importe_alquiler` (the
 lowest monthly price), both as stored, without VAT added.
 
-`ultima_renta` (the rent the regulation asks to show) is not a column: it is the monthly price charged before the
-current one, for that modalidad, read from `HistorialPrecio` (rows dated in the future are ignored). It is `null`
-when there is no earlier price and always `null` for sale. It is returned in each detail `modalidades` entry, so a
-listing offered under two rental modalidades has one per modalidad. The history itself is never serialized.
+### `RegulacionAlquiler` (rent regulation of a rental offer)
+One optional record per rental offer (an `InmuebleModalidad` with a monthly price); a sale offer cannot have one
+(model `clean()`/`save()`). It holds what an ad for a habitual-residence lease in a stressed zone must show, which
+comes from outside (SERPAVI, the owner, the previous manager) and not from our own price log. Public: each rental
+entry of `modalidades[]` in the detail has a `regulacion` object, `null` for a sale; a rental without a record
+shows `renta_previa: "desconocida"` and null values.
+
+| Field | Rule |
+|---|---|
+| `indice_referencia_min`, `indice_referencia_max` | Reference price range of the state index; not negative and min ≤ max (DB). The maximum is the cap on the rent |
+| `indice_referencia_fecha` | When the index was consulted: SERPAVI changes over time |
+| `renta_previa` | `desconocida` (default: not confirmed yet), `con_renta` (there was a rental in the last 5 years) or `sin_renta` (there was none). "Unknown" is not "none": a property rented through another agency has no history here |
+| `ultima_renta` | Rent of the last contract (not negative, DB). Exactly when `renta_previa` is `con_renta` (DB) |
+| `ultima_renta_fin` | When that contract ended, to check the 5-year window. Only with `con_renta` (DB); optional |
+
+`python manage.py comprobar_regulacion_alquiler` lists the published, open `habitual` offers in a stressed zone
+(see `DeclaracionZonaTensionada`) whose last-rent status is unconfirmed or whose contract has no end date or ended
+more than 5 years ago, or that lack the index maximum; it fails if there are any (read only; run it before
+publishing or from cron). The rent-update clause (`actualizacion_renta`, for example IRAV) is a contract term, so
+it is a field of `Condiciones`.
 
 ### `Condiciones`
 Contracting conditions of one modalidad (`modalidad`, required), as text.
@@ -178,7 +197,7 @@ Primary key `_id`; `referencia` is unique. Main groups of columns:
 | Surfaces (m²) | `sup_construida`, `sup_cont_comun`, `sup_util`, `sup_parcela` (plot) |
 | Costs | `gtos_comunidad`, `ibi` (whether they are included in the rent is `Otros.gastos_comunidad_incluidos` and `Otros.ibi_incluido`) |
 | Energy | `eficiencia`, `nombre_eficiencia`, `consumo_energetico` (kWh/m²/year), `emisiones_co2` (kg CO₂/m²/year) |
-| Catalan rental rules | `indice_referencia_min`, `indice_referencia_max`, `actualizacion_renta`, `situacion_5_anios`. `zona_tensionada` and `gran_tenedor` are not columns: `gran_tenedor` is a property of the owner (`Propietario.gran_tenedor`) and the detail returns `true` when any owner of the listing has it; `zona_tensionada` comes from the municipality's declarations (section 3) and is `true` when one is in force today |
+| Catalan rental rules | none are columns: the index range and the last rent are in `RegulacionAlquiler` (section 4) and the update clause in `Condiciones`. `zona_tensionada` and `gran_tenedor` are not columns either: `gran_tenedor` is a property of the owner (`Propietario.gran_tenedor`) and the detail returns `true` when any owner of the listing has it; `zona_tensionada` comes from the municipality's declarations (section 3) and is `true` when one is in force today |
 | Web | `publicar_web`, `descripcion_es`, `descripcion_en`, `descripcion_cat`, `usos`, `notas_web`, `situacion_actual` |
 | Audit | `created_at`, `updated_at`, `created_by`, `updated_by` |
 
@@ -191,7 +210,6 @@ buen estado or a reformar (it is not the availability `estado`, which lives on e
 |---|---|
 | `referencia` is unique | DB |
 | `municipio` is required; the distrito must belong to the municipio, and the barrio to the distrito (or, without a distrito, to the municipio) | model `validate_location()`, run by `clean()` and every `save()` |
-| `indice_referencia_min` ≤ `indice_referencia_max` | DB constraint + model `clean()` |
 | `subtipo` is one of piso, ático, dúplex, estudio, chalet adosado, chalet independiente, otro, and only a `Vivienda` has one (any other `tipo` needs it empty) | DB constraint + model `clean()` and `save()` |
 | `anio_construccion` is 1000–2100, `planta` is -5–100 (0 is the ground floor, negative a basement), `n_plantas` is 1–100 | DB constraint + model validator |
 | `sup_construida`, `sup_cont_comun`, `sup_util`, `sup_parcela`, `gtos_comunidad`, `ibi`, both reference indices, `consumo_energetico` and `emisiones_co2` cannot be negative | DB constraint + model validator |
@@ -305,7 +323,7 @@ issuing body, so other provinces can use their own registries.
 | `InmueblePropietario` | Link between a listing and an owner (many to many): optional `porcentaje` (share, above 0 and up to 100, DB); an owner appears once per listing (DB). Removed with the listing |
 | `DatosInternos` | One per listing: `notas_internas`, `otros_datos`, `cat_nrc` (cadastral reference), `fecha_firma`, and how the agency works the listing: `exclusiva`, `gestion_comercial`, `administracion` (three independent yes/no flags) and `tasacion_propietario` (the owner's valuation, not negative, DB) |
 | `DeclaracionZonaTensionada` | Municipality declared a stressed residential market for a period: `municipio` (`PROTECT`), `desde`, `hasta` (empty = still in force, never before `desde`, DB), `referencia` (resolution). One per municipality and start date (DB). `Municipio.es_zona_tensionada()` is true when one is in force on the date; overlaps are allowed. Staff maintain it in the admin; nothing is seeded |
-| `HistorialPrecio` | Price by date for a listing under one `modalidad` (rent or sale): `fecha`, `importe` (≥ 0, model validator), `nota`; one entry per modalidad and date per listing (DB); newest first. Rows are appended automatically when an `InmuebleModalidad` price is created or changed (`save()`; a second change on the same day replaces the day's row; `QuerySet.update()` and `bulk_create()` skip it), so the latest row equals the current price. Rows can also be entered by hand, for example past prices. Private, except that the previous monthly price becomes the public `ultima_renta` (see section 4). A modalidad with history cannot be deleted (`PROTECT`) |
+| `HistorialPrecio` | Price by date for a listing under one `modalidad` (rent or sale): `fecha`, `importe` (≥ 0, model validator), `nota`; one entry per modalidad and date per listing (DB); newest first. Rows are appended automatically when an `InmuebleModalidad` price is created or changed (`save()`; a second change on the same day replaces the day's row; `QuerySet.update()` and `bulk_create()` skip it), so the latest row equals the current price. Rows can also be entered by hand, for example past prices. Private and never serialized: it is our own price log, not a record of leases, so it does not feed the last rent (see `RegulacionAlquiler`). A modalidad with history cannot be deleted (`PROTECT`) |
 | `Inmueble` columns | `original_id`, `publicar_web`, `fecha_baja`, `fecha_entrega`, `created_at`, `updated_at`, `created_by`, `updated_by` |
 
 Public exposure is an allow-list: a new `Inmueble` column stays private until it is added to the public list

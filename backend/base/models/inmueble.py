@@ -11,7 +11,6 @@ from base.models.modalidad import Modalidad
 # Decimal columns that cannot be negative (validator + database constraint).
 NO_NEGATIVOS = (
     'sup_construida', 'sup_cont_comun', 'sup_util', 'gtos_comunidad', 'ibi',
-    'indice_referencia_min', 'indice_referencia_max',
     'consumo_energetico', 'emisiones_co2', 'sup_parcela',
 )
 
@@ -187,32 +186,6 @@ class Inmueble(models.Model):
         verbose_name='Emisiones (kg CO₂/m²/año)',
         validators=[MinValueValidator(0)],
     )
-    # Datos exigidos por la normativa de alquiler de Cataluña.
-    indice_referencia_min = models.DecimalField(
-        max_digits=9,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='Índice de referencia (mínimo)',
-        validators=[MinValueValidator(0)],
-    )
-    indice_referencia_max = models.DecimalField(
-        max_digits=9,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='Índice de referencia (máximo)',
-        validators=[MinValueValidator(0)],
-    )
-    actualizacion_renta = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='Actualización de renta',
-        help_text='Por ejemplo: IRAV.', default='')
-    situacion_5_anios = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='Situación en los últimos 5 años', default='')
     descripcion_es = models.TextField(blank=True, default='')
     descripcion_en = models.TextField(blank=True, default='')
     descripcion_cat = models.TextField(blank=True, default='')
@@ -254,12 +227,6 @@ class Inmueble(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(indice_referencia_min__isnull=True)
-                | models.Q(indice_referencia_max__isnull=True)
-                | models.Q(indice_referencia_min__lte=models.F('indice_referencia_max')),
-                name='inmueble_indice_referencia_min_max',
-            ),
-            models.CheckConstraint(
                 condition=models.Q(anio_construccion__isnull=True)
                 | models.Q(anio_construccion__gte=1000, anio_construccion__lte=2100),
                 name='inmueble_anio_construccion_rango',
@@ -300,14 +267,6 @@ class Inmueble(models.Model):
 
     def clean(self):
         super().clean()
-        if (
-            self.indice_referencia_min is not None
-            and self.indice_referencia_max is not None
-            and self.indice_referencia_min > self.indice_referencia_max
-        ):
-            raise ValidationError(
-                {'indice_referencia_min': 'El mínimo supera al máximo.'}
-            )
         self.validate_location()
         self.validate_subtipo()
 

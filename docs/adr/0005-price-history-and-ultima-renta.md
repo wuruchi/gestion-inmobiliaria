@@ -1,6 +1,6 @@
 # ADR 0005: Price history is written automatically; `ultima_renta` is derived from it
 
-- Status: Accepted (migration `0022`)
+- Status: Accepted (migration `0022`); the `ultima_renta` part is superseded by ADR 0007
 - Revises: ADR 0001 (`ultima_renta` as a column on `Inmueble`; `HistorialPrecio` as hand-entered log).
 
 ## Context

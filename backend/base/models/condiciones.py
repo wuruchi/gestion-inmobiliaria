@@ -23,6 +23,10 @@ class Condiciones(models.Model):
     fianza = models.TextField(blank=True)
     pago_adelantado = models.TextField(blank=True)
     suministros = models.TextField(blank=True)
+    actualizacion_renta = models.TextField(
+        blank=True, verbose_name='actualización de la renta',
+        help_text='Cláusula de actualización anual, por ejemplo: IRAV. Sin pacto expreso no hay actualización.',
+    )
     limpieza_final = models.TextField(blank=True)
     requisitos = models.TextField(
         blank=True, help_text='Documentación que debe aportar el inquilino o el comprador.'

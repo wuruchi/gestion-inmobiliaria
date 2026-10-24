@@ -6,6 +6,7 @@
     python seed.py locations --dry-run
     python seed.py modalidades        load the three Modalidad rows (also supports --dry-run)
     python seed.py condiciones        create the default Condiciones of each modalidad (also supports --dry-run)
+    python seed.py check-locations    check that listings' locations nest (read only)
     python seed.py status             row counts
     python seed.py fetch-locations    refresh data/*.json from the official sources
 
@@ -32,6 +33,16 @@ def setup_django():
     return settings.DATABASES['default']['NAME']
 
 
+def report_location_consistency():
+    """Print the backend's location scan; the exit status is 1 when something does not nest."""
+    from seedlib.locations import check_locations
+    problems = check_locations()
+    for tipo, descripcion in problems:
+        print(f'{tipo}: {descripcion}')
+    print(f'location check: {len(problems)} problem(s)' if problems else 'location check: consistent')
+    return 1 if problems else 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = parser.add_subparsers(dest='command', required=True)
@@ -42,6 +53,7 @@ def main():
     mod.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
     con = sub.add_parser('condiciones')
     con.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
+    sub.add_parser('check-locations')
     sub.add_parser('status')
     sub.add_parser('fetch-locations')
     args = parser.parse_args()
@@ -62,6 +74,10 @@ def main():
             print(f'{model:10} created {created:4}  updated {updated:4}')
         if args.dry_run:
             print('dry run: nothing was written')
+        else:
+            return report_location_consistency()
+    elif args.command == 'check-locations':
+        return report_location_consistency()
     elif args.command == 'modalidades':
         from seedlib.modalidades import seed_modalidades
         for model, (created, updated) in seed_modalidades(args.dry_run).items():
@@ -81,4 +97,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main() or 0)

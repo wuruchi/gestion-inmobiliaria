@@ -3,7 +3,6 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
-from django.utils import timezone
 from base.models.condiciones import Condiciones
 from base.models.historial_precio import HistorialPrecio
 from base.models.inmueble import Inmueble
@@ -112,23 +111,6 @@ class InmuebleModalidad(models.Model):
             super().save(*args, **kwargs)
             if toca_precio and (anterior is None or anterior != Decimal(str(self.precio))):
                 HistorialPrecio.registrar(self.inmueble_id, self.modalidad_id, self.precio)
-
-    @property
-    def ultima_renta(self):
-        """The monthly price charged before the current one, for this modalidad; None if there is none.
-
-        Read from the price history (uses prefetched `inmueble.historial_precios`). Only monthly
-        modalidades have one. Rows dated in the future are not yet in force and are ignored.
-        """
-        if self.modalidad.unidad_precio != 'mensual':
-            return None
-        hoy = timezone.localdate()
-        vigentes = sorted(
-            (h for h in self.inmueble.historial_precios.all()
-             if h.modalidad_id == self.modalidad_id and h.fecha <= hoy),
-            key=lambda h: h.fecha, reverse=True,
-        )
-        return vigentes[1].importe if len(vigentes) > 1 else None
 
     def __str__(self) -> str:
         return f'{self.inmueble.referencia} {self.modalidad.nombre} {self.precio}'

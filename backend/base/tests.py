@@ -61,15 +61,78 @@ class LocationModelTests(TestCase):
         ok = inmueble(referencia='Y', municipio=self.mun, distrito=self.dis)
         self.assertEqual(ok.provincia, self.prov)
 
-    def test_municipio_requires_matching_provincia_and_comarca(self):
+    def test_municipio_code_must_start_with_the_provincia_code(self):
         girona = Provincia.objects.create(codigo_ine='17', nombre='Girona')
         with self.assertRaises(ValidationError):
             Municipio.objects.create(provincia=girona, codigo_ine='08200', nombre='Mal codigo')
+
+    def test_comarca_can_span_provincias(self):
+        """Cerdanya is split between Lleida and Girona: a comarca has no province of its own."""
         from base.models import Comarca
-        comarca = Comarca.objects.create(provincia=girona, codigo='01', nombre='Alt Emporda')
-        with self.assertRaises(ValidationError):
-            Municipio.objects.create(
-                provincia=self.prov, comarca=comarca, codigo_ine='08300', nombre='Otra provincia')
+        lleida = Provincia.objects.create(codigo_ine='25', nombre='Lleida')
+        girona = Provincia.objects.create(codigo_ine='17', nombre='Girona')
+        cerdanya = Comarca.objects.create(codigo='21', nombre='Cerdanya')
+        alp = Municipio.objects.create(provincia=girona, comarca=cerdanya, codigo_ine='17005', nombre='Alp')
+        das = Municipio.objects.create(provincia=lleida, comarca=cerdanya, codigo_ine='25052', nombre='Das')
+        self.assertEqual(set(cerdanya.municipios.all()), {alp, das})
+        self.assertNotIn('provincia', {f.name for f in Comarca._meta.get_fields()})
+
+    def test_comarca_code_and_slug_are_unique(self):
+        from base.models import Comarca
+        Comarca.objects.create(codigo='21', nombre='Cerdanya')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Comarca.objects.create(codigo='21', nombre='Otra', slug='otra')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Comarca.objects.create(codigo='22', nombre='Cerdanya')
+
+
+class ComprobarUbicacionesTests(TestCase):
+    def setUp(self):
+        self.prov = Provincia.objects.create(codigo_ine='08', nombre='Barcelona')
+        self.bcn = Municipio.objects.create(provincia=self.prov, codigo_ine='08019', nombre='Barcelona')
+        self.bdn = Municipio.objects.create(provincia=self.prov, codigo_ine='08015', nombre='Badalona')
+        self.eix = Distrito.objects.create(municipio=self.bcn, codigo='02', nombre='Eixample')
+        self.cv = Distrito.objects.create(municipio=self.bcn, codigo='01', nombre='Ciutat Vella')
+        self.antoni = Barrio.objects.create(distrito=self.eix, codigo='07', nombre='Sant Antoni')
+
+    def tipos(self):
+        from base.comprobaciones import inconsistencias_ubicacion
+        return sorted(t for t, _ in inconsistencias_ubicacion())
+
+    def test_consistent_data_has_no_problems_and_the_command_succeeds(self):
+        from io import StringIO
+        from django.core.management import call_command
+        inmueble(referencia='C1', municipio=self.bcn, distrito=self.eix, barrio=self.antoni)
+        inmueble(referencia='C2', municipio=self.bcn, barrio=self.antoni)
+        inmueble(referencia='C3', municipio=self.bdn)
+        self.assertEqual(self.tipos(), [])
+        out = StringIO()
+        call_command('comprobar_ubicaciones', stdout=out)
+        self.assertIn('consistent', out.getvalue())
+
+    def test_bulk_writes_that_skip_the_model_checks_are_detected(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        a = inmueble(referencia='C4', municipio=self.bcn)
+        b = inmueble(referencia='C5', municipio=self.bcn)
+        c = inmueble(referencia='C6', municipio=self.bcn)
+        Inmueble.objects.filter(pk=a.pk).update(municipio=self.bdn, distrito=self.eix)
+        Inmueble.objects.filter(pk=b.pk).update(distrito=self.cv, barrio=self.antoni)
+        Inmueble.objects.filter(pk=c.pk).update(municipio=self.bdn, barrio=self.antoni)
+        self.assertEqual(
+            self.tipos(),
+            ['barrio_de_otro_distrito', 'barrio_de_otro_municipio', 'distrito_de_otro_municipio'])
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command('comprobar_ubicaciones', stdout=out)
+        for ref in ('C4', 'C5', 'C6'):
+            self.assertIn(ref, out.getvalue())
+
+    def test_municipio_code_of_another_provincia_is_detected(self):
+        girona = Provincia.objects.create(codigo_ine='17', nombre='Girona')
+        Municipio.objects.filter(pk=self.bdn.pk).update(provincia=girona)
+        self.assertEqual(self.tipos(), ['municipio_con_codigo_de_otra_provincia'])
 
 
 class BarrioTests(TestCase):
@@ -114,10 +177,7 @@ class DetailApiTests(TestCase):
         self.default = Condiciones.objects.create(
             nombre='General', modalidad=self.temporal, por_defecto=True, fianza='2 mensualidades'
         )
-        self.inm = inmueble(
-            referencia='G767', publicar_web=True,
-            indice_referencia_min='839.99', indice_referencia_max='1153.53',
-        )
+        self.inm = inmueble(referencia='G767', publicar_web=True)
         from base.models import DeclaracionZonaTensionada
         DeclaracionZonaTensionada.objects.create(municipio=self.inm.municipio, desde=date(2021, 9, 20))
         self.precio = InmuebleModalidad.objects.create(
@@ -153,11 +213,6 @@ class DetailApiTests(TestCase):
             Condiciones.objects.create(nombre='Otra', modalidad=self.temporal, por_defecto=True)
         venta = Modalidad.objects.create(codigo='venta', nombre='Venta', orden=1, unidad_precio='total')
         Condiciones.objects.create(nombre='Venta general', modalidad=venta, por_defecto=True)
-
-    def test_reference_index_range_validated(self):
-        self.inm.indice_referencia_min = '2000'
-        with self.assertRaises(ValidationError):
-            self.inm.clean()
 
     def test_reservation_request(self):
         from base.models import SolicitudReserva
@@ -431,78 +486,223 @@ class HistorialPrecioAutomaticoTests(ModalidadFixture):
         self.assertEqual([i for _, i in self.filas('venta')], ['250000.00'])
 
 
-class UltimaRentaTests(ModalidadFixture):
+class RegulacionAlquilerTests(ModalidadFixture):
     def setUp(self):
         super().setUp()
         from datetime import date
-        from base.models import HistorialPrecio
-        self.Historial = HistorialPrecio
+        from base.models import RegulacionAlquiler
         self.date = date
-        self.inm = inmueble(referencia='UR1', publicar_web=True)
+        self.Regulacion = RegulacionAlquiler
+        self.inm = inmueble(referencia='RG1', publicar_web=True)
+        self.alquiler = InmuebleModalidad.objects.create(
+            inmueble=self.inm, modalidad=self.mod['habitual'], precio='1000')
+        self.venta = InmuebleModalidad.objects.create(
+            inmueble=self.inm, modalidad=self.mod['venta'], precio='250000')
 
-    def ultima(self, codigo='temporal'):
+    def regulacion(self, codigo='habitual'):
         data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
-        return {m['codigo']: m['ultima_renta'] for m in data['modalidades']}[codigo]
+        return {m['codigo']: m['regulacion'] for m in data['modalidades']}[codigo]
 
-    def alta(self, historial=(), modalidad='temporal', precio='1000'):
-        for fecha, importe in historial:
-            self.Historial.objects.create(
-                inmueble=self.inm, modalidad=self.mod[modalidad], fecha=fecha, importe=importe)
-        return InmuebleModalidad.objects.create(
-            inmueble=self.inm, modalidad=self.mod[modalidad], precio=precio)
+    def test_rental_without_a_record_is_unknown_and_sale_has_none(self):
+        self.assertEqual(self.regulacion(), {
+            'indice_referencia_min': None, 'indice_referencia_max': None,
+            'indice_referencia_fecha': None, 'renta_previa': 'desconocida',
+            'ultima_renta': None, 'ultima_renta_fin': None})
+        self.assertIsNone(self.regulacion('venta'))
 
-    def test_none_without_a_previous_price(self):
-        self.alta()
-        self.assertIsNone(self.ultima())
+    def test_declared_values_reach_the_detail(self):
+        self.Regulacion.objects.create(
+            oferta=self.alquiler, indice_referencia_min='839.99', indice_referencia_max='1153.53',
+            indice_referencia_fecha=self.date(2026, 10, 1), renta_previa='con_renta',
+            ultima_renta='900', ultima_renta_fin=self.date(2025, 6, 30))
+        self.assertEqual(self.regulacion(), {
+            'indice_referencia_min': '839.99', 'indice_referencia_max': '1153.53',
+            'indice_referencia_fecha': '2026-10-01', 'renta_previa': 'con_renta',
+            'ultima_renta': '900.00', 'ultima_renta_fin': '2025-06-30'})
 
-    def test_is_the_price_before_the_current_one(self):
-        self.alta([(self.date(2023, 1, 1), '800'), (self.date(2024, 1, 1), '900')], precio='1000')
-        self.assertEqual(self.ultima(), '900.00')
+    def test_no_rental_in_5_years_is_distinct_from_unknown(self):
+        self.Regulacion.objects.create(oferta=self.alquiler, renta_previa='sin_renta')
+        self.assertEqual(self.regulacion()['renta_previa'], 'sin_renta')
+        self.assertIsNone(self.regulacion()['ultima_renta'])
 
-    def test_follows_a_price_change(self):
-        oferta = self.alta([(self.date(2024, 1, 1), '900')], precio='1000')
-        # A correction on the same day replaces the day's price; a change on a later day keeps it.
-        oferta.precio = '1050'
-        oferta.save()
-        self.assertEqual(self.ultima(), '900.00')
-        self.Historial.objects.filter(importe='1050').update(fecha=self.date(2025, 1, 1))
-        oferta.precio = '1100'
-        oferta.save()
-        self.assertEqual(self.ultima(), '1050.00')
+    def test_a_property_without_our_history_can_still_declare_a_last_rent(self):
+        """The rent came from another agency: nothing in our price log, and it is still stated."""
+        from base.models import HistorialPrecio
+        HistorialPrecio.objects.filter(inmueble=self.inm).delete()
+        self.Regulacion.objects.create(
+            oferta=self.alquiler, renta_previa='con_renta', ultima_renta='820',
+            ultima_renta_fin=self.date(2026, 2, 1))
+        self.assertEqual(self.regulacion()['ultima_renta'], '820.00')
 
-    def test_is_per_modalidad(self):
-        self.alta([(self.date(2024, 1, 1), '900')], 'temporal', '1000')
-        self.alta([(self.date(2024, 1, 1), '700')], 'habitual', '750')
-        self.assertEqual((self.ultima('temporal'), self.ultima('habitual')), ('900.00', '700.00'))
+    def test_price_log_does_not_feed_the_last_rent(self):
+        from base.models import HistorialPrecio
+        HistorialPrecio.objects.create(
+            inmueble=self.inm, modalidad=self.mod['habitual'], fecha=self.date(2024, 1, 1), importe='700')
+        self.alquiler.precio = '1100'
+        self.alquiler.save()
+        self.assertEqual(self.regulacion()['renta_previa'], 'desconocida')
+        self.assertIsNone(self.regulacion()['ultima_renta'])
 
-    def test_sale_offers_have_none_even_with_history(self):
-        self.alta([(self.date(2024, 1, 1), '200000')], 'venta', '250000')
-        self.assertIsNone(self.ultima('venta'))
+    def test_amount_and_end_date_only_with_a_rental(self):
+        for estado, extra in (('con_renta', {}), ('sin_renta', {'ultima_renta': '1'}),
+                              ('desconocida', {'ultima_renta_fin': self.date(2025, 1, 1)})):
+            reg = self.Regulacion(oferta=self.alquiler, renta_previa=estado, **extra)
+            with self.assertRaises(ValidationError, msg=estado):
+                reg.full_clean()
+            with self.assertRaises((IntegrityError, ValidationError), msg=estado), transaction.atomic():
+                reg.save()
+        self.assertEqual(self.Regulacion.objects.count(), 0)
 
-    def test_future_dated_prices_are_ignored(self):
-        self.alta([(self.date(2024, 1, 1), '900'), (self.date(2999, 1, 1), '5000')], precio='1000')
-        self.assertEqual(self.ultima(), '900.00')
+    def test_database_rejects_inconsistent_rows_that_skip_the_model(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.Regulacion.objects.bulk_create([self.Regulacion(oferta=self.alquiler, ultima_renta='5')])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.Regulacion.objects.bulk_create([self.Regulacion(oferta=self.alquiler, renta_previa='con_renta')])
 
-    def test_listing_has_no_such_column_and_detail_does_not_leak_history(self):
-        self.assertNotIn('ultima_renta', {f.name for f in Inmueble._meta.get_fields()})
-        self.alta([(self.date(2023, 1, 1), '800'), (self.date(2024, 1, 1), '900')])
-        body = self.client.get(f'/api/inmuebles/{self.inm._id}/').content.decode()
-        self.assertNotIn('800', body)
-        self.assertNotIn('historial', body)
+    def test_reference_index_range_and_sign(self):
+        reg = self.Regulacion(oferta=self.alquiler, indice_referencia_min=10, indice_referencia_max=5)
+        with self.assertRaises(ValidationError):
+            reg.full_clean()
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.Regulacion.objects.bulk_create([reg])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.Regulacion.objects.bulk_create([self.Regulacion(oferta=self.alquiler, indice_referencia_max=-1)])
+        self.Regulacion.objects.create(
+            oferta=self.alquiler, indice_referencia_min=5, indice_referencia_max=5)
 
-    def test_reads_history_in_a_constant_number_of_queries(self):
+    def test_a_sale_offer_cannot_have_regulation(self):
+        with self.assertRaises(ValidationError):
+            self.Regulacion(oferta=self.venta).full_clean()
+        with self.assertRaises(ValidationError):
+            self.Regulacion.objects.create(oferta=self.venta)
+
+    def test_one_record_per_offer_and_it_goes_with_the_offer(self):
+        self.Regulacion.objects.create(oferta=self.alquiler)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.Regulacion.objects.create(oferta=self.alquiler)
+        self.alquiler.delete()
+        self.assertEqual(self.Regulacion.objects.count(), 0)
+
+    def test_listing_no_longer_has_the_regulatory_columns(self):
+        names = {f.name for f in Inmueble._meta.get_fields()}
+        for gone in ('ultima_renta', 'indice_referencia_min', 'indice_referencia_max',
+                     'actualizacion_renta', 'situacion_5_anios'):
+            self.assertNotIn(gone, names)
+
+    def test_update_clause_is_a_condition_of_the_offer(self):
+        Condiciones.objects.create(
+            nombre='Habitual', modalidad=self.mod['habitual'], por_defecto=True, actualizacion_renta='IRAV')
+        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        habitual = [m for m in data['modalidades'] if m['codigo'] == 'habitual'][0]
+        self.assertEqual(habitual['condiciones']['actualizacion_renta'], 'IRAV')
+        self.assertNotIn('actualizacion_renta', data)
+
+    def test_reads_regulation_in_a_constant_number_of_queries(self):
         from django.test.utils import CaptureQueriesContext
         from django.db import connection
-        self.alta([(self.date(2024, 1, 1), '900')])
+        self.Regulacion.objects.create(oferta=self.alquiler, renta_previa='sin_renta')
         with CaptureQueriesContext(connection) as pocas:
             self.client.get(f'/api/inmuebles/{self.inm._id}/')
-        for year in range(2010, 2020):
-            self.Historial.objects.create(
-                inmueble=self.inm, modalidad=self.mod['temporal'], fecha=self.date(year, 1, 1), importe='500')
-        self.alta([(self.date(2024, 1, 1), '600')], 'habitual', '650')
+        extra = InmuebleModalidad.objects.create(
+            inmueble=self.inm, modalidad=self.mod['temporal'], precio='500')
+        self.Regulacion.objects.create(oferta=extra, renta_previa='sin_renta')
         with CaptureQueriesContext(connection) as muchas:
             self.client.get(f'/api/inmuebles/{self.inm._id}/')
         self.assertEqual(len(pocas), len(muchas))
+
+
+class ComprobarRegulacionAlquilerTests(ModalidadFixture):
+    def setUp(self):
+        super().setUp()
+        from datetime import date, timedelta
+        from django.utils import timezone
+        from base.comprobaciones import pendientes_regulacion_alquiler
+        from base.models import DeclaracionZonaTensionada, RegulacionAlquiler
+        self.Regulacion = RegulacionAlquiler
+        self.pendientes = pendientes_regulacion_alquiler
+        self.hoy = timezone.localdate()
+        self.timedelta = timedelta
+        self.municipio = self.both.municipio
+        # The shared fixture publishes a habitual rental (M2) in the same municipality: leave it out.
+        Inmueble.objects.filter(pk=self.rent.pk).update(publicar_web=False)
+        self.inm = inmueble(referencia='CR1', publicar_web=True)
+        self.oferta = InmuebleModalidad.objects.create(
+            inmueble=self.inm, modalidad=self.mod['habitual'], precio='1000')
+
+    def tipos(self):
+        return sorted(t for t, _ in self.pendientes())
+
+    def declarar(self):
+        from base.models import DeclaracionZonaTensionada
+        DeclaracionZonaTensionada.objects.create(municipio=self.municipio, desde=self.date(2000, 1, 1))
+
+    @property
+    def date(self):
+        from datetime import date
+        return date
+
+    def completa(self, **extra):
+        datos = dict(indice_referencia_max='1100', renta_previa='sin_renta')
+        datos.update(extra)
+        return self.Regulacion.objects.create(oferta=self.oferta, **datos)
+
+    def test_outside_a_stressed_zone_nothing_is_required(self):
+        self.assertEqual(self.tipos(), [])
+
+    def test_stressed_zone_without_data_reports_both_gaps(self):
+        self.declarar()
+        self.assertEqual(self.tipos(), ['indice_sin_rellenar', 'renta_previa_sin_confirmar'])
+
+    def test_complete_data_passes_and_the_command_succeeds(self):
+        from io import StringIO
+        from django.core.management import call_command
+        self.declarar()
+        self.completa()
+        self.assertEqual(self.tipos(), [])
+        out = StringIO()
+        call_command('comprobar_regulacion_alquiler', stdout=out)
+        self.assertIn('complete', out.getvalue())
+
+    def test_unconfirmed_status_is_reported(self):
+        self.declarar()
+        self.completa(renta_previa='desconocida')
+        self.assertEqual(self.tipos(), ['renta_previa_sin_confirmar'])
+
+    def test_last_rent_needs_its_end_date_and_must_be_within_5_years(self):
+        self.declarar()
+        reg = self.completa(renta_previa='con_renta', ultima_renta='900')
+        self.assertEqual(self.tipos(), ['renta_previa_sin_fecha_fin'])
+        reg.ultima_renta_fin = self.hoy.replace(year=self.hoy.year - 6)
+        reg.save()
+        self.assertEqual(self.tipos(), ['renta_previa_fuera_de_5_anios'])
+        reg.ultima_renta_fin = self.hoy - self.timedelta(days=400)
+        reg.save()
+        self.assertEqual(self.tipos(), [])
+
+    def test_only_published_open_habitual_offers_are_checked(self):
+        self.declarar()
+        self.inm.publicar_web = False
+        self.inm.save()
+        self.assertEqual(self.tipos(), [])
+        self.inm.publicar_web = True
+        self.inm.save()
+        self.oferta.estado = 'cerrado'
+        self.oferta.save()
+        self.assertEqual(self.tipos(), [])
+        self.oferta.estado = 'disponible'
+        self.oferta.save()
+        InmuebleModalidad.objects.filter(pk=self.oferta.pk).update(modalidad=self.mod['venta'])
+        self.assertEqual(self.tipos(), [])
+
+    def test_the_command_fails_and_lists_the_offender(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        self.declarar()
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command('comprobar_regulacion_alquiler', stdout=out)
+        self.assertIn('CR1', out.getvalue())
 
 
 class HistorialPrecioTests(ModalidadFixture):
@@ -518,10 +718,11 @@ class HistorialPrecioTests(ModalidadFixture):
             ['1200.00', '950.00', '900.00'])
         data = self.client.get(f'/api/inmuebles/{self.both._id}/').json()
         self.assertNotIn('historial_precios', data)
-        # Only the previous rent is derived from it; older prices never reach the API.
-        self.assertEqual(data['modalidades'][0]['ultima_renta'], '950.00')
+        # The log is our own asking prices: none of it reaches the API.
+        self.assertNotIn('950', str(data['modalidades']))
         self.assertNotIn('900', str(data['modalidades']))
-        self.assertNotIn('fecha', str(data['modalidades']))
+        self.assertNotIn('importe', str(data['modalidades']))
+        self.assertNotIn('2023-01-01', str(data['modalidades']))
 
     def test_one_entry_per_modalidad_and_date_and_no_negative_price(self):
         from datetime import date
@@ -810,6 +1011,12 @@ class DatosInternosServicioTests(TestCase):
                 self.assertNotIn(secret, body, (url, secret))
 
 
+SIN_REGULACION = {
+    'indice_referencia_min': None, 'indice_referencia_max': None, 'indice_referencia_fecha': None,
+    'renta_previa': 'desconocida', 'ultima_renta': None, 'ultima_renta_fin': None,
+}
+
+
 class PrecioModalidadTests(ModalidadFixture):
     """Price per modalidad: required, unique, non-negative, unit set by the modalidad."""
 
@@ -854,10 +1061,10 @@ class PrecioModalidadTests(ModalidadFixture):
         data = self.client.get(f'/api/inmuebles/{self.both._id}/').json()
         self.assertEqual(data['modalidades'], [
             {'codigo': 'temporal', 'nombre': 'Vivienda temporal', 'unidad_precio': 'mensual',
-             'precio': '1200.00', 'mas_iva': False, 'tipo_iva': None, 'ultima_renta': None,
+             'precio': '1200.00', 'mas_iva': False, 'tipo_iva': None, 'regulacion': SIN_REGULACION,
              'condiciones': None},
             {'codigo': 'venta', 'nombre': 'Venta', 'unidad_precio': 'total',
-             'precio': '300000.00', 'mas_iva': False, 'tipo_iva': None, 'ultima_renta': None,
+             'precio': '300000.00', 'mas_iva': False, 'tipo_iva': None, 'regulacion': None,
              'condiciones': None},
         ])
         self.assertEqual((data['importe_alquiler'], data['importe_venta']), ('1200.00', '300000.00'))
@@ -1022,12 +1229,6 @@ class DatabaseRulesTests(TestCase):
                 Inmueble(referencia='R', **{field: -1}).full_clean(exclude=['municipio'])
             with self.assertRaises(IntegrityError, msg=field), transaction.atomic():
                 inmueble(referencia='R', **{field: -1})
-
-    def test_reference_index_range_is_a_database_constraint(self):
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            inmueble(referencia='R1', indice_referencia_min=10, indice_referencia_max=5)
-        inmueble(referencia='R2', indice_referencia_min=5)
-        inmueble(referencia='R3', indice_referencia_min=5, indice_referencia_max=5)
 
     def test_counts_cannot_be_negative(self):
         from base.models import Dormitorios, Otros
@@ -1743,7 +1944,7 @@ class DetailTablesAllowListTests(TestCase):
         'OtrosEspaciosSerializer': 'id despachos vestidores altillo galeria trastero buhardilla bodega '
             'lavadero estudios bibliotecas inmueble',
         'CondicionesSerializer': 'id nombre honorarios itp incluido no_incluido fianza pago_adelantado '
-            'suministros limpieza_final requisitos notaria registro gestoria honorarios_comprador',
+            'suministros actualizacion_renta limpieza_final requisitos notaria registro gestoria honorarios_comprador',
         'RegistroLegalSerializer': 'tipo numero organismo',
         'MediaInmuebleSerializer': 'tipo url titulo',
         'SingleImageSerializer': '_id image default alt_text posicion tipo',
@@ -1754,7 +1955,9 @@ class DetailTablesAllowListTests(TestCase):
         'SalonSerializer': 'id salon_m2 descripcion inmueble',
         'CarpinteriaSerializer': 'id carpinteria_interior carpinteria_exterior inmueble',
         'PrecioModalidadSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva',
-        'PrecioModalidadDetalleSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva ultima_renta condiciones',
+        'PrecioModalidadDetalleSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva regulacion condiciones',
+        'RegulacionAlquilerSerializer': 'indice_referencia_min indice_referencia_max indice_referencia_fecha '
+            'renta_previa ultima_renta ultima_renta_fin',
     }
 
     def test_every_public_field_is_listed(self):

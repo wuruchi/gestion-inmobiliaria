@@ -96,9 +96,9 @@ class SeedLocationsTest(unittest.TestCase):
             conn = sqlite3.connect(db)
             conn.execute(
                 "insert into base_condiciones (nombre, modalidad_id, por_defecto, honorarios, itp, incluido, "
-                "no_incluido, fianza, pago_adelantado, suministros, limpieza_final, requisitos, notaria, "
-                "registro, gestoria, honorarios_comprador) "
-                "select 'Mi venta', id, 1, '', '', '', '', '', '', '', '', '', '', '', '', '' "
+                "no_incluido, fianza, pago_adelantado, suministros, actualizacion_renta, limpieza_final, "
+                "requisitos, notaria, registro, gestoria, honorarios_comprador) "
+                "select 'Mi venta', id, 1, '', '', '', '', '', '', '', '', '', '', '', '', '', '' "
                 "from base_modalidad where codigo='venta'")
             conn.commit()
             conn.close()
@@ -106,6 +106,19 @@ class SeedLocationsTest(unittest.TestCase):
             names = [r[0] for r in sqlite3.connect(db).execute(
                 'select nombre from base_condiciones order by nombre')]
             self.assertEqual(names, ['Alquiler de temporada', 'Alquiler de vivienda habitual', 'Mi venta'])
+
+    def test_rent_defaults_carry_the_update_clause_and_sale_does_not(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / 'test.sqlite3')
+            self.run_seed(db, 'migrate')
+            self.run_seed(db, 'modalidades')
+            self.run_seed(db, 'condiciones')
+            rows = dict(sqlite3.connect(db).execute(
+                'select m.codigo, c.actualizacion_renta from base_condiciones c '
+                'join base_modalidad m on m.id = c.modalidad_id'))
+            self.assertIn('IRAV', rows['temporal'])
+            self.assertIn('IRAV', rows['habitual'])
+            self.assertEqual(rows['venta'], '')
 
     def test_location_files_nest_properly(self):
         sys.path.insert(0, str(ROOT))
@@ -128,18 +141,77 @@ class SeedLocationsTest(unittest.TestCase):
         }
         with mock.patch.object(locations, '_load', side_effect=data.__getitem__):
             problems = locations.validate_locations()
-        self.assertEqual(len(problems), 5, problems)
+        self.assertEqual(len(problems), 4, problems)
 
-    def test_municipio_province_is_checked_on_save(self):
+    def test_a_comarca_may_group_municipios_of_several_provincias(self):
+        sys.path.insert(0, str(ROOT))
+        from unittest import mock
+        from seedlib import locations
+        data = {
+            'provincias': [{'codigo_ine': '17', 'nombre': 'Girona'}, {'codigo_ine': '25', 'nombre': 'Lleida'}],
+            'comarcas': [{'codigo': '21', 'nombre': 'Cerdanya'}],
+            'municipios': [
+                {'codigo_ine': '17005', 'comarca': '21'},
+                {'codigo_ine': '25052', 'comarca': '21'},
+            ],
+            'distritos': [],
+            'barrios': [],
+        }
+        with mock.patch.object(locations, '_load', side_effect=data.__getitem__):
+            self.assertEqual(locations.validate_locations(), [])
+
+    def test_a_comarca_with_a_provincia_key_is_reported_as_stale(self):
+        sys.path.insert(0, str(ROOT))
+        from unittest import mock
+        from seedlib import locations
+        data = {
+            'provincias': [{'codigo_ine': '08', 'nombre': 'Barcelona'}],
+            'comarcas': [{'codigo': '01', 'nombre': 'A', 'provincia': '08'}],
+            'municipios': [], 'distritos': [], 'barrios': [],
+        }
+        with mock.patch.object(locations, '_load', side_effect=data.__getitem__):
+            problems = locations.validate_locations()
+        self.assertEqual(len(problems), 1, problems)
+
+    def test_comarcas_have_no_province_column_after_seeding(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = str(Path(tmp) / 'test.sqlite3')
             self.run_seed(db, 'migrate')
             self.run_seed(db, 'locations')
-            c = sqlite3.connect(db)
-            bad = c.execute(
-                "select count(*) from base_municipio m join base_provincia p on p._id = m.provincia_id "
-                "where substr(m.codigo_ine, 1, 2) != p.codigo_ine").fetchone()[0]
-            self.assertEqual(bad, 0)
+            columns = [r[1] for r in sqlite3.connect(db).execute('pragma table_info(base_comarca)')]
+            self.assertNotIn('provincia_id', columns)
+            municipios = sqlite3.connect(db).execute(
+                'select count(*) from base_municipio where comarca_id is null').fetchone()[0]
+            self.assertEqual(municipios, 0)
+
+    def test_seeded_locations_pass_the_backend_consistency_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / 'test.sqlite3')
+            self.run_seed(db, 'migrate')
+            out = self.run_seed(db, 'locations').stdout
+            self.assertIn('location check: consistent', out)
+            self.assertIn('location check: consistent', self.run_seed(db, 'check-locations').stdout)
+
+    def test_check_locations_fails_when_a_listing_does_not_nest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / 'test.sqlite3')
+            self.run_seed(db, 'migrate')
+            self.run_seed(db, 'locations')
+            # A bulk import skips the model checks: a Barcelona district on a Badalona listing.
+            script = (
+                'import sys; sys.path.insert(0, %r); import seed; seed.setup_django()\n'
+                'from base.models import Distrito, Inmueble, Municipio\n'
+                "Inmueble.objects.bulk_create([Inmueble(referencia='BAD1',\n"
+                "    municipio=Municipio.objects.get(codigo_ine='08015'), distrito=Distrito.objects.first())])\n"
+            ) % str(ROOT)
+            subprocess.run(
+                [sys.executable, '-c', script], env={**os.environ, 'DB_SQLITE_PATH': db},
+                capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                [sys.executable, str(ROOT / 'seed.py'), 'check-locations'],
+                env={**os.environ, 'DB_SQLITE_PATH': db}, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertIn('BAD1', result.stdout)
 
 
 if __name__ == '__main__':

@@ -29,6 +29,7 @@ python seed.py modalidades          # the three Modalidad rows: temporal, habitu
 python seed.py modalidades --dry-run
 python seed.py condiciones         # the default Condiciones of each modalidad (needs modalidades first)
 python seed.py condiciones --dry-run
+python seed.py check-locations      # check that listings' municipio/distrito/barrio nest (read only; exit 1 if not)
 python seed.py status               # row counts
 python seed.py fetch-locations      # refresh data/*.json from the official sources
 ```
@@ -42,12 +43,14 @@ All commands except `fetch-locations` are safe to run repeatedly. `locations` an
 ## Location rules
 `locations` checks the data files before it writes anything, and aborts with the full list of problems:
 - a municipio's `codigo_ine` must start with the code of a province in `provincias.json`;
-- its `comarca` must exist in `comarcas.json` and be in the same province (a comarca may carry an optional
-  `provincia` key; without it, it is Barcelona's);
+- its `comarca` must exist in `comarcas.json`. A comarca has no province (it may group municipios of several, as
+  Cerdanya does), so a `provincia` key on a comarca is stale and reported;
 - every distrito must point at a municipio in the files, and every barrio at a distrito in the files.
 
-The backend models enforce the same rules on every save (`Municipio`: code prefix and comarca province), so
-rows written by the seed and by the admin obey one set of rules. Distritos and barrios are optional for a
+The backend models enforce the code-prefix rule on every save, so rows written by the seed and by the admin obey
+one set of rules. After a real `locations` run the seed also runs the backend's location scan
+(`comprobar_ubicaciones`) and exits with status 1, listing the offenders, if any listing's municipio, distrito and
+barrio do not nest or a municipio code does not match its province. `check-locations` runs just that scan. Distritos and barrios are optional for a
 listing: only Barcelona city has them loaded, so other municipios have a municipio-level location only.
 
 ## Configuration
@@ -71,6 +74,7 @@ Committed, so seeding works offline. Each file records its sources and retrieval
 `condiciones` creates `Alquiler de temporada`, `Alquiler de vivienda habitual` and `Compraventa`, each the default
 of its modalidad. Staff edit them in the admin, so the command never overwrites: it skips a record whose name
 exists, or whose modalidad already has a default, and reports `kept`. It stops if the modalidades are not loaded.
+The rent defaults include the rent-update clause (`actualizacion_renta`, the IRAV, which applies only if agreed). Because the command never overwrites, default records created before that field existed keep it empty: set it in the admin.
 
 ## Tests
 ```

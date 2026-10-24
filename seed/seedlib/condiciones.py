@@ -12,7 +12,7 @@ from .fetch import DATA_DIR
 from .locations import DryRun
 
 TEXTOS = (
-    'fianza', 'honorarios', 'pago_adelantado', 'itp', 'suministros', 'limpieza_final',
+    'fianza', 'honorarios', 'pago_adelantado', 'itp', 'suministros', 'actualizacion_renta', 'limpieza_final',
     'incluido', 'no_incluido', 'requisitos', 'notaria', 'registro', 'gestoria',
     'honorarios_comprador',
 )

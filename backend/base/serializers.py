@@ -3,7 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from .models import Inmueble, ImageInmueble, Barrio, Modalidad, Distrito, Municipio, Provincia, Otros, PlazaAparcamiento, Banios, Dormitorios, Instalaciones, Dotacion, AreaRecreo, Estancias
 from .models import Seguridad, Entorno, Transporte, OtrosEspacios
-from .models import Condiciones, InmuebleModalidad, MediaInmueble, RegistroLegal, SolicitudReserva
+from .models import Condiciones, InmuebleModalidad, MediaInmueble, RegistroLegal, RegulacionAlquiler, SolicitudReserva
 
 class ProvinciasSerializer(serializers.ModelSerializer):
     class Meta:
@@ -155,14 +155,28 @@ class CondicionesSerializer(serializers.ModelSerializer):
       model = Condiciones
       exclude = ['por_defecto', 'modalidad']
 
+class RegulacionAlquilerSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = RegulacionAlquiler
+      fields = ['indice_referencia_min', 'indice_referencia_max', 'indice_referencia_fecha',
+                'renta_previa', 'ultima_renta', 'ultima_renta_fin']
+
 class PrecioModalidadDetalleSerializer(PrecioModalidadSerializer):
-   # Monthly price charged before the current one (from the private price history); null when unknown.
-   ultima_renta = serializers.DecimalField(max_digits=11, decimal_places=2, read_only=True)
+   # Rent regulation of a rental offer: null for a sale; a rental without a record is "desconocida".
+   regulacion = serializers.SerializerMethodField()
    # The listing's own conditions for this modalidad, else the modalidad's default.
    condiciones = serializers.SerializerMethodField()
 
    class Meta(PrecioModalidadSerializer.Meta):
-      fields = PrecioModalidadSerializer.Meta.fields + ['ultima_renta', 'condiciones']
+      fields = PrecioModalidadSerializer.Meta.fields + ['regulacion', 'condiciones']
+
+   def get_regulacion(self, obj):
+      if obj.modalidad.unidad_precio != 'mensual':
+         return None
+      try:
+         return RegulacionAlquilerSerializer(obj.regulacion).data
+      except ObjectDoesNotExist:
+         return RegulacionAlquilerSerializer(RegulacionAlquiler()).data
 
    def get_condiciones(self, obj):
       if obj.condiciones_id:
@@ -284,8 +298,7 @@ INMUEBLE_PUBLIC_FIELDS = [
   'sup_construida', 'sup_cont_comun', 'sup_util',
   'eficiencia',
   'nombre_eficiencia', 'consumo_energetico', 'emisiones_co2',
-  'indice_referencia_min', 'indice_referencia_max', 'actualizacion_renta',
-  'situacion_5_anios', 'descripcion_es',
+  'descripcion_es',
   'descripcion_en', 'descripcion_cat', 'usos',
   'gtos_comunidad', 'ibi', 'situacion_actual',
   'notas_web',

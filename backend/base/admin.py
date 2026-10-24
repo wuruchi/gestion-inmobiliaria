@@ -23,6 +23,7 @@ from base.models import (
     PlazaAparcamiento,
     Otros,
     RegistroLegal,
+    RegulacionAlquiler,
     Seguridad,
     Transporte,
     Provincia,
@@ -104,6 +105,7 @@ class InmuebleModalidadFormSet(BaseInlineFormSet):
 
 class InmuebleModalidadInline(admin.TabularInline):
     model = InmuebleModalidad
+    show_change_link = True  # the rent regulation is edited on the offer's own page
     formset = InmuebleModalidadFormSet
     extra = 1
     min_num = 1
@@ -305,3 +307,18 @@ class DeclaracionZonaTensionadaAdmin(admin.ModelAdmin):
     list_filter = ('desde', 'hasta')
     search_fields = ('municipio__nombre', 'referencia')
     autocomplete_fields = ('municipio',)
+
+
+class RegulacionAlquilerInline(admin.StackedInline):
+    model = RegulacionAlquiler
+
+
+@admin.register(InmuebleModalidad)
+class InmuebleModalidadAdmin(admin.ModelAdmin):
+    """One offer (price of a listing under a modalidad) with its rent regulation."""
+
+    list_display = ('inmueble', 'modalidad', 'precio', 'estado')
+    list_filter = ('modalidad', 'estado')
+    search_fields = ('inmueble__referencia',)
+    list_select_related = ('inmueble', 'modalidad')
+    inlines = [RegulacionAlquilerInline]

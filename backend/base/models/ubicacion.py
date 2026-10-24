@@ -30,24 +30,16 @@ class Provincia(SlugMixin):
 
 
 class Comarca(SlugMixin):
+    """A Catalan comarca. It has no province: a comarca can span two (Cerdanya), so the
+    province belongs to each `Municipio` and the comarca only groups municipios."""
+
     _id = models.AutoField(primary_key=True, editable=False)
-    provincia = models.ForeignKey(
-        Provincia, on_delete=models.PROTECT, related_name='comarcas'
-    )
-    codigo = models.CharField(max_length=2)  # official code, e.g. '21'
+    codigo = models.CharField(max_length=2, unique=True)  # official code, e.g. '21'
     nombre = models.CharField(max_length=100)
-    slug = models.SlugField()
+    slug = models.SlugField(unique=True)
 
     class Meta:
         ordering = ['nombre']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['provincia', 'codigo'], name='uniq_comarca_codigo'
-            ),
-            models.UniqueConstraint(
-                fields=['provincia', 'slug'], name='uniq_comarca_slug'
-            ),
-        ]
 
     def __str__(self) -> str:
         return self.nombre
@@ -81,16 +73,12 @@ class Municipio(SlugMixin):
         ]
 
     def validate_location(self):
-        """The code starts with the province's and the comarca is in the same province."""
+        """The code starts with the province's. The comarca may be in another province."""
         if self.provincia_id and not self.codigo_ine.startswith(
             self.provincia.codigo_ine
         ):
             raise ValidationError(
                 {'codigo_ine': 'El código INE no empieza por el de la provincia.'}
-            )
-        if self.comarca_id and self.comarca.provincia_id != self.provincia_id:
-            raise ValidationError(
-                {'comarca': 'La comarca no pertenece a la provincia.'}
             )
 
     def clean(self):

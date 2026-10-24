@@ -7,9 +7,6 @@ from django.utils.text import slugify
 from .fetch import DATA_DIR
 
 
-DEFAULT_PROVINCIA = '08'  # the comarca file does not name its province: Catalonia's is Barcelona's
-
-
 class DryRun(Exception):
     pass
 
@@ -27,14 +24,16 @@ def _upsert(model, lookup, defaults, stats):
 def validate_locations():
     """Check that the data files nest properly; returns the list of problems (empty = ok).
 
-    A municipio's code must start with its province's, its comarca must exist, and every
-    distrito and barrio must point at a municipio / distrito that is in the files.
+    A municipio's code must start with the code of a province in the files, its comarca must exist,
+    and every distrito and barrio must point at a municipio / distrito that is in the files.
+    A comarca has no province of its own (Cerdanya spans two), so it may group municipios of
+    several provinces; a `provincia` key on a comarca is stale and reported.
     """
     provincias = {p['codigo_ine'] for p in _load('provincias')}
-    comarcas = {c['codigo']: c.get('provincia', DEFAULT_PROVINCIA) for c in _load('comarcas')}
+    comarcas = {c['codigo'] for c in _load('comarcas')}
     problems = [
-        f'comarca {code}: unknown provincia {prov}'
-        for code, prov in comarcas.items() if prov not in provincias
+        f'comarca {c["codigo"]}: has a provincia, but a comarca belongs to none'
+        for c in _load('comarcas') if 'provincia' in c
     ]
     municipios = {}
     for m in _load('municipios'):
@@ -44,8 +43,6 @@ def validate_locations():
             problems.append(f'municipio {code}: unknown provincia {code[:2]}')
         if m['comarca'] not in comarcas:
             problems.append(f'municipio {code}: unknown comarca {m["comarca"]}')
-        elif comarcas[m['comarca']] != code[:2]:
-            problems.append(f'municipio {code}: comarca {m["comarca"]} is in another provincia')
     distritos = set()
     for d in _load('distritos'):
         if d['municipio_ine'] not in municipios:
@@ -81,10 +78,7 @@ def seed_locations(dry_run=False):
             for c in _load('comarcas'):
                 comarcas[c['codigo']] = _upsert(
                     Comarca,
-                    {
-                        'provincia': provincias[c.get('provincia', DEFAULT_PROVINCIA)],
-                        'codigo': c['codigo'],
-                    },
+                    {'codigo': c['codigo']},
                     {'nombre': c['nombre'], 'slug': slugify(c['nombre'])},
                     stats,
                 )
@@ -125,3 +119,9 @@ def seed_locations(dry_run=False):
     except DryRun:
         pass
     return stats
+
+
+def check_locations():
+    """Run the backend's location consistency scan; returns the list of `(tipo, descripcion)` problems."""
+    from base.comprobaciones import inconsistencias_ubicacion
+    return inconsistencias_ubicacion()
