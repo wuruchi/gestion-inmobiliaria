@@ -15,6 +15,7 @@ erDiagram
     Provincia ||--o{ Municipio : has
     Comarca |o--o{ Municipio : groups
     Municipio ||--o{ Distrito : has
+    Municipio ||--o{ DeclaracionZonaTensionada : "declared stressed"
     Distrito ||--o{ Barrio : has
 
     Inmueble }o--|| Municipio : located
@@ -33,7 +34,8 @@ erDiagram
     Inmueble ||--o{ PlazaAparcamiento : "parking spaces"
     Inmueble ||--o{ RegistroLegal : "registry numbers"
     Inmueble ||--o| DatosInternos : "private data"
-    Propietario ||--o{ DatosInternos : owns
+    Inmueble ||--o{ InmueblePropietario : "owned by"
+    Propietario ||--o{ InmueblePropietario : owns
     Inmueble ||--o{ SolicitudReserva : "requests (reservation, visit, information)"
 
     Inmueble ||--o| Dormitorios : detail
@@ -59,7 +61,7 @@ The model groups:
 | Detail tables | `Dormitorios`, `Banios`, `Estancias`, `OtrosEspacios`, `Dotacion`, `Instalaciones`, `Seguridad`, `Entorno`, `Transporte`, `AreaRecreo`, `Otros` | Yes |
 | Media and parking | `ImageInmueble`, `MediaInmueble`, `PlazaAparcamiento` | Yes (parking value and rent are private; the optional price is public) |
 | Legal | `RegistroLegal` | Yes |
-| Private | `Propietario`, `DatosInternos`, `HistorialPrecio` | Never |
+| Private | `Propietario`, `InmueblePropietario`, `DatosInternos`, `HistorialPrecio`, `DeclaracionZonaTensionada` | Never (the detail shows only `gran_tenedor` and `zona_tensionada`, derived) |
 | Requests | `SolicitudReserva` | Write-only: the public can create one, never read |
 
 ## 2. Dependencies and delete behaviour
@@ -80,7 +82,8 @@ Direction: "A → B" means A holds the foreign key to B.
 | `InmuebleModalidad` → `Modalidad` | | `PROTECT` (a modalidad in use cannot be deleted) |
 | `ImageInmueble`, `MediaInmueble`, `PlazaAparcamiento`, `RegistroLegal`, `HistorialPrecio`, `DatosInternos` → `Inmueble` | | `CASCADE` |
 | Every detail table → `Inmueble` (one-to-one, field `inmueble`) | | `CASCADE` |
-| `DatosInternos` → `Propietario` (optional) | | `PROTECT` (an owner with listings cannot be deleted) |
+| `InmueblePropietario` → `Inmueble` | | `CASCADE` |
+| `InmueblePropietario` → `Propietario` | | `PROTECT` (an owner with listings cannot be deleted) |
 | `SolicitudReserva` → `Inmueble` (optional) | | `SET_NULL` (the request survives its listing) |
 
 Consequences: you cannot delete a location, a modalidad in use, a conditions record in use or an owner with
@@ -128,12 +131,24 @@ One row per modalidad a listing is offered under. This is the only place prices 
 | A modalidad in use cannot be deleted | DB (`PROTECT`) |
 | `mas_iva` says the price excludes VAT; `tipo_iva` (0–100 %) is then required, and must be empty without `mas_iva` | DB constraint + model `clean()` |
 | `condiciones` (optional) must be conditions of the same modalidad | model `clean()` and `save()` |
+| `estado` of the offer: `disponible` (default), `reservado` or `cerrado` (rented or sold) | DB choices + model validator |
+
+The availability of a listing is not stored: `Inmueble.estado` is derived from its offers and returned in the list
+and the detail. `Disponible` if any offer is `disponible` (or there are no offers); else `Reservado` if any is
+`reservado`; when every offer is `cerrado`, `Alquilado` if one of them has a monthly price, else `Vendido`. So a
+flat that is let but still for sale stays `Disponible`. The list is ordered by this state (available, reserved,
+closed), then by `fecha_disponibilidad`.
 
 Because the price is required, a listing offered for sale always has a sale price, and a rental always has a
 rent price. `precio` is always the amount as advertised: with `mas_iva` it is the net price. The API returns
-`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva}]` (the detail adds `condiciones`)
+`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva}]` (the detail adds `ultima_renta` and `condiciones`)
 and keeps two derived fields for the frontend: `importe_venta` (the venta price) and `importe_alquiler` (the
 lowest monthly price), both as stored, without VAT added.
+
+`ultima_renta` (the rent the regulation asks to show) is not a column: it is the monthly price charged before the
+current one, for that modalidad, read from `HistorialPrecio` (rows dated in the future are ignored). It is `null`
+when there is no earlier price and always `null` for sale. It is returned in each detail `modalidades` entry, so a
+listing offered under two rental modalidades has one per modalidad. The history itself is never serialized.
 
 ### `Condiciones`
 Contracting conditions of one modalidad (`modalidad`, required), as text.
@@ -156,20 +171,19 @@ Primary key `_id`; `referencia` is unique. Main groups of columns:
 
 | Group | Columns |
 |---|---|
-| Identity | `referencia`, `original_id` (id in the legacy system), `titulo`, `tipo`, `subtipo`, `estado` |
+| Identity | `referencia`, `original_id` (id in the legacy system), `titulo`, `tipo`, `subtipo` |
 | Building | `conservacion`, `anio_construccion`, `planta` (floor of a flat), `n_plantas` (levels of the property) |
 | Location | `municipio`, `distrito`, `barrio`, `codigo_postal`, `direccion`, `direccion_short`, `dir_descripcion`, `ocultar_direccion`, `geo_latitude`, `geo_longitude` |
 | Dates | `fecha_disponibilidad`, `fecha_alta`, `fecha_baja`, `fecha_entrega` (all dates, no time) |
 | Surfaces (m²) | `sup_construida`, `sup_cont_comun`, `sup_util`, `sup_parcela` (plot) |
 | Costs | `gtos_comunidad`, `ibi` (whether they are included in the rent is `Otros.gastos_comunidad_incluidos` and `Otros.ibi_incluido`) |
 | Energy | `eficiencia`, `nombre_eficiencia`, `consumo_energetico` (kWh/m²/year), `emisiones_co2` (kg CO₂/m²/year) |
-| Catalan rental rules | `ultima_renta`, `indice_referencia_min`, `indice_referencia_max`, `actualizacion_renta`, `situacion_5_anios`, `gran_tenedor`, `zona_tensionada` |
+| Catalan rental rules | `indice_referencia_min`, `indice_referencia_max`, `actualizacion_renta`, `situacion_5_anios`. `zona_tensionada` and `gran_tenedor` are not columns: `gran_tenedor` is a property of the owner (`Propietario.gran_tenedor`) and the detail returns `true` when any owner of the listing has it; `zona_tensionada` comes from the municipality's declarations (section 3) and is `true` when one is in force today |
 | Web | `publicar_web`, `descripcion_es`, `descripcion_en`, `descripcion_cat`, `usos`, `notas_web`, `situacion_actual` |
 | Audit | `created_at`, `updated_at`, `created_by`, `updated_by` |
 
 Choices: `tipo` is Vivienda, Oficina, Local, Parking or Otro (default Otro); `conservacion` is obra nueva,
-buen estado or a reformar (it is not `estado`, which is availability); `estado` is Disponible,
-Alquilado or Reservado (default Disponible).
+buen estado or a reformar (it is not the availability `estado`, which lives on each offer, see section 4).
 
 ### Rules
 
@@ -180,7 +194,7 @@ Alquilado or Reservado (default Disponible).
 | `indice_referencia_min` ≤ `indice_referencia_max` | DB constraint + model `clean()` |
 | `subtipo` is one of piso, ático, dúplex, estudio, chalet adosado, chalet independiente, otro, and only a `Vivienda` has one (any other `tipo` needs it empty) | DB constraint + model `clean()` and `save()` |
 | `anio_construccion` is 1000–2100, `planta` is -5–100 (0 is the ground floor, negative a basement), `n_plantas` is 1–100 | DB constraint + model validator |
-| `sup_construida`, `sup_cont_comun`, `sup_util`, `sup_parcela`, `gtos_comunidad`, `ibi`, `ultima_renta`, both reference indices, `consumo_energetico` and `emisiones_co2` cannot be negative | DB constraint + model validator |
+| `sup_construida`, `sup_cont_comun`, `sup_util`, `sup_parcela`, `gtos_comunidad`, `ibi`, both reference indices, `consumo_energetico` and `emisiones_co2` cannot be negative | DB constraint + model validator |
 | Surfaces allow up to 999,999.99 m² | DB |
 | A new listing is not published (`publicar_web=False`) | model default |
 | `created_by` is set on creation and `updated_by` on every save, from the logged-in user | admin (`save_model`) |
@@ -287,9 +301,11 @@ issuing body, so other provinces can use their own registries.
 
 | Model | Purpose and rules |
 |---|---|
-| `Propietario` | Owner: `nombre`, `nif`, `email`, `telefono`. An owner with listings cannot be deleted (`PROTECT`) |
-| `DatosInternos` | One per listing: `propietario` (optional), `notas_internas`, `otros_datos`, `cat_nrc` (cadastral reference), `fecha_firma`, and how the agency works the listing: `exclusiva`, `gestion_comercial`, `administracion` (three independent yes/no flags) and `tasacion_propietario` (the owner's valuation, not negative, DB) |
-| `HistorialPrecio` | Price by date for a listing under one `modalidad` (rent or sale): `fecha`, `importe` (≥ 0, model validator), `nota`; one entry per modalidad and date per listing (DB); newest first. `ultima_renta` on `Inmueble` stays the public declared figure and is not linked to it |
+| `Propietario` | Owner, independent of any listing: `nombre`, `nif`, `email`, `telefono`, `gran_tenedor` (large holder; applies to all their listings). An owner with listings cannot be deleted (`PROTECT`) |
+| `InmueblePropietario` | Link between a listing and an owner (many to many): optional `porcentaje` (share, above 0 and up to 100, DB); an owner appears once per listing (DB). Removed with the listing |
+| `DatosInternos` | One per listing: `notas_internas`, `otros_datos`, `cat_nrc` (cadastral reference), `fecha_firma`, and how the agency works the listing: `exclusiva`, `gestion_comercial`, `administracion` (three independent yes/no flags) and `tasacion_propietario` (the owner's valuation, not negative, DB) |
+| `DeclaracionZonaTensionada` | Municipality declared a stressed residential market for a period: `municipio` (`PROTECT`), `desde`, `hasta` (empty = still in force, never before `desde`, DB), `referencia` (resolution). One per municipality and start date (DB). `Municipio.es_zona_tensionada()` is true when one is in force on the date; overlaps are allowed. Staff maintain it in the admin; nothing is seeded |
+| `HistorialPrecio` | Price by date for a listing under one `modalidad` (rent or sale): `fecha`, `importe` (≥ 0, model validator), `nota`; one entry per modalidad and date per listing (DB); newest first. Rows are appended automatically when an `InmuebleModalidad` price is created or changed (`save()`; a second change on the same day replaces the day's row; `QuerySet.update()` and `bulk_create()` skip it), so the latest row equals the current price. Rows can also be entered by hand, for example past prices. Private, except that the previous monthly price becomes the public `ultima_renta` (see section 4). A modalidad with history cannot be deleted (`PROTECT`) |
 | `Inmueble` columns | `original_id`, `publicar_web`, `fecha_baja`, `fecha_entrega`, `created_at`, `updated_at`, `created_by`, `updated_by` |
 
 Public exposure is an allow-list: a new `Inmueble` column stays private until it is added to the public list

@@ -16,6 +16,7 @@ from base.models import (
     MediaInmueble,
     HistorialPrecio,
     Inmueble,
+    InmueblePropietario,
     InmuebleModalidad,
     Instalaciones,
     OtrosEspacios,
@@ -32,6 +33,7 @@ from base.models import (
     Distrito,
     Condiciones,
     DatosInternos,
+    DeclaracionZonaTensionada,
     Propietario,
     SolicitudReserva,
 )
@@ -81,6 +83,11 @@ class TransporteInline(admin.StackedInline):
 
 class DatosInternosInline(admin.StackedInline):
     model = DatosInternos
+
+
+class InmueblePropietarioInline(admin.TabularInline):
+    model = InmueblePropietario
+    extra = 1
     autocomplete_fields = ('propietario',)
 
 
@@ -165,6 +172,7 @@ class InmuebleAdmin(admin.ModelAdmin):
         PlazaAparcamientoInline,
         RegistroLegalInline,
         HistorialPrecioInline,
+        InmueblePropietarioInline,
         DatosInternosInline,
         DormitoriosInline,
         BaniosInline,
@@ -186,15 +194,15 @@ class InmuebleAdmin(admin.ModelAdmin):
         'precios_lista',
         'fecha_disponibilidad',
         'propietario',
+        'estado',
         'publicar_web',
     )
-    search_fields = ['referencia', 'direccion', 'datos_internos__propietario__nombre']
-    list_filter = ('modalidades', 'publicar_web')
+    search_fields = ['referencia', 'direccion', 'propietarios__nombre']
+    list_filter = ('modalidades', 'precios__estado', 'publicar_web')
 
     @admin.display(description='Propietario')
     def propietario(self, obj):
-        datos = getattr(obj, 'datos_internos', None)
-        return datos.propietario if datos else None
+        return ', '.join(p.nombre for p in obj.propietarios.all())
 
     @admin.display(description='Precios')
     def precios_lista(self, obj):
@@ -206,8 +214,9 @@ class InmuebleAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return (
             super().get_queryset(request)
-            .select_related('datos_internos__propietario')
-            .prefetch_related(Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')))
+            .prefetch_related(
+                'propietarios',
+                Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')))
         )
 
     class Media:
@@ -253,7 +262,6 @@ admin.site.register(Banios)
 admin.site.register(Inmueble, InmuebleAdmin)
 admin.site.register(Provincia)
 admin.site.register(Comarca)
-admin.site.register(Municipio)
 admin.site.register(Distrito)
 admin.site.register(Barrio)
 
@@ -264,7 +272,8 @@ class ModalidadAdmin(admin.ModelAdmin):
 
 @admin.register(Propietario)
 class PropietarioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'nif', 'email', 'telefono')
+    list_display = ('nombre', 'nif', 'email', 'telefono', 'gran_tenedor')
+    list_filter = ('gran_tenedor',)
     search_fields = ('nombre', 'nif', 'email')
 
 
@@ -281,3 +290,18 @@ class SolicitudReservaAdmin(admin.ModelAdmin):
     search_fields = ('referencia', 'nombre', 'email')
     readonly_fields = ('inmueble', 'referencia', 'tipo', 'nombre', 'email', 'telefono',
                        'fecha_desde', 'mensaje', 'acepta_aviso_legal', 'datos_borrados', 'created_at')
+
+
+@admin.register(Municipio)
+class MunicipioAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'codigo_ine', 'provincia', 'comarca')
+    list_filter = ('provincia',)
+    search_fields = ('nombre', 'codigo_ine')
+
+
+@admin.register(DeclaracionZonaTensionada)
+class DeclaracionZonaTensionadaAdmin(admin.ModelAdmin):
+    list_display = ('municipio', 'desde', 'hasta', 'referencia')
+    list_filter = ('desde', 'hasta')
+    search_fields = ('municipio__nombre', 'referencia')
+    autocomplete_fields = ('municipio',)

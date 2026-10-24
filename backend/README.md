@@ -46,13 +46,13 @@ The database settings live in `backend/database.py`, shared with the seed tool.
   `Transporte`, `AreaRecreo`, `Otros`. They are the single source for equipment and stay limits.
 - **Prices:** `InmuebleModalidad` holds one required, non-negative `precio` per listing and modalidad.
   `Modalidad.unidad_precio` says whether it is monthly or a total. A modalidad in use cannot be deleted.
-  The API returns `modalidades: [{codigo, nombre, unidad_precio, precio}]`; `importe_alquiler` (lowest monthly
+  The API returns `modalidades: [{codigo, nombre, unidad_precio, precio}]` (the detail also has `ultima_renta` per rental modalidad, from the price history); `importe_alquiler` (lowest monthly
   price) and `importe_venta` are derived from it for the frontend.
 - **Rooms:** `n_habitaciones` is computed (`Dormitorios`: dobles + individuales; suites are a subset), not stored.
 - **Parking:** `PlazaAparcamiento` (many per listing: number, type, surface, notes, optional price; value and rent are private).
   `n_plz_garaje` in the API is the count of plazas. A parking space on its own is a listing with `tipo='Parking'`.
 - **Photos:** `ImageInmueble` (`ImageField`, `tipo`, `posicion`, `alt_text`, one `default` photo per listing; floor plans are `tipo='plano'`). `MediaInmueble`: videos and virtual tours by link.
-- **Private (never in the API):** `Propietario` (owners), `DatosInternos` (one per listing: owner link, internal
+- **Private (never in the API):** `Propietario` (owners, with `gran_tenedor`), `InmueblePropietario` (listing ↔ owners, many to many), `DatosInternos` (one per listing: internal
   notes, `cat_nrc`, signing date), `HistorialPrecio` (price by date and modalidad). `Inmueble.created_by` / `updated_by` are set by the admin.
 - **Other:** `SolicitudReserva` (reservation, visit or information requests: `tipo`, optional `mensaje`; `estado` pendiente / contactada / cerrada / descartada).
   Personal data is kept 12 months: schedule `python manage.py purgar_solicitudes` (options `--meses N`, `--dry-run`),

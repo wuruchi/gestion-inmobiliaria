@@ -16,7 +16,9 @@ from .otros import Otros
 from .condiciones import Condiciones
 from .solicitud_reserva import SolicitudReserva
 from .historial_precio import HistorialPrecio
+from .zona_tensionada import DeclaracionZonaTensionada
 from .propietario import Propietario
+from .inmueble_propietario import InmueblePropietario
 from .datos_internos import DatosInternos
 from .estancias import Estancias
 from .plaza_aparcamiento import PlazaAparcamiento

@@ -1,7 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from base.models.inmueble import Inmueble
-from base.models.propietario import Propietario
 
 
 class DatosInternos(models.Model):
@@ -9,13 +8,6 @@ class DatosInternos(models.Model):
 
     inmueble = models.OneToOneField(
         Inmueble, on_delete=models.CASCADE, related_name='datos_internos'
-    )
-    propietario = models.ForeignKey(
-        Propietario,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='inmuebles',
     )
     notas_internas = models.TextField(blank=True, default='')
     otros_datos = models.TextField(blank=True, default='')

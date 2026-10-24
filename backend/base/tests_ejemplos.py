@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from base.models import (
+    DeclaracionZonaTensionada, HistorialPrecio,
     AreaRecreo, Banios, Comarca, Condiciones, DatosInternos, Distrito, Barrio, Dormitorios, Dotacion,
     Entorno, Estancias, ImageInmueble, Inmueble, InmuebleModalidad, Instalaciones, MediaInmueble,
     Modalidad, Municipio, Otros, OtrosEspacios, PlazaAparcamiento, Provincia, RegistroLegal,
@@ -69,9 +70,10 @@ class Atb01Test(EjemploTestCase):
             descripcion_es='ARRENDAMIENTO DE USO DISTINTO DEL DE VIVIENDA (USO EXCLUSIVO VACACIONES/OCIO). '
                            'Fantástico piso de obra nueva y de diseño con una terraza privada, un solarium '
                            'y dos piscinas comunitarias. ALARMA Y WIFI INCLUIDO. Finca con ascensor.',
-            zona_tensionada=True, indice_referencia_min='839.99', indice_referencia_max='1153.53',
-            situacion_5_anios='Vivienda alquilada', ultima_renta='1750', gran_tenedor=False,
+            indice_referencia_min='839.99', indice_referencia_max='1153.53',
+            situacion_5_anios='Vivienda alquilada',
             actualizacion_renta='IRAV', eficiencia='D', consumo_energetico='71')
+        DeclaracionZonaTensionada.objects.create(municipio=cls.barcelona, desde=date(2021, 9, 20))
         precio_condiciones = Condiciones.objects.create(
             nombre='Temporada', modalidad=cls.temporal, por_defecto=True,
             fianza='Mínimo 2 mensualidades de alquiler.', honorarios='1 mensualidad + IVA',
@@ -80,6 +82,9 @@ class Atb01Test(EjemploTestCase):
             limpieza_final='Obligatoria y a cargo del inquilino',
             incluido='Gastos de comunidad y seguro', no_incluido='Honorarios de la agencia, agua y luz',
             requisitos='Trabajador por cuenta ajena: DNI/NIE, contrato y 3 últimas nóminas, IBAN.')
+        # The last rent (1750 €) is the price charged before the current one, so it comes from the history.
+        HistorialPrecio.objects.create(
+            inmueble=inm, modalidad=cls.temporal, fecha=date(2024, 5, 1), importe='1750')
         InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.temporal, precio='1750')
         RegistroLegal.objects.create(inmueble=inm, tipo='cedula_habitabilidad', numero='CHB0333*******')
         RegistroLegal.objects.create(inmueble=inm, tipo='aicat', numero='5205')
@@ -123,8 +128,9 @@ class Atb01Test(EjemploTestCase):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
             'zona_tensionada': True, 'indice_referencia_min': '839.99', 'indice_referencia_max': '1153.53',
-            'situacion_5_anios': 'Vivienda alquilada', 'ultima_renta': '1750.00', 'gran_tenedor': False,
+            'situacion_5_anios': 'Vivienda alquilada', 'gran_tenedor': False,
             'actualizacion_renta': 'IRAV', 'eficiencia': 'D', 'consumo_energetico': '71.00'})
+        self.assertEqual(data['modalidades'][0]['ultima_renta'], '1750.00')
         self.assertEqual(
             sorted((r['tipo'], r['numero']) for r in data['registros_legales']),
             [('aicat', '5205'), ('cedula_habitabilidad', 'CHB0333*******')])
@@ -194,12 +200,14 @@ class Atb02Test(EjemploTestCase):
             descripcion_es='Alquiler de Oficina (2 a 5 años). Oficina en Sabadell Centre a escasos metros '
                            'de la Gran Vía. Dos espacios diáfanos, uno (16 m2) con un baño con ducha y otro '
                            'independiente (18 m2) en el patio (60 m2). DETALLES: Persianas eléctricas.',
-            situacion_5_anios='Alquilado', ultima_renta='390', eficiencia='E', consumo_energetico='126')
+            situacion_5_anios='Alquilado', eficiencia='E', consumo_energetico='126')
         # Honorarios are 700 € + IVA for this office, so it has conditions of its own.
         propias = Condiciones.objects.create(
             nombre='Oficina G753-B-1', modalidad=cls.habitual, honorarios='700 € + IVA',
             incluido='Gastos de comunidad, seguro e IBI', no_incluido='Honorarios de la agencia, ITP y suministros')
         # The page says "+IVA" without the rate; 21 % is the general rate for commercial leases.
+        HistorialPrecio.objects.create(
+            inmueble=inm, modalidad=cls.habitual, fecha=date(2023, 3, 1), importe='390')
         InmuebleModalidad.objects.create(
             inmueble=inm, modalidad=cls.habitual, precio='450', mas_iva=True, tipo_iva='21',
             condiciones=propias)
@@ -235,8 +243,8 @@ class Atb02Test(EjemploTestCase):
 
     def test_energy_and_last_rent(self):
         self.assertContiene(self.detalle(self.inm), {
-            'situacion_5_anios': 'Alquilado', 'ultima_renta': '390.00', 'eficiencia': 'E',
-            'consumo_energetico': '126.00'})
+            'situacion_5_anios': 'Alquilado', 'eficiencia': 'E', 'consumo_energetico': '126.00'})
+        self.assertEqual(self.detalle(self.inm)['modalidades'][0]['ultima_renta'], '390.00')
 
     # NO MODELADO: a long office lease has to use the `habitual` modalidad, whose name says "Vivienda
     # habitual". "Persianas eléctricas" has no field; it stays in the description. An office has no
@@ -500,7 +508,7 @@ class Idealista03Test(EjemploTestCase):
         cls.inm = inm = Inmueble.objects.create(
             referencia='IDEA-03', municipio=sitges, distrito=centre, direccion='Calle de Sant Sebastià',
             ocultar_direccion=True, tipo='Vivienda', subtipo='piso', conservacion='buen_estado',
-            anio_construccion=2009, sup_construida='55', sup_util='46', gran_tenedor=False,
+            anio_construccion=2009, sup_construida='55', sup_util='46',
             consumo_energetico='143', emisiones_co2='25', publicar_web=True,
             descripcion_es='Piso en el corazón de Sitges. La propiedad cuenta con licencia turística. '
                            'PRECIO DE VENTA: 295.000€ + 29.500€ (ITP).')

@@ -15,13 +15,13 @@ INMUEBLES_PER_PAGE = 5
 
 # Everything InmuebleSerializer reads, fetched in 2 queries instead of ~15 per listing.
 def inmuebles_publicados(**filters):
-  return Inmueble.objects.con_habitaciones().filter(publicar_web=True, **filters).select_related(
+  return Inmueble.objects.con_habitaciones().con_orden_estado().filter(publicar_web=True, **filters).select_related(
     'municipio__provincia', 'distrito__municipio__provincia', 'barrio',
     'otros', 'banios', 'dormitorios', 'instalaciones', 'arearecreo', 'dotacion',
     'estancias',
   ).prefetch_related(
     'images', Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
-  ).order_by('-estado', 'fecha_disponibilidad', '_id')
+  ).order_by('orden_estado', 'fecha_disponibilidad', '_id')
 
 def parse_request(request, modalidad=None):
   fecha_entradata = request.query_params.get('fecha_entrada')
@@ -139,7 +139,8 @@ def getInmueble(request, pk):
       'otrosespacios', 'seguridad',
       'entorno', 'transporte',
     ).prefetch_related(
-      'images', 'plazas', 'registros_legales', 'medios',
+      'images', 'plazas', 'registros_legales', 'medios', 'propietarios', 'historial_precios',
+      'municipio__declaraciones_tensionada',
       Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones')),
     ),
     _id=pk, publicar_web=True)

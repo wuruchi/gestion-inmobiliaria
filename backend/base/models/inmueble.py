@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, Value
+from django.db.models import Case, Exists, F, OuterRef, Value, When
 from django.db.models.functions import Coalesce
 from base.models.ubicacion import Municipio, Distrito, Barrio
 from base.models.modalidad import Modalidad
@@ -11,7 +11,7 @@ from base.models.modalidad import Modalidad
 # Decimal columns that cannot be negative (validator + database constraint).
 NO_NEGATIVOS = (
     'sup_construida', 'sup_cont_comun', 'sup_util', 'gtos_comunidad', 'ibi',
-    'ultima_renta', 'indice_referencia_min', 'indice_referencia_max',
+    'indice_referencia_min', 'indice_referencia_max',
     'consumo_energetico', 'emisiones_co2', 'sup_parcela',
 )
 
@@ -24,6 +24,22 @@ class InmuebleQuerySet(models.QuerySet):
                 F('dormitorios__dobles')
                 + F('dormitorios__individuales'),
                 Value(0),
+            )
+        )
+
+    def con_orden_estado(self):
+        """Annotate `orden_estado` (see `Inmueble.estado`): 0 available, 1 reserved, 2 closed."""
+        from base.models.inmueble_modalidad import InmuebleModalidad
+        ofertas = InmuebleModalidad.objects.filter(inmueble=OuterRef('pk'))
+        return self.annotate(
+            orden_estado=Case(
+                When(
+                    ~Exists(ofertas)
+                    | Exists(ofertas.filter(estado=InmuebleModalidad.DISPONIBLE)),
+                    then=Value(0),
+                ),
+                When(Exists(ofertas.filter(estado=InmuebleModalidad.RESERVADO)), then=Value(1)),
+                default=Value(2),
             )
         )
 
@@ -51,11 +67,6 @@ class Inmueble(models.Model):
         ('obra_nueva', 'Obra nueva'),
         ('buen_estado', 'Buen estado'),
         ('a_reformar', 'A reformar'),
-    )
-    ESTADOS = (
-        ('Disponible', ('Disponible')),
-        ('Alquilado', ('Alquilado')),
-        ('Reservado', ('Reservado')),
     )
     _id = models.AutoField(primary_key=True, editable=False)
     # The province is `municipio.provincia` (see the `provincia` property).
@@ -103,6 +114,12 @@ class Inmueble(models.Model):
         blank=True,
         related_name='inmuebles',
     )
+    propietarios = models.ManyToManyField(
+        'Propietario',
+        through='InmueblePropietario',
+        blank=True,
+        related_name='inmuebles',
+    )
     codigo_postal = models.CharField(max_length=10, blank=True, default='')
     direccion = models.CharField(max_length=200, null=False, blank=True)
     direccion_short = models.CharField(max_length=200, null=False, blank=True)
@@ -116,13 +133,6 @@ class Inmueble(models.Model):
 
     fecha_alta = models.DateField(null=True, blank=True)
     fecha_baja = models.DateField(null=True, blank=True)
-    estado = models.CharField(
-        max_length=100,
-        null=False,
-        blank=True,
-        choices=ESTADOS,
-        default='Disponible',
-    )
     sup_construida = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -178,14 +188,6 @@ class Inmueble(models.Model):
         validators=[MinValueValidator(0)],
     )
     # Datos exigidos por la normativa de alquiler de Cataluña.
-    ultima_renta = models.DecimalField(
-        max_digits=9,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='Precio de la última renta',
-        validators=[MinValueValidator(0)],
-    )
     indice_referencia_min = models.DecimalField(
         max_digits=9,
         decimal_places=2,
@@ -211,10 +213,6 @@ class Inmueble(models.Model):
         max_length=100,
         blank=True,
         verbose_name='Situación en los últimos 5 años', default='')
-    gran_tenedor = models.BooleanField(default=False)
-    zona_tensionada = models.BooleanField(
-        default=False, verbose_name='Zona de mercado residencial tensionado'
-    )
     descripcion_es = models.TextField(blank=True, default='')
     descripcion_en = models.TextField(blank=True, default='')
     descripcion_cat = models.TextField(blank=True, default='')
@@ -295,8 +293,8 @@ class Inmueble(models.Model):
                 name='inm_web_loc',
             ),
             models.Index(
-                fields=['publicar_web', 'estado', 'fecha_disponibilidad'],
-                name='inm_web_estado_fecha',
+                fields=['publicar_web', 'fecha_disponibilidad'],
+                name='inm_web_fecha',
             ),
         ]
 
@@ -352,6 +350,33 @@ class Inmueble(models.Model):
     @property
     def provincia(self):
         return self.municipio.provincia
+
+    @property
+    def estado(self):
+        """Availability of the listing, derived from its offers (uses prefetched `precios`).
+
+        Disponible if any offer is available, else Reservado if any is reserved. When every offer is
+        closed: Alquilado if one of them is a monthly price, else Vendido. No offers: Disponible.
+        """
+        ofertas = list(self.precios.all())
+        estados = {o.estado for o in ofertas}
+        if not ofertas or 'disponible' in estados:
+            return 'Disponible'
+        if 'reservado' in estados:
+            return 'Reservado'
+        if any(o.modalidad.unidad_precio == 'mensual' for o in ofertas):
+            return 'Alquilado'
+        return 'Vendido'
+
+    @property
+    def zona_tensionada(self):
+        """The municipality is a stressed residential market today (uses prefetched declarations)."""
+        return self.municipio.es_zona_tensionada()
+
+    @property
+    def gran_tenedor(self):
+        """True when any owner of the listing is a large holder (uses prefetched `propietarios`)."""
+        return any(p.gran_tenedor for p in self.propietarios.all())
 
     @property
     def n_habitaciones(self):

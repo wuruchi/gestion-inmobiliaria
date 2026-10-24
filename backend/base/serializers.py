@@ -156,11 +156,13 @@ class CondicionesSerializer(serializers.ModelSerializer):
       exclude = ['por_defecto', 'modalidad']
 
 class PrecioModalidadDetalleSerializer(PrecioModalidadSerializer):
+   # Monthly price charged before the current one (from the private price history); null when unknown.
+   ultima_renta = serializers.DecimalField(max_digits=11, decimal_places=2, read_only=True)
    # The listing's own conditions for this modalidad, else the modalidad's default.
    condiciones = serializers.SerializerMethodField()
 
    class Meta(PrecioModalidadSerializer.Meta):
-      fields = PrecioModalidadSerializer.Meta.fields + ['condiciones']
+      fields = PrecioModalidadSerializer.Meta.fields + ['ultima_renta', 'condiciones']
 
    def get_condiciones(self, obj):
       if obj.condiciones_id:
@@ -207,6 +209,8 @@ class DerivedFieldsMixin(serializers.Serializer):
   # One entry per modalidad offered, with its price and the unit of that price.
   modalidades = PrecioModalidadSerializer(source='precios', many=True, read_only=True)
   es_venta = serializers.SerializerMethodField()
+  # Availability of the listing, derived from the state of each of its offers.
+  estado = serializers.CharField(read_only=True)
   importe_alquiler = serializers.SerializerMethodField()
   importe_venta = serializers.SerializerMethodField()
 
@@ -276,12 +280,12 @@ INMUEBLE_PUBLIC_FIELDS = [
   'conservacion', 'anio_construccion', 'planta', 'n_plantas', 'sup_parcela',
   'codigo_postal', 'direccion',
   'direccion_short', 'dir_descripcion', 'ocultar_direccion', 'geo_latitude', 'geo_longitude',
-  'fecha_alta', 'estado',
+  'fecha_alta',
   'sup_construida', 'sup_cont_comun', 'sup_util',
   'eficiencia',
-  'nombre_eficiencia', 'consumo_energetico', 'emisiones_co2', 'ultima_renta',
+  'nombre_eficiencia', 'consumo_energetico', 'emisiones_co2',
   'indice_referencia_min', 'indice_referencia_max', 'actualizacion_renta',
-  'situacion_5_anios', 'gran_tenedor', 'zona_tensionada', 'descripcion_es',
+  'situacion_5_anios', 'descripcion_es',
   'descripcion_en', 'descripcion_cat', 'usos',
   'gtos_comunidad', 'ibi', 'situacion_actual',
   'notas_web',
@@ -296,7 +300,7 @@ INMUEBLE_NESTED_FIELDS = [
   'n_banios', 'n_habitaciones', 'zona', 'zona_ref', 'modalidades', 'es_venta', 'importe_alquiler', 'importe_venta', 'n_plz_garaje', 'plazas', 'images', 'planos', 'medios', 'provincia', 'municipio', 'distrito', 'barrio', 'registros_legales',
   'otros', 'banios', 'dormitorios', 'instalaciones', 'arearecreo', 'dotacion',
   'cocina', 'terraza', 'salon', 'carpinteria', 'otros_espacios', 'seguridad',
-  'entorno', 'transporte',
+  'entorno', 'transporte', 'gran_tenedor', 'zona_tensionada', 'estado',
 ]
 
 class SingleInmuebleSerializer(OcultarDireccionMixin, ImagenesMixin, DerivedFieldsMixin, serializers.ModelSerializer):
@@ -324,6 +328,10 @@ class SingleInmuebleSerializer(OcultarDireccionMixin, ImagenesMixin, DerivedFiel
   plazas = PlazaAparcamientoSerializer(many=True, read_only=True)
   registros_legales = RegistroLegalSerializer(many=True, read_only=True)
   n_plz_garaje = serializers.SerializerMethodField()
+  # True when any owner is a large holder; the owners themselves are never serialized.
+  gran_tenedor = serializers.BooleanField(read_only=True)
+  # True when the municipality has a declaration in force today.
+  zona_tensionada = serializers.BooleanField(read_only=True)
 
   def get_planos(self, obj):
     return self._imagenes(obj, planos=True)

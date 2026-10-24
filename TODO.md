@@ -9,23 +9,32 @@ reference data), tests, and an update of `MODELS.md`.
 
 Rules: frontend is out of scope; the dev database is disposable, so data migrations may be skipped.
 
+Tests: never disable the suite. Start each group from a green run and update fixtures and tests in the same
+commit as the model change. If a group breaks a whole example, skip only that test with
+`@unittest.skip("TODO <item>")` and remove the skip when the group lands. A group is not done while the
+suite is red or has a skip.
+
 ## Open decisions (settle before the item that depends on them)
 
-- [ ] Current price: keep `InmuebleModalidad.precio` and append to `HistorialPrecio` on every change, or make
-      the history the source and derive the current price? (1.4)
+- [x] Current price: `InmuebleModalidad.precio` stays the source and every change is appended to
+      `HistorialPrecio` automatically; `ultima_renta` is derived from the history per modalidad (ADR 0005). (1.4)
 - [ ] Location: keep `municipio` + optional `barrio` and derive `distrito`, or keep the three FKs with a DB-level
       guarantee? (1.1)
-- [ ] `estado` per listing or per modalidad? (4)
+- [x] `estado` per modalidad: stored on `InmuebleModalidad`, derived for the listing (ADR 0004). (4)
+- [ ] `fecha_disponibilidad` is per listing but "available from" depends on the offer; move it to
+      `InmuebleModalidad` too? (4)
 - [ ] Equipment catalogue (2.4): do it, or keep the wide typed tables? Default: keep, and only unify the
       count-vs-boolean convention.
 
 ## 1. Correctness: facts in the wrong place
 
-- [ ] Move `gran_tenedor` from `Inmueble` to `Propietario`; expose it in the API only if needed. (1.2)
-- [ ] Decide where `zona_tensionada` comes from (location plus date) and stop storing it per listing. (1.2)
-- [ ] Single source of truth for the current price, per the decision above; remove the possible drift between
-      `InmuebleModalidad.precio` and `HistorialPrecio`. (1.4)
-- [ ] Rent-only regulatory columns (`ultima_renta`, `indice_referencia_min/max`, `actualizacion_renta`,
+- [x] `Propietario` is independent; a listing has many owners (`InmueblePropietario`) and `gran_tenedor` lives on
+      `Propietario`. The detail still returns `gran_tenedor`, derived from the owners (ADR 0002). (1.2, 5)
+- [x] `zona_tensionada` is derived from dated declarations per municipality (`DeclaracionZonaTensionada`, ADR 0003). (1.2)
+- [ ] Load the real declarations (list, dates and resolutions) once verified with the Generalitat / DOGC. (1.2)
+- [x] The history can no longer fall behind the current price (ADR 0005). (1.4)
+- [x] `ultima_renta` is no longer a column (ADR 0005).
+- [ ] Remaining rent-only regulatory columns (`indice_referencia_min/max`, `actualizacion_renta`,
       `situacion_5_anios`) move to the rental offer (on or under `InmuebleModalidad`). (1.3)
 - [ ] Move `Otros.estancia_*` and `acepta_animales` to the rental conditions. (3)
 - [ ] `CertificadoEnergetico` table: `eficiencia`, `nombre_eficiencia`, `consumo_energetico`, `emisiones_co2`
@@ -65,8 +74,8 @@ Rules: frontend is out of scope; the dev database is disposable, so data migrati
 
 ## 5. Missing entities
 
-- [ ] Co-ownership: `InmueblePropietario(inmueble, propietario, porcentaje)`; make `Propietario.nif` unique when
-      set. (4)
+- [x] Co-ownership: `InmueblePropietario(inmueble, propietario, porcentaje)` (ADR 0002).
+- [ ] Make `Propietario.nif` unique when set. (4)
 - [ ] `DatosInternos`: move `cat_nrc` to `RegistroLegal`; extract the management agreement (`fecha_firma`,
       `exclusiva`, `gestion_comercial`, `administracion`) into its own model with dates. (4)
 - [ ] Date the owner valuation (`tasacion_propietario`) or keep a history. (4)

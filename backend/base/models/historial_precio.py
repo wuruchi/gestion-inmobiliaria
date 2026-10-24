@@ -1,11 +1,16 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from base.models.inmueble import Inmueble
+from django.utils import timezone
 from base.models.modalidad import Modalidad
 
 
 class HistorialPrecio(models.Model):
-    """Price of a listing under a modalidad from a given date; private, never serialized."""
+    """Price of a listing under a modalidad from a given date; private, never serialized.
+
+    `InmuebleModalidad.save()` appends a row whenever its price is created or changes, so the latest
+    row always equals the current price. Rows can also be entered by hand (for example past prices).
+    """
 
     inmueble = models.ForeignKey(
         Inmueble, on_delete=models.CASCADE, related_name='historial_precios'
@@ -29,6 +34,14 @@ class HistorialPrecio(models.Model):
                 name='uniq_precio_inmueble_modalidad_fecha',
             )
         ]
+
+    @classmethod
+    def registrar(cls, inmueble_id, modalidad_id, importe, fecha=None):
+        """Record `importe` from `fecha` (today); a second change on the same day replaces the first."""
+        cls.objects.update_or_create(
+            inmueble_id=inmueble_id, modalidad_id=modalidad_id,
+            fecha=fecha or timezone.localdate(), defaults={'importe': importe},
+        )
 
     def __str__(self) -> str:
         return f'{self.inmueble.referencia} {self.modalidad} {self.fecha} {self.importe}'

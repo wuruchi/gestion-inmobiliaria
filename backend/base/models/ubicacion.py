@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -99,6 +100,11 @@ class Municipio(SlugMixin):
     def save(self, *args, **kwargs):
         self.validate_location()
         super().save(*args, **kwargs)
+
+    def es_zona_tensionada(self, fecha=None):
+        """A declaration is in force on `fecha` (today); uses prefetched `declaraciones_tensionada`."""
+        fecha = fecha or timezone.localdate()
+        return any(d.en_vigor(fecha) for d in self.declaraciones_tensionada.all())
 
     def __str__(self) -> str:
         return self.nombre
