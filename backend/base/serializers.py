@@ -82,17 +82,17 @@ class ImagenesMixin(serializers.Serializer):
 class CaracteristicasSerializer(serializers.ModelSerializer):
    class Meta:
       model = Caracteristicas
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 class DistribucionSerializer(serializers.ModelSerializer):
    class Meta:
       model = Distribucion
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 class InstalacionesSerializer(serializers.ModelSerializer):
    class Meta:
       model = Instalaciones
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 # Supplies are rows of `Suministro`; the API flattens them back to the keys the clients know.
 def instalaciones_planas(inmueble):
@@ -115,43 +115,43 @@ def instalaciones_planas(inmueble):
 class AreaRecreoSerializer(serializers.ModelSerializer):
    class Meta:
       model = AreaRecreo
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 class DotacionSerializer(serializers.ModelSerializer):
    class Meta:
       model = Dotacion
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 # The merged Estancias row is exposed under its original four keys.
 class CocinaSerializer(serializers.ModelSerializer):
    class Meta:
       model = Estancias
-      fields = ['id', 'cocina', 'cocina_amueblada', 'tipo_cocina', 'suelo_cocina', 'inmueble']
+      fields = ['cocina', 'cocina_amueblada', 'tipo_cocina', 'suelo_cocina']
 
 class TerrazaSerializer(serializers.ModelSerializer):
    class Meta:
       model = Estancias
-      fields = ['id', 'n_terrazas', 'terraza_m2', 'n_balcones', 'balcones_m2', 'descripcion', 'inmueble']
+      fields = ['n_terrazas', 'terraza_m2', 'n_balcones', 'balcones_m2', 'descripcion']
 
 class SalonSerializer(serializers.ModelSerializer):
    class Meta:
       model = Estancias
-      fields = ['id', 'salon_m2', 'descripcion', 'inmueble']
+      fields = ['salon_m2', 'descripcion']
 
 class CarpinteriaSerializer(serializers.ModelSerializer):
    class Meta:
       model = Estancias
-      fields = ['id', 'carpinteria_interior', 'carpinteria_exterior', 'inmueble']
+      fields = ['carpinteria_interior', 'carpinteria_exterior']
 
 class SeguridadSerializer(serializers.ModelSerializer):
    class Meta:
       model = Seguridad
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 class EntornoSerializer(serializers.ModelSerializer):
    class Meta:
       model = Entorno
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 # One row per mode in the database; the API keeps one flag and one description per mode.
 def transporte_plano(inmueble):
@@ -167,12 +167,12 @@ def transporte_plano(inmueble):
 class OtrosEspaciosSerializer(serializers.ModelSerializer):
    class Meta:
       model = OtrosEspacios
-      fields = '__all__'
+      exclude = ['id', 'inmueble']  # the row of a listing: neither its own id nor the listing's is needed
 
 class CondicionesSerializer(serializers.ModelSerializer):
    class Meta:
       model = Condiciones
-      exclude = ['por_defecto', 'modalidad', 'created_by', 'created_at', 'updated_by', 'updated_at']
+      exclude = ['id', 'por_defecto', 'modalidad', 'created_by', 'created_at', 'updated_by', 'updated_at']
 
 class RegulacionAlquilerSerializer(serializers.ModelSerializer):
    class Meta:

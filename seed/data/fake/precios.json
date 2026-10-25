@@ -1,0 +1,232 @@
+{
+ "note": "Approximate market figures for fake offers (dev tool), in euros: sale price and monthly rent per built m2, and the state rent-index range per m2. Order of magnitude only, not market data.",
+ "barcelona_distritos": {
+  "01": {
+   "venta_m2": 4700,
+   "alquiler_m2": 21.5,
+   "indice_m2": [
+    12.0,
+    16.5
+   ]
+  },
+  "02": {
+   "venta_m2": 5600,
+   "alquiler_m2": 22.0,
+   "indice_m2": [
+    11.8,
+    15.8
+   ]
+  },
+  "03": {
+   "venta_m2": 4200,
+   "alquiler_m2": 19.0,
+   "indice_m2": [
+    10.6,
+    14.2
+   ]
+  },
+  "04": {
+   "venta_m2": 5900,
+   "alquiler_m2": 21.0,
+   "indice_m2": [
+    11.4,
+    15.2
+   ]
+  },
+  "05": {
+   "venta_m2": 6300,
+   "alquiler_m2": 22.0,
+   "indice_m2": [
+    12.0,
+    16.5
+   ]
+  },
+  "06": {
+   "venta_m2": 5100,
+   "alquiler_m2": 21.0,
+   "indice_m2": [
+    11.6,
+    15.5
+   ]
+  },
+  "07": {
+   "venta_m2": 3800,
+   "alquiler_m2": 17.0,
+   "indice_m2": [
+    9.8,
+    13.2
+   ]
+  },
+  "08": {
+   "venta_m2": 3100,
+   "alquiler_m2": 15.0,
+   "indice_m2": [
+    8.8,
+    11.8
+   ]
+  },
+  "09": {
+   "venta_m2": 3700,
+   "alquiler_m2": 16.5,
+   "indice_m2": [
+    9.4,
+    12.6
+   ]
+  },
+  "10": {
+   "venta_m2": 4800,
+   "alquiler_m2": 20.0,
+   "indice_m2": [
+    11.0,
+    14.8
+   ]
+  }
+ },
+ "barcelona_media": {
+  "venta_m2": 4600,
+  "alquiler_m2": 19.5,
+  "indice_m2": [
+   10.8,
+   14.5
+  ]
+ },
+ "municipios": {
+  "badalona": {
+   "factor": 0.62,
+   "cp": [
+    "08911",
+    "08912",
+    "08913",
+    "08914",
+    "08915",
+    "08916",
+    "08917",
+    "08918"
+   ]
+  },
+  "l'hospitalet de llobregat": {
+   "factor": 0.68,
+   "cp": [
+    "08901",
+    "08902",
+    "08903",
+    "08904",
+    "08905",
+    "08906",
+    "08907",
+    "08908"
+   ]
+  },
+  "sabadell": {
+   "factor": 0.5,
+   "cp": [
+    "08201",
+    "08202",
+    "08203",
+    "08204",
+    "08205",
+    "08206",
+    "08207",
+    "08208"
+   ]
+  },
+  "terrassa": {
+   "factor": 0.48,
+   "cp": [
+    "08220",
+    "08221",
+    "08222",
+    "08223",
+    "08224",
+    "08225"
+   ]
+  },
+  "mataró": {
+   "factor": 0.52,
+   "cp": [
+    "08301",
+    "08302",
+    "08303",
+    "08304"
+   ]
+  },
+  "sant cugat del vallès": {
+   "factor": 0.95,
+   "cp": [
+    "08172",
+    "08173",
+    "08174"
+   ]
+  },
+  "sitges": {
+   "factor": 0.9,
+   "cp": [
+    "08870"
+   ]
+  },
+  "castelldefels": {
+   "factor": 0.8,
+   "cp": [
+    "08860"
+   ]
+  },
+  "cornellà de llobregat": {
+   "factor": 0.6,
+   "cp": [
+    "08940"
+   ]
+  },
+  "sant boi de llobregat": {
+   "factor": 0.55,
+   "cp": [
+    "08830"
+   ]
+  },
+  "santa coloma de gramenet": {
+   "factor": 0.55,
+   "cp": [
+    "08921",
+    "08922",
+    "08923"
+   ]
+  },
+  "girona": {
+   "factor": 0.55,
+   "cp": [
+    "17001",
+    "17002",
+    "17003",
+    "17004",
+    "17005",
+    "17006",
+    "17007"
+   ]
+  },
+  "lleida": {
+   "factor": 0.4,
+   "cp": [
+    "25001",
+    "25002",
+    "25003",
+    "25004",
+    "25005",
+    "25006",
+    "25007",
+    "25008"
+   ]
+  },
+  "tarragona": {
+   "factor": 0.5,
+   "cp": [
+    "43001",
+    "43002",
+    "43003",
+    "43004",
+    "43005",
+    "43006",
+    "43007"
+   ]
+  }
+ },
+ "factor_por_defecto": 0.5
+}

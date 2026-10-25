@@ -199,7 +199,7 @@ class DetailApiTests(TestCase):
         self.assertTrue(data['seguridad']['puerta_blindada'])
         self.assertEqual(data['entorno']['cerca_colegios'], True)
         self.assertEqual(data['transporte']['descripcion_metro'], 'L2')
-        self.assertEqual(data['salon'], {'id': data['terraza']['id'], 'salon_m2': None, 'descripcion': 'Vistas', 'inmueble': self.inm.id})
+        self.assertEqual(data['salon'], {'salon_m2': None, 'descripcion': 'Vistas'})
         self.assertEqual(data['terraza']['descripcion'], 'Vistas')
         self.assertFalse(data['carpinteria']['carpinteria_interior'])
         self.assertTrue(data['zona_tensionada'])
@@ -1880,6 +1880,114 @@ class CamposDeLocabarcelonaTests(ModalidadFixture):
         self.assertEqual(self.detalle()['descripciones'], {'it': 'Ciao'})
 
 
+class PanelDeAdministracionTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.client.force_login(get_user_model().objects.create_superuser('admin', 'a@example.com', 'x'))
+
+    def secciones(self):
+        response = self.client.get('/admin/')
+        return {a['name']: [m['object_name'] for m in a['models']] for a in response.context['app_list']}
+
+    def test_the_index_splits_the_base_app_into_sections(self):
+        secciones = self.secciones()
+        self.assertEqual(secciones['Inmuebles'], ['Inmueble', 'ImageInmueble', 'Distribucion'])
+        self.assertEqual(secciones['Ofertas y condiciones'], ['InmuebleModalidad', 'Modalidad', 'Condiciones'])
+        self.assertEqual(secciones['Agencia y propietarios'], ['Agencia', 'Propietario'])
+        self.assertEqual(secciones['Solicitudes'], ['SolicitudReserva'])
+        self.assertIn('Municipio', secciones['Ubicación'])
+        self.assertNotIn('Base', secciones)
+
+    def test_every_registered_model_has_a_section(self):
+        """A new admin model must be added to `SECCIONES`; otherwise it lands in "Otros"."""
+        self.assertNotIn('Otros', self.secciones())
+
+    def test_other_apps_are_left_alone(self):
+        self.assertIn(['Group', 'User'], self.secciones().values())
+
+    def test_the_app_page_lists_the_sections(self):
+        response = self.client.get('/admin/base/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ofertas y condiciones')
+
+    def test_listing_form_groups_every_field_and_the_pages_open(self):
+        from django.contrib import admin
+        from base.admin import InmuebleAdminForm
+        model_admin = admin.site._registry[Inmueble]
+        agrupados = [c for _, opciones in model_admin.fieldsets for f in opciones['fields']
+                     for c in (f if isinstance(f, tuple) else (f,))]
+        # The two many-to-many fields go through link tables, which the admin edits as inlines.
+        formulario = set(InmuebleAdminForm().fields) - {'modalidades', 'propietarios'}
+        self.assertEqual(sorted(agrupados), sorted(formulario))
+        self.assertEqual(len(agrupados), len(set(agrupados)))
+        inm = inmueble(referencia='AD1')
+        self.assertEqual(self.client.get('/admin/base/inmueble/add/').status_code, 200)
+        response = self.client.get(f'/admin/base/inmueble/{inm.id}/change/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Identificación')
+
+    def test_detail_tables_are_collapsed_and_offers_stay_open(self):
+        from django.contrib import admin
+        inlines = {i.model.__name__: i for i in admin.site._registry[Inmueble].inlines}
+        for nombre in ('Distribucion', 'Dotacion', 'Instalaciones', 'Caracteristicas', 'DatosInternos'):
+            self.assertIn('collapse', inlines[nombre].classes, nombre)
+        for nombre in ('InmuebleModalidad', 'ImageInmueble', 'RegistroLegal'):
+            self.assertNotIn('collapse', tuple(getattr(inlines[nombre], 'classes', None) or ()), nombre)
+
+
+class IdentificadoresUuidTests(ModalidadFixture):
+    """Listings, offers and requests have UUIDv7 keys; the rest of the models keep integers (ADR 0022)."""
+
+    def test_listing_offer_and_request_keys_are_uuid_v7(self):
+        from uuid import UUID
+        from base.models import SolicitudReserva
+        solicitud = SolicitudReserva.objects.create(
+            inmueble=self.both, referencia='M1', nombre='Ana', email='a@example.com', telefono='600000000',
+            acepta_aviso_legal=True)
+        oferta = self.both.precios.first()
+        for objeto in (self.both, oferta, solicitud):
+            self.assertIsInstance(objeto.pk, UUID)
+            self.assertEqual(objeto.pk.version, 7)
+
+    def test_keys_are_created_before_the_first_save_and_follow_creation_order(self):
+        nuevo = Inmueble(referencia='U1', municipio=self.both.municipio)
+        self.assertIsNotNone(nuevo.pk)
+        primero, segundo = inmueble(referencia='U2'), inmueble(referencia='U3')
+        self.assertLess(primero.pk, segundo.pk)
+
+    def test_the_other_models_keep_integer_keys(self):
+        from base.models import Condiciones, ImageInmueble, Municipio
+        for modelo in (Municipio, Condiciones, ImageInmueble, Modalidad, RegistroLegal):
+            self.assertEqual(modelo._meta.pk.get_internal_type() in ('AutoField', 'BigAutoField'), True, modelo)
+
+    def test_the_api_uses_the_uuid_as_a_string_id(self):
+        data = self.client.get(f'/api/inmuebles/{self.both.id}/').json()
+        self.assertEqual(data['id'], str(self.both.id))
+        listed = {i['referencia']: i['id'] for i in self.client.get('/api/inmuebles/').json()['inmuebles']}
+        self.assertEqual(listed['M1'], str(self.both.id))
+
+    def test_only_a_uuid_addresses_a_listing(self):
+        self.assertEqual(self.client.get('/api/inmuebles/1/').status_code, 404)
+        self.assertEqual(self.client.get('/api/inmuebles/abc/').status_code, 404)
+        self.assertEqual(self.client.get('/api/inmuebles/00000000-0000-7000-8000-000000000000/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/inmuebles/{self.hidden.id}/').status_code, 404)  # unpublished
+        respuesta = self.client.post(
+            f'/api/inmuebles/{self.both.id}/reservas/',
+            {'nombre': 'Ana', 'email': 'a@example.com', 'telefono': '600000000', 'acepta_aviso_legal': True},
+            content_type='application/json')
+        self.assertEqual(respuesta.status_code, 201)
+
+    def test_the_price_log_gets_one_row_per_change_with_a_uuid_key(self):
+        from base.models import HistorialPrecio
+        oferta = self.both.precios.get(modalidad=self.mod['temporal'])
+        self.assertEqual(HistorialPrecio.objects.filter(inmueble=self.both, modalidad=oferta.modalidad).count(), 1)
+        oferta.precio = 1300
+        oferta.save()
+        self.assertEqual(
+            list(HistorialPrecio.objects.filter(inmueble=self.both, modalidad=oferta.modalidad)
+                 .values_list('importe', flat=True)), [1300])  # same day: the day's row is replaced
+
+
 class CoordenadasOcultasTests(TestCase):
     def setUp(self):
         self.inm = inmueble(
@@ -2512,27 +2620,26 @@ class DetailTablesAllowListTests(TestCase):
     """
 
     PUBLIC = {
-        'CaracteristicasSerializer': 'id suelo_piso exterior altura_real_m orientacion_norte orientacion_sur '
-            'orientacion_este orientacion_oeste chimenea vistas_al_mar vistas_montania tipo_fachada inmueble',
-        'DistribucionSerializer': 'id dobles individuales exteriores suites banios aseos capacidad_personas suelo_banio inmueble',
-        'InstalacionesSerializer': 'id calefaccion tipo_calefaccion subtipo_calefaccion tvs '
+        'CaracteristicasSerializer': 'suelo_piso exterior altura_real_m orientacion_norte orientacion_sur '
+            'orientacion_este orientacion_oeste chimenea vistas_al_mar vistas_montania tipo_fachada',
+        'DistribucionSerializer': 'dobles individuales exteriores suites banios aseos capacidad_personas suelo_banio',
+        'InstalacionesSerializer': 'calefaccion tipo_calefaccion subtipo_calefaccion tvs '
             'tv_internacional antena_parabolica aire_acondicionado ascensor internet internet_velocidad_mbps telefono '
-            'instalacion_telefono dvd hilo_musical acceso_silla_ruedas inmueble',
-        'AreaRecreoSerializer': 'id zona_deportiva gimnasio piscina solarium jardin_infantil local_social inmueble',
-        'DotacionSerializer': 'id amueblado armarios_empotrados jacuzzi_hidromasaje secadora lavadora '
+            'instalacion_telefono dvd hilo_musical acceso_silla_ruedas',
+        'AreaRecreoSerializer': 'zona_deportiva gimnasio piscina solarium jardin_infantil local_social',
+        'DotacionSerializer': 'amueblado armarios_empotrados jacuzzi_hidromasaje secadora lavadora '
             'lavavajillas microondas nevera radio ropero toldo horno utensilios_cocina vajilla cuberteria '
             'cristaleria ropa_cama toallas estufa ventilador camas sofas tendedero cafetera plancha kit_limpieza '
-            'secador_pelo papel_higienico sofa_cama inmueble',
-        'SeguridadSerializer': 'id portero_conserje vigilancia_privada camaras_seguridad puerta_blindada '
+            'secador_pelo papel_higienico sofa_cama',
+        'SeguridadSerializer': 'portero_conserje vigilancia_privada camaras_seguridad puerta_blindada '
             'caja_seguridad cristales_blindados sistema_alarma instalacion_antirrobo '
-            'instalacion_contra_incendio video_portero portero_automatico inmueble',
-        'EntornoSerializer': 'id zona_comunitaria otras_areas_comunitarias jardin jardin_m2 cerca_colegios '
+            'instalacion_contra_incendio video_portero portero_automatico',
+        'EntornoSerializer': 'zona_comunitaria otras_areas_comunitarias jardin jardin_m2 cerca_colegios '
             'cerca_farmacia cerca_guarderias cerca_medico cerca_centro_comercial distancia_playa_m '
-            'distancia_poblacion_m distancia_ciudad_m cerca_supermercado cerca_restaurantes cerca_discotecas '
-            'inmueble',
-        'OtrosEspaciosSerializer': 'id despachos vestidores altillo galeria trastero buhardilla bodega '
-            'lavadero patio porche estudios bibliotecas inmueble',
-        'CondicionesSerializer': 'id nombre honorarios itp incluido no_incluido fianza pago_adelantado '
+            'distancia_poblacion_m distancia_ciudad_m cerca_supermercado cerca_restaurantes cerca_discotecas',
+        'OtrosEspaciosSerializer': 'despachos vestidores altillo galeria trastero buhardilla bodega '
+            'lavadero patio porche estudios bibliotecas',
+        'CondicionesSerializer': 'nombre honorarios itp incluido no_incluido fianza pago_adelantado '
             'suministros actualizacion_renta limpieza_final requisitos notaria registro gestoria honorarios_comprador '
             'itp_porcentaje honorarios_incluidos_en_precio',
         'RegistroLegalSerializer': 'tipo estado numero organismo',
@@ -2543,10 +2650,10 @@ class DetailTablesAllowListTests(TestCase):
         'SingleImageSerializer': 'id image default alt_text posicion tipo',
         'PlazaAparcamientoSerializer': 'id numero tipo superficie notas opcional precio_opcional '
             'precio_opcional_unidad precio_opcional_mas_iva precio_opcional_tipo_iva',
-        'CocinaSerializer': 'id cocina cocina_amueblada tipo_cocina suelo_cocina inmueble',
-        'TerrazaSerializer': 'id n_terrazas terraza_m2 n_balcones balcones_m2 descripcion inmueble',
-        'SalonSerializer': 'id salon_m2 descripcion inmueble',
-        'CarpinteriaSerializer': 'id carpinteria_interior carpinteria_exterior inmueble',
+        'CocinaSerializer': 'cocina cocina_amueblada tipo_cocina suelo_cocina',
+        'TerrazaSerializer': 'n_terrazas terraza_m2 n_balcones balcones_m2 descripcion',
+        'SalonSerializer': 'salon_m2 descripcion',
+        'CarpinteriaSerializer': 'carpinteria_interior carpinteria_exterior',
         'PrecioModalidadSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva fecha_disponibilidad',
         'PrecioModalidadDetalleSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva fecha_disponibilidad '
             'fianza_meses fianza_total regulacion terminos inclusiones condiciones',

@@ -129,7 +129,8 @@ building/unit links, price tiers, availability wording, price-drop alerts.
 - [x] Fixtures atb-01, atb-03 and idealista-03 updated; `MODELS.md` updated.
 - [ ] Add fixtures for locb-01..03 to `tests_ejemplos.py` (agency 11525 / A13529, NRU in process, certificate with a
       rating but no number, half-bath, patio, smoking).
-- [ ] Rename the agencies created by migration `0043` (`AICAT <number>`) in a real database; fill their API number.
+- [x] `python seed.py agencia` loads AtBarcelona (ATB, AICAT 5205).
+- [ ] Fill the agency's API number in the admin when it is known.
 - [ ] Frontend `interfaces.ts` still lists `aicat` as a registry type; update it when the backend is done.
 
 ### Step 2: unknown is not "no"; hidden address
@@ -169,3 +170,58 @@ Each candidate was checked against the existing models first.
 - [ ] Habitual offer in a stressed zone with `precio` above `indice_referencia_max`.
 - [ ] Sale offer without the cost fields filled (Ley 10/2025 clause in idealista-03).
 - [ ] Soft warning on surface per bedroom (locb "8 bedrooms, 8 m2").
+
+## 9. UUID primary keys (ADR 0022)
+- [x] `Inmueble`, `InmuebleModalidad` and `SolicitudReserva` use UUIDv7 keys; the rest keep integers; migrations regenerated.
+- [x] The detail-table serializers and `Condiciones` no longer return `id` / `inmueble`.
+- [ ] Recreate the development database (and the Postgres schema, if used) before the next run.
+- [ ] Run the backend suite against Postgres once a server is available (the change was only tested on SQLite).
+- [ ] Frontend: listing ids become strings; the detail and reservation routes take a UUID.
+
+## 10. Public API: offer-centred redesign (proposal, not yet an ADR)
+`InmuebleModalidad` (the offer) becomes the central public resource; `Inmueble` is nested inside it. Clean break under
+`/api/v0`: the version is 0 on purpose, so the contract may still change without notice (the frontend is untouched until
+the backend is done). Moving to `/api/v1` is the moment the contract is frozen.
+
+### Decisions to settle first
+- [ ] Closed offers (rented, sold) in search: hide by default behind `estado=`, keep their detail reachable (recommended).
+- [ ] Names: `ofertas` and `solicitudes` in Spanish (recommended) or English.
+- [ ] Envelope: DRF `PageNumberPagination` (`count`, `next`, `previous`, `results`) plus `Link` header (recommended).
+
+### Step 1: foundation and core resource
+- [ ] `REST_FRAMEWORK` settings: JSON-only renderer in production, default throttle, pagination, exception handler.
+- [ ] `/api/v0` prefix; remove `getRoutes` ('Hello') and the old `/inmuebles/modalidad/...` and `.../count/` routes.
+- [ ] Errors as `application/problem+json` (RFC 9457) with a field-level `errors` extension.
+- [ ] Pagination: `page_size` chosen by the client (capped at 50), out-of-range page is 404, `Link: rel=next/prev` (RFC 8288).
+- [ ] `GET /ofertas`: one row per offer; no `distinct()`, no per-inmueble state annotations.
+- [ ] Filters: `modalidad`, `municipio`, `distrito`, `barrio` (id or slug), `precio_min`, `precio_max`, `habitaciones_min`,
+      `banios_min`, `sup_min`, `sup_max`, `tipo`, `subtipo`, `disponible_antes`.
+- [ ] Feature filters: `amueblado`, `animales`, `piscina`, `parking`, `ascensor`, `terraza`.
+- [ ] `sort`: `precio`, `-precio`, `-fecha_alta`, `sup`.
+- [ ] Card payload (price object, `fianza`, state, availability, main image, headline numbers) and detail payload
+      (`regulacion`, `terminos`, `inclusiones`, `condiciones` at the top level of the offer, `inmueble` nested,
+      `otras_ofertas`, `agencia`).
+- [ ] Money as decimal string plus `moneda`; `precio.por_m2` derived; dates RFC 3339.
+- [ ] `GET /ofertas/{id}`: `ETag` and conditional GET; unpublished offer is 404.
+- [ ] `POST /ofertas/{id}/solicitudes`: 201 with `Location`, keeps the 10/hour throttle, 429 with `Retry-After`.
+- [ ] Tests pinning the public fields of the offer card and detail (private data never serialized, as today).
+- [ ] `MODELS.md` and an ADR describing the API.
+
+### Step 2: reference data
+- [ ] `GET /municipios?provincia=&q=`, `/distritos?municipio=`, `/barrios?distrito=` replace the nested paths; paginated.
+- [ ] `GET /catalogos`: types, subtypes, conservation and modalidades (replaces `/modalidades`).
+- [ ] `GET /agencia`: public agency data (name, AICAT, API number).
+- [ ] `Cache-Control` on reference data.
+
+### Step 3: discovery
+- [ ] `GET /ofertas?id=a,b,c`: batch fetch for client-side favourites.
+- [ ] `GET /ofertas/{id}/similares`: same zone and modalidad, similar price.
+- [ ] `GET /ofertas/mapa`: same filters, GeoJSON (RFC 7946), minimal properties, `bbox=`; hidden addresses stay snapped.
+- [ ] `GET /ofertas/facetas`: counts per district, type and room number for the current filters.
+- [ ] `Accept-Language` picks the default description language.
+
+### Step 4: later
+- [ ] `GET /estadisticas/precios?municipio=`: price per m² per zone (idealista "Informe de precios", locb).
+- [ ] OpenAPI schema with `drf-spectacular`.
+- [ ] Freeze the contract and publish it as `/api/v1`; from then on retire versions with the `Sunset` header (RFC 8594).
+- [ ] Frontend: move to `/ofertas` after the backend is declared done.

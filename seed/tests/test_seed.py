@@ -88,6 +88,13 @@ class SeedLocationsTest(unittest.TestCase):
                 "select fianza from base_condiciones where nombre='Alquiler de temporada'").fetchone()[0], '1 mes')
             self.assertEqual(self.count(db, 'condiciones'), 3)
 
+    def test_migrate_also_creates_the_tables_the_admin_needs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / 'test.sqlite3')
+            self.run_seed(db, 'migrate')
+            tablas = {f[0] for f in sqlite3.connect(db).execute("select name from sqlite_master where type = 'table'")}
+            self.assertTrue({'django_session', 'django_admin_log', 'auth_user', 'base_inmueble'} <= tablas)
+
     def test_stressed_zone_declarations_load_what_exists_and_never_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = str(Path(tmp) / 'test.sqlite3')
@@ -134,6 +141,26 @@ class SeedLocationsTest(unittest.TestCase):
         self.assertEqual(clave("Hospitalet de Llobregat, l'"), "l'hospitalet de llobregat")
         self.assertEqual(clave("Franqueses del Vallès, les"), "les franqueses del vallès")
         self.assertEqual(clave("Sant Cugat del Vallès"), "sant cugat del vallès")
+
+    def test_main_agency_is_created_once_and_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / 'test.sqlite3')
+            self.run_seed(db, 'migrate')
+            self.run_seed(db, 'agencia', '--dry-run')
+            self.assertEqual(self.count(db, 'agencia'), 0)
+            self.run_seed(db, 'agencia')
+            conn = sqlite3.connect(db)
+            self.assertEqual(
+                conn.execute('select nombre, siglas, aicat, numero_api from base_agencia').fetchall(),
+                [('AtBarcelona', 'ATB', '5205', '')])
+            conn.execute("update base_agencia set telefono = '999', numero_api = 'A1'")
+            conn.commit()
+            conn.close()
+            salida = self.run_seed(db, 'agencia').stdout
+            self.assertIn('kept    1', salida)
+            self.assertEqual(self.count(db, 'agencia'), 1)
+            self.assertEqual(sqlite3.connect(db).execute(
+                'select telefono, numero_api from base_agencia').fetchone(), ('999', 'A1'))
 
     def test_a_modalidad_that_already_has_a_default_is_left_alone(self):
         with tempfile.TemporaryDirectory() as tmp:

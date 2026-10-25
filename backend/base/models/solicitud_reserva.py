@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from base.models.ids import uuid7
 from base.models.inmueble import Inmueble
 
 
@@ -22,6 +23,7 @@ class SolicitudReserva(models.Model):
         (CERRADA, 'Cerrada'),
         (DESCARTADA, 'Descartada'),
     )
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
     inmueble = models.ForeignKey(
         Inmueble,
         on_delete=models.SET_NULL,

@@ -50,16 +50,20 @@ from base.models import (
 
 class AreaRecreoInline(admin.StackedInline):
     model = AreaRecreo
+    classes = ['collapse']
 
 
 class DotacionInline(admin.StackedInline):
     model = Dotacion
+    classes = ['collapse']
 
 class EstanciasInline(admin.StackedInline):
     model = Estancias
+    classes = ['collapse']
 
 class EntornoInline(admin.StackedInline):
     model = Entorno
+    classes = ['collapse']
 
 class ImageInmuebleInline(admin.TabularInline):
     model = ImageInmueble
@@ -68,45 +72,56 @@ class ImageInmuebleInline(admin.TabularInline):
 
 class InstalacionesInline(admin.StackedInline):
     model = Instalaciones
+    classes = ['collapse']
 
 class OtrosEspaciosInline(admin.StackedInline):
     model = OtrosEspacios
+    classes = ['collapse']
 
 class CaracteristicasInline(admin.StackedInline):
     model = Caracteristicas
+    classes = ['collapse']
 
 class DistribucionInline(admin.StackedInline):
     model = Distribucion
+    classes = ['collapse']
 
 class SeguridadInline(admin.StackedInline):
     model = Seguridad
+    classes = ['collapse']
 
 class TransporteInline(admin.TabularInline):
     model = TransporteInmueble
+    classes = ['collapse']
     extra = 0
 
 
 class SuministroInline(admin.TabularInline):
     model = Suministro
+    classes = ['collapse']
     extra = 0
 
 
 class DescripcionInline(admin.TabularInline):
     model = DescripcionInmueble
+    classes = ['collapse']
     extra = 0
 
 
 class DatosInternosInline(admin.StackedInline):
     model = DatosInternos
+    classes = ['collapse']
 
 
 class AcuerdoAdministracionInline(admin.TabularInline):
     model = AcuerdoAdministracion
+    classes = ['collapse']
     extra = 0
 
 
 class CertificadoEnergeticoInline(admin.StackedInline):
     model = CertificadoEnergetico
+    classes = ['collapse']
 
 
 class AuditoriaAdminMixin:
@@ -128,7 +143,7 @@ class AuditoriaAdminMixin:
     @staticmethod
     def _auditar(request, obj):
         if hasattr(obj, 'updated_by'):
-            if obj.pk is None:
+            if obj._state.adding:  # a UUID primary key exists before the first save
                 obj.created_by = request.user
             obj.updated_by = request.user
 
@@ -161,6 +176,7 @@ class InmuebleModalidadInline(admin.TabularInline):
 
 class PlazaAparcamientoInline(admin.TabularInline):
     model = PlazaAparcamiento
+    classes = ['collapse']
     extra = 0
 
 
@@ -176,6 +192,7 @@ class RegistroLegalInline(admin.TabularInline):
 
 class HistorialPrecioInline(admin.TabularInline):
     model = HistorialPrecio
+    classes = ['collapse']
     extra = 1
 
 
@@ -214,30 +231,45 @@ class InmuebleAdminForm(forms.ModelForm):
 
 class InmuebleAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     form = InmuebleAdminForm
+    # Offers, media and legal records stay open; the detail tables are collapsed (see the inlines above).
     inlines = [
         InmuebleModalidadInline,
         ImageInmuebleInline,
         MediaInmuebleInline,
-        PlazaAparcamientoInline,
+        DescripcionInline,
         RegistroLegalInline,
-        HistorialPrecioInline,
-        InmueblePropietarioInline,
-        DatosInternosInline,
-        AcuerdoAdministracionInline,
         CertificadoEnergeticoInline,
+        InmueblePropietarioInline,
         DistribucionInline,
         EstanciasInline,
-        SeguridadInline,
+        OtrosEspaciosInline,
         DotacionInline,
-        DescripcionInline,
         InstalacionesInline,
         SuministroInline,
-        OtrosEspaciosInline,
+        SeguridadInline,
         EntornoInline,
         # AreaRecreoInline,
         TransporteInline,
         CaracteristicasInline,
+        PlazaAparcamientoInline,
+        HistorialPrecioInline,
+        AcuerdoAdministracionInline,
+        DatosInternosInline,
     ]
+    fieldsets = (
+        ('Identificación', {'fields': (
+            'referencia', 'titulo', ('tipo', 'subtipo'), 'agencia', 'situacion_actual', 'publicar_web')}),
+        ('Ubicación', {'fields': (
+            'municipio', 'distrito', 'barrio', 'codigo_postal', 'direccion', 'direccion_short',
+            'dir_descripcion', 'ocultar_direccion', ('geo_latitude', 'geo_longitude'))}),
+        ('Edificio', {'fields': (
+            'conservacion', ('anio_construccion', 'anio_ultima_reforma'), ('planta', 'n_plantas'))}),
+        ('Superficies (m²)', {'fields': (('sup_construida', 'sup_util'), ('sup_cont_comun', 'sup_parcela'))}),
+        ('Gastos', {'fields': (('gtos_comunidad', 'ibi'),)}),
+        ('Fechas', {'fields': (('fecha_alta', 'fecha_baja', 'fecha_entrega'),)}),
+        ('Web', {'fields': ('usos', 'notas_web')}),
+        ('Interno (no se publica)', {'fields': ('referencia_catastral',), 'classes': ('collapse',)}),
+    )
     list_display = (
         'referencia',
         'codigo_postal',
@@ -315,8 +347,8 @@ admin.site.register(Barrio)
 
 @admin.register(Agencia)
 class AgenciaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'aicat', 'numero_api')
-    search_fields = ('nombre', 'aicat', 'numero_api')
+    list_display = ('nombre', 'siglas', 'aicat', 'numero_api')
+    search_fields = ('nombre', 'siglas', 'aicat', 'numero_api')
 
 
 @admin.register(Modalidad)

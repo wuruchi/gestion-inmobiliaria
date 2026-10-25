@@ -1,0 +1,14 @@
+{
+  "source": "The AtBarcelona listing pages in ../gestion-inmobiliaria-examples (atb-01..03): the AICAT is the same on all three; the contact data is from their footer. The API number is not published there, so it is left empty.",
+  "items": [
+    {
+      "siglas": "ATB",
+      "nombre": "AtBarcelona",
+      "aicat": "5205",
+      "numero_api": "",
+      "direccion": "Calle Aragó 189 Local 2, Barcelona",
+      "telefono": "+34 93 307 09 12",
+      "email": "info@atbarcelona.es"
+    }
+  ]
+}

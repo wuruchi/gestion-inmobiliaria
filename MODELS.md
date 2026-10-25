@@ -75,6 +75,13 @@ The model groups:
 | Private | `Propietario`, `InmueblePropietario`, `DatosInternos`, `AcuerdoAdministracion`, `HistorialPrecio`, `DeclaracionZonaTensionada` | Never (the detail shows only `gran_tenedor` and `zona_tensionada`, derived) |
 | Requests | `SolicitudReserva` | Write-only: the public can create one, never read |
 
+### Identifiers
+
+`Inmueble`, `InmuebleModalidad` and `SolicitudReserva` have a UUIDv7 primary key (ADR 0022); the API returns it as a string
+and a listing is addressed by it (`/api/inmuebles/<uuid>/`). The key exists before the first save, so use
+`_state.adding`, not `pk is None`, to tell a new row. Every other model keeps an integer key. The human reference of
+a listing is `referencia`.
+
 ## 2. Model reference
 
 One entry per model: what it is, then one bullet for each table it is related to (a foreign key in either direction,
@@ -390,7 +397,7 @@ Contracting conditions of one modalidad (`modalidad`, required), as text.
 
 ## 6. The listing: `Inmueble`
 
-Primary key `id`; `referencia` is unique. Main groups of columns:
+Primary key `id` (a UUIDv7); `referencia` is unique. Main groups of columns:
 
 | Group | Columns |
 |---|---|
@@ -445,7 +452,7 @@ Choices: `tipo` is `vivienda`, `oficina`, `local`, `parking`, `terreno`, `traste
 
 The nine one-to-one tables have at most one row per listing (field `inmueble`) and are deleted with the listing. The three
 repeating-group tables (`Suministro`, `TransporteInmueble`, `DescripcionInmueble`) have one row per member. All counts
-are `PositiveIntegerField` (never negative, DB). All are public in the API.
+are `PositiveIntegerField` (never negative, DB). All are public in the API, without their `id` or the listing's.
 
 | Model | Contents |
 |---|---|
@@ -533,11 +540,12 @@ of ATBarcelona (5205), Locabarcelona (11525) and GrupLiving (3366), and the API 
 
 | Field | Rule |
 |---|---|
-| `nombre` | Unique |
+| `nombre`, `siglas` | `nombre` is unique; `siglas` is the optional acronym (ATB) |
 | `aicat`, `numero_api` | Registry numbers of the agency; empty = not recorded; a filled number is unique (DB, conditional unique constraints) |
 | `direccion`, `telefono`, `email` | Contact data; private for now (the detail returns only `nombre`, `aicat`, `numero_api`) |
 
 `Inmueble.agencia` is optional and `PROTECT`. The detail returns `agencia` (`null` without one). ADR 0019.
+`python seed.py agencia` loads the main agency, AtBarcelona (`ATB`, AICAT 5205); it never overwrites staff's data.
 
 ### `RegistroLegal` (many per listing)
 Registrations or licences a listing must show. Not tied to one region: each row says its type and the
@@ -624,6 +632,16 @@ The API accepts `tipo`, `fecha_desde` and `mensaje` besides the name, email, pho
   `inmuebles/` without a modalidad it compares the monthly (rent) prices. A listing appears once.
 - Reference lists: provinces, municipios, distritos, barrios, modalidades (with `unidad_precio`).
 
+### The admin panel
+
+Every model lives in the `base` app, so the admin index is split into sections by `base/admin_site.py`
+(`SECCIONES`, shown by `GestionAdminSite`): Inmuebles, Ofertas y condiciones, Agencia y propietarios, Solicitudes and
+Ubicación. A registered model missing from `SECCIONES` shows up under "Otros", and a test fails until it is classified.
+The listing form is grouped in fieldsets (Identificación, Ubicación, Edificio, Superficies, Gastos, Fechas, Web,
+Interno), and its inlines are ordered offers, media, descriptions and legal records first. The detail tables, parking,
+price history, management agreements and internal data are collapsed. A test checks that the fieldsets cover every
+editable column.
+
 ## 12. Decisions (ADRs)
 
 The reasons behind the model are in `docs/adr/`; where a later ADR revises an earlier one, the later one wins.
@@ -648,6 +666,7 @@ The reasons behind the model are in `docs/adr/`; where a later ADR revises an ea
 | [0016](docs/adr/0016-scans-run-by-hand.md) | Consistency scans run by hand for now |
 | [0017](docs/adr/0017-fecha-disponibilidad-per-offer.md) | `fecha_disponibilidad` belongs to each offer |
 | [0018](docs/adr/0018-keep-wide-equipment-tables.md) | Keep the wide equipment tables |
+| [0022](docs/adr/0022-uuid-primary-keys.md) | UUIDv7 primary keys for listings, offers and requests; migrations regenerated |
 | [0021](docs/adr/0021-additive-fields-from-locabarcelona.md) | Additive fields from the Locabarcelona pages, and what was left out |
 | [0020](docs/adr/0020-deposit-sale-costs-and-rent-inclusions.md) | Deposit months on the offer, sale costs, rent inclusions per offer |
 | [0019](docs/adr/0019-gaps-from-locabarcelona-and-examples.md) | Gaps found in the examples: `Agencia`, NRUA and registry status (done); unknown-vs-no, money fields and scans (planned) |

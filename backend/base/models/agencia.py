@@ -5,6 +5,7 @@ class Agencia(models.Model):
     """The real-estate agency that advertises listings: its registry numbers are the agency's, not the property's."""
 
     nombre = models.CharField(max_length=150, unique=True)
+    siglas = models.CharField(max_length=20, blank=True, default='', help_text='Acrónimo de la agencia, por ejemplo: ATB.')
     aicat = models.CharField(
         max_length=60, blank=True, default='',
         verbose_name='registro AICAT',

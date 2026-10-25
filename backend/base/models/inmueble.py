@@ -4,6 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Case, Exists, F, IntegerField, OuterRef, Subquery, Value, When
 from django.db.models.functions import Coalesce
+from base.models.ids import uuid7
 from base.models.ubicacion import Municipio, Distrito, Barrio
 from base.models.modalidad import Modalidad
 
@@ -95,7 +96,7 @@ class Inmueble(models.Model):
         ('buen_estado', 'Buen estado'),
         ('a_reformar', 'A reformar'),
     )
-    id = models.AutoField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
     # The province is `municipio.provincia` (see the `provincia` property).
     municipio = models.ForeignKey(Municipio, on_delete=models.PROTECT)
     agencia = models.ForeignKey(

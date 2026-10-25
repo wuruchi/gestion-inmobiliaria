@@ -7,6 +7,7 @@ from django.utils import timezone
 from base.models.auditoria import Auditoria
 from base.models.condiciones import Condiciones
 from base.models.historial_precio import HistorialPrecio
+from base.models.ids import uuid7
 from base.models.inmueble import Inmueble
 from base.models.modalidad import Modalidad
 
@@ -23,6 +24,7 @@ class InmuebleModalidad(Auditoria):
         (CERRADO, 'Cerrado (alquilado o vendido)'),
     )
 
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
     inmueble = models.ForeignKey(
         Inmueble, on_delete=models.CASCADE, related_name='precios'
     )
@@ -125,7 +127,7 @@ class InmuebleModalidad(Auditoria):
         update_fields = kwargs.get('update_fields')
         toca_precio = update_fields is None or 'precio' in update_fields
         anterior = None
-        if self.pk and toca_precio:
+        if not self._state.adding and toca_precio:
             anterior = type(self).objects.filter(pk=self.pk).values_list('precio', flat=True).first()
         with transaction.atomic():
             super().save(*args, **kwargs)

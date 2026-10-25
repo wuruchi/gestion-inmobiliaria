@@ -41,7 +41,7 @@ ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost')
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    'base.admin_site.GestionAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',

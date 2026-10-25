@@ -1,0 +1,1960 @@
+{
+ "note": "Approximate data for fake offers (dev tool): barrio centre, postal codes and a few real streets per barrio (codes as in barrios.json, Barcelona only). Not authoritative; street/number combinations are plausible, not verified.",
+ "barrios": {
+  "01": {
+   "lat": 41.3795,
+   "lon": 2.1695,
+   "cp": [
+    "08001"
+   ],
+   "calles": [
+    [
+     "Carrer de Joaquín Costa",
+     1,
+     60
+    ],
+    [
+     "Carrer de la Riera Alta",
+     1,
+     60
+    ],
+    [
+     "Carrer de l'Hospital",
+     30,
+     130
+    ],
+    [
+     "Carrer de Sant Pau",
+     1,
+     120
+    ]
+   ]
+  },
+  "02": {
+   "lat": 41.383,
+   "lon": 2.1765,
+   "cp": [
+    "08002"
+   ],
+   "calles": [
+    [
+     "Carrer d'Avinyó",
+     1,
+     60
+    ],
+    [
+     "Carrer dels Escudellers",
+     1,
+     70
+    ],
+    [
+     "Carrer de Ferran",
+     1,
+     45
+    ],
+    [
+     "Carrer del Call",
+     1,
+     30
+    ]
+   ]
+  },
+  "03": {
+   "lat": 41.38,
+   "lon": 2.1895,
+   "cp": [
+    "08003"
+   ],
+   "calles": [
+    [
+     "Carrer del Baluard",
+     1,
+     50
+    ],
+    [
+     "Carrer de Sant Carles",
+     1,
+     40
+    ],
+    [
+     "Carrer de la Maquinista",
+     1,
+     40
+    ],
+    [
+     "Passeig de Joan de Borbó",
+     1,
+     90
+    ]
+   ]
+  },
+  "04": {
+   "lat": 41.3875,
+   "lon": 2.1825,
+   "cp": [
+    "08003"
+   ],
+   "calles": [
+    [
+     "Carrer de la Princesa",
+     1,
+     60
+    ],
+    [
+     "Carrer de Trafalgar",
+     1,
+     60
+    ],
+    [
+     "Passeig del Born",
+     1,
+     30
+    ],
+    [
+     "Carrer de Sant Pere Més Alt",
+     1,
+     100
+    ]
+   ]
+  },
+  "05": {
+   "lat": 41.3975,
+   "lon": 2.1835,
+   "cp": [
+    "08013"
+   ],
+   "calles": [
+    [
+     "Carrer de Lepant",
+     1,
+     80
+    ],
+    [
+     "Carrer d'Ausiàs Marc",
+     90,
+     190
+    ],
+    [
+     "Carrer de Roger de Flor",
+     1,
+     90
+    ],
+    [
+     "Carrer d'Alí Bei",
+     1,
+     80
+    ]
+   ]
+  },
+  "06": {
+   "lat": 41.404,
+   "lon": 2.1745,
+   "cp": [
+    "08013",
+    "08025"
+   ],
+   "calles": [
+    [
+     "Carrer de Provença",
+     400,
+     500
+    ],
+    [
+     "Carrer de Mallorca",
+     400,
+     500
+    ],
+    [
+     "Carrer de Sardenya",
+     300,
+     400
+    ],
+    [
+     "Carrer de Marina",
+     200,
+     300
+    ]
+   ]
+  },
+  "07": {
+   "lat": 41.394,
+   "lon": 2.165,
+   "cp": [
+    "08009",
+    "08010"
+   ],
+   "calles": [
+    [
+     "Carrer d'Aragó",
+     250,
+     400
+    ],
+    [
+     "Carrer de València",
+     250,
+     400
+    ],
+    [
+     "Passeig de Gràcia",
+     50,
+     130
+    ],
+    [
+     "Carrer de Mallorca",
+     200,
+     330
+    ]
+   ]
+  },
+  "08": {
+   "lat": 41.389,
+   "lon": 2.1545,
+   "cp": [
+    "08011",
+    "08036"
+   ],
+   "calles": [
+    [
+     "Carrer del Comte d'Urgell",
+     1,
+     100
+    ],
+    [
+     "Carrer d'Enric Granados",
+     1,
+     120
+    ],
+    [
+     "Carrer de Casanova",
+     1,
+     120
+    ],
+    [
+     "Carrer d'Aribau",
+     1,
+     130
+    ]
+   ]
+  },
+  "09": {
+   "lat": 41.383,
+   "lon": 2.149,
+   "cp": [
+    "08015",
+    "08029"
+   ],
+   "calles": [
+    [
+     "Carrer del Comte Borrell",
+     100,
+     250
+    ],
+    [
+     "Carrer de Villarroel",
+     200,
+     300
+    ],
+    [
+     "Carrer de Calàbria",
+     100,
+     250
+    ],
+    [
+     "Carrer d'Entença",
+     1,
+     120
+    ]
+   ]
+  },
+  "10": {
+   "lat": 41.3785,
+   "lon": 2.1625,
+   "cp": [
+    "08015"
+   ],
+   "calles": [
+    [
+     "Carrer del Comte Borrell",
+     1,
+     100
+    ],
+    [
+     "Carrer del Parlament",
+     1,
+     60
+    ],
+    [
+     "Carrer de Manso",
+     1,
+     60
+    ],
+    [
+     "Ronda de Sant Antoni",
+     1,
+     90
+    ]
+   ]
+  },
+  "11": {
+   "lat": 41.374,
+   "lon": 2.164,
+   "cp": [
+    "08004"
+   ],
+   "calles": [
+    [
+     "Carrer de Blai",
+     1,
+     60
+    ],
+    [
+     "Carrer de Margarit",
+     1,
+     70
+    ],
+    [
+     "Avinguda del Paral·lel",
+     60,
+     180
+    ],
+    [
+     "Carrer de Vila i Vilà",
+     1,
+     100
+    ]
+   ]
+  },
+  "12": {
+   "lat": 41.3585,
+   "lon": 2.14,
+   "cp": [
+    "08038"
+   ],
+   "calles": [
+    [
+     "Passeig de la Zona Franca",
+     50,
+     250
+    ],
+    [
+     "Carrer del Foc",
+     1,
+     60
+    ],
+    [
+     "Carrer de Motors",
+     1,
+     60
+    ]
+   ]
+  },
+  "13": {
+   "lat": 41.364,
+   "lon": 2.145,
+   "cp": [
+    "08038",
+    "08004"
+   ],
+   "calles": [
+    [
+     "Carrer de la Mare de Déu de Port",
+     200,
+     400
+    ],
+    [
+     "Carrer del Foc",
+     100,
+     300
+    ],
+    [
+     "Carrer de la Foneria",
+     1,
+     40
+    ]
+   ]
+  },
+  "14": {
+   "lat": 41.372,
+   "lon": 2.156,
+   "cp": [
+    "08004"
+   ],
+   "calles": [
+    [
+     "Carrer de la Font de la Guatlla",
+     1,
+     60
+    ],
+    [
+     "Carrer de Lleida",
+     1,
+     60
+    ],
+    [
+     "Carrer de Tamarit",
+     1,
+     60
+    ]
+   ]
+  },
+  "15": {
+   "lat": 41.3755,
+   "lon": 2.1425,
+   "cp": [
+    "08014"
+   ],
+   "calles": [
+    [
+     "Carrer de Creu Coberta",
+     70,
+     170
+    ],
+    [
+     "Carrer del Rector Triadó",
+     1,
+     80
+    ],
+    [
+     "Carrer de Sants",
+     1,
+     60
+    ]
+   ]
+  },
+  "16": {
+   "lat": 41.368,
+   "lon": 2.133,
+   "cp": [
+    "08014"
+   ],
+   "calles": [
+    [
+     "Carrer de la Constitució",
+     1,
+     70
+    ],
+    [
+     "Carrer de Sants",
+     150,
+     300
+    ],
+    [
+     "Carrer de Güell",
+     1,
+     60
+    ]
+   ]
+  },
+  "17": {
+   "lat": 41.375,
+   "lon": 2.128,
+   "cp": [
+    "08028"
+   ],
+   "calles": [
+    [
+     "Carrer de Joan Güell",
+     1,
+     200
+    ],
+    [
+     "Carrer de Galileu",
+     1,
+     100
+    ],
+    [
+     "Carrer de Badal",
+     1,
+     100
+    ],
+    [
+     "Carrer de Sants",
+     300,
+     400
+    ]
+   ]
+  },
+  "18": {
+   "lat": 41.3785,
+   "lon": 2.1355,
+   "cp": [
+    "08014"
+   ],
+   "calles": [
+    [
+     "Carrer de Sants",
+     100,
+     250
+    ],
+    [
+     "Carrer de Vallespir",
+     1,
+     80
+    ],
+    [
+     "Carrer d'Antoni de Capmany",
+     1,
+     70
+    ]
+   ]
+  },
+  "19": {
+   "lat": 41.3865,
+   "lon": 2.13,
+   "cp": [
+    "08028",
+    "08029"
+   ],
+   "calles": [
+    [
+     "Avinguda de Madrid",
+     1,
+     100
+    ],
+    [
+     "Carrer de Numància",
+     1,
+     130
+    ],
+    [
+     "Avinguda Diagonal",
+     550,
+     650
+    ],
+    [
+     "Carrer de Joan Güell",
+     200,
+     300
+    ]
+   ]
+  },
+  "20": {
+   "lat": 41.379,
+   "lon": 2.126,
+   "cp": [
+    "08028"
+   ],
+   "calles": [
+    [
+     "Carrer de Tarragona",
+     150,
+     250
+    ],
+    [
+     "Carrer de Galileu",
+     100,
+     200
+    ],
+    [
+     "Carrer de Entença",
+     150,
+     250
+    ]
+   ]
+  },
+  "21": {
+   "lat": 41.393,
+   "lon": 2.112,
+   "cp": [
+    "08034"
+   ],
+   "calles": [
+    [
+     "Avinguda de Pedralbes",
+     1,
+     60
+    ],
+    [
+     "Avinguda de Diagonal",
+     650,
+     750
+    ],
+    [
+     "Carrer de Doctor Carulla",
+     1,
+     50
+    ],
+    [
+     "Passeig de Manuel Girona",
+     1,
+     70
+    ]
+   ]
+  },
+  "22": {
+   "lat": 41.417,
+   "lon": 2.11,
+   "cp": [
+    "08017"
+   ],
+   "calles": [
+    [
+     "Carretera de Vallvidrera",
+     1,
+     100
+    ],
+    [
+     "Carrer de Doctor Roux",
+     1,
+     40
+    ],
+    [
+     "Avinguda del Tibidabo",
+     1,
+     60
+    ]
+   ]
+  },
+  "23": {
+   "lat": 41.4,
+   "lon": 2.122,
+   "cp": [
+    "08017"
+   ],
+   "calles": [
+    [
+     "Carrer Major de Sarrià",
+     1,
+     120
+    ],
+    [
+     "Passeig de la Reina Elisenda de Montcada",
+     1,
+     60
+    ],
+    [
+     "Carrer de Capità Arenas",
+     1,
+     100
+    ],
+    [
+     "Carrer de Ganduxer",
+     1,
+     80
+    ]
+   ]
+  },
+  "24": {
+   "lat": 41.398,
+   "lon": 2.133,
+   "cp": [
+    "08034",
+    "08017"
+   ],
+   "calles": [
+    [
+     "Carrer de Ganduxer",
+     100,
+     200
+    ],
+    [
+     "Carrer d'Iradier",
+     1,
+     60
+    ],
+    [
+     "Carrer de Madrazo",
+     1,
+     60
+    ]
+   ]
+  },
+  "25": {
+   "lat": 41.405,
+   "lon": 2.133,
+   "cp": [
+    "08022",
+    "08017"
+   ],
+   "calles": [
+    [
+     "Passeig de la Bonanova",
+     1,
+     100
+    ],
+    [
+     "Carrer de Ramon Muntaner",
+     1,
+     60
+    ],
+    [
+     "Carrer del Doctor Roux",
+     50,
+     120
+    ],
+    [
+     "Carrer de Iradier",
+     60,
+     140
+    ]
+   ]
+  },
+  "26": {
+   "lat": 41.399,
+   "lon": 2.147,
+   "cp": [
+    "08021",
+    "08006"
+   ],
+   "calles": [
+    [
+     "Carrer de Balmes",
+     250,
+     400
+    ],
+    [
+     "Carrer de Muntaner",
+     250,
+     400
+    ],
+    [
+     "Carrer de Laforja",
+     1,
+     100
+    ],
+    [
+     "Carrer de Santaló",
+     1,
+     80
+    ]
+   ]
+  },
+  "27": {
+   "lat": 41.409,
+   "lon": 2.144,
+   "cp": [
+    "08023",
+    "08022"
+   ],
+   "calles": [
+    [
+     "Carrer del Putxet",
+     1,
+     60
+    ],
+    [
+     "Carrer de Zaragoza",
+     1,
+     80
+    ],
+    [
+     "Carrer de Pi i Margall",
+     1,
+     60
+    ],
+    [
+     "Passeig de Sant Gervasi",
+     50,
+     150
+    ]
+   ]
+  },
+  "28": {
+   "lat": 41.413,
+   "lon": 2.145,
+   "cp": [
+    "08023"
+   ],
+   "calles": [
+    [
+     "Avinguda de Vallcarca",
+     1,
+     80
+    ],
+    [
+     "Carrer de Cambrils",
+     1,
+     40
+    ],
+    [
+     "Carrer de Penitents",
+     1,
+     60
+    ]
+   ]
+  },
+  "29": {
+   "lat": 41.418,
+   "lon": 2.145,
+   "cp": [
+    "08023"
+   ],
+   "calles": [
+    [
+     "Carrer del Coll",
+     1,
+     60
+    ],
+    [
+     "Carrer de Garriga i Roca",
+     1,
+     60
+    ],
+    [
+     "Carrer de Cambrils",
+     40,
+     100
+    ]
+   ]
+  },
+  "30": {
+   "lat": 41.412,
+   "lon": 2.158,
+   "cp": [
+    "08024"
+   ],
+   "calles": [
+    [
+     "Carrer de Verdi",
+     150,
+     260
+    ],
+    [
+     "Carrer de Sant Salvador",
+     1,
+     70
+    ],
+    [
+     "Avinguda de l'Hospital Militar",
+     1,
+     100
+    ]
+   ]
+  },
+  "31": {
+   "lat": 41.403,
+   "lon": 2.156,
+   "cp": [
+    "08012",
+    "08024"
+   ],
+   "calles": [
+    [
+     "Carrer de Verdi",
+     1,
+     150
+    ],
+    [
+     "Carrer de Torrent de l'Olla",
+     1,
+     150
+    ],
+    [
+     "Carrer de Gran de Gràcia",
+     1,
+     200
+    ],
+    [
+     "Carrer de Ramon i Cajal",
+     1,
+     80
+    ]
+   ]
+  },
+  "32": {
+   "lat": 41.406,
+   "lon": 2.164,
+   "cp": [
+    "08012",
+    "08025"
+   ],
+   "calles": [
+    [
+     "Carrer de Còrsega",
+     400,
+     500
+    ],
+    [
+     "Carrer de Providència",
+     1,
+     100
+    ],
+    [
+     "Carrer de Gran de Gràcia",
+     200,
+     300
+    ]
+   ]
+  },
+  "33": {
+   "lat": 41.41,
+   "lon": 2.168,
+   "cp": [
+    "08041"
+   ],
+   "calles": [
+    [
+     "Carrer de Gran Vista",
+     1,
+     40
+    ],
+    [
+     "Carrer de Sant Antoni Maria Claret",
+     150,
+     250
+    ],
+    [
+     "Carrer de Mühlberg",
+     1,
+     40
+    ]
+   ]
+  },
+  "34": {
+   "lat": 41.418,
+   "lon": 2.162,
+   "cp": [
+    "08041"
+   ],
+   "calles": [
+    [
+     "Carrer de Can Baró",
+     1,
+     50
+    ],
+    [
+     "Carrer de Rosselló",
+     450,
+     600
+    ],
+    [
+     "Carrer de Sant Antoni Maria Claret",
+     250,
+     350
+    ]
+   ]
+  },
+  "35": {
+   "lat": 41.416,
+   "lon": 2.169,
+   "cp": [
+    "08041"
+   ],
+   "calles": [
+    [
+     "Carrer de Telègraf",
+     1,
+     60
+    ],
+    [
+     "Carrer de Sant Antoni Maria Claret",
+     300,
+     400
+    ],
+    [
+     "Carrer de Rda del Guinardó",
+     1,
+     60
+    ]
+   ]
+  },
+  "36": {
+   "lat": 41.426,
+   "lon": 2.165,
+   "cp": [
+    "08032"
+   ],
+   "calles": [
+    [
+     "Carrer de Mare de Déu del Coll",
+     1,
+     40
+    ],
+    [
+     "Carrer de Jorge Manrique",
+     1,
+     40
+    ],
+    [
+     "Carrer de Pare Mariana",
+     1,
+     60
+    ]
+   ]
+  },
+  "37": {
+   "lat": 41.422,
+   "lon": 2.152,
+   "cp": [
+    "08032"
+   ],
+   "calles": [
+    [
+     "Carrer de Mühlberg",
+     40,
+     120
+    ],
+    [
+     "Carrer de Murtra",
+     1,
+     60
+    ],
+    [
+     "Carrer del Carmel",
+     1,
+     60
+    ]
+   ]
+  },
+  "38": {
+   "lat": 41.428,
+   "lon": 2.148,
+   "cp": [
+    "08035"
+   ],
+   "calles": [
+    [
+     "Carrer de Pare Mariana",
+     60,
+     120
+    ],
+    [
+     "Carrer de Beat Almató",
+     1,
+     40
+    ],
+    [
+     "Carrer de Francesc Tàrrega",
+     1,
+     40
+    ]
+   ]
+  },
+  "39": {
+   "lat": 41.435,
+   "lon": 2.143,
+   "cp": [
+    "08035"
+   ],
+   "calles": [
+    [
+     "Carrer de Sant Genís",
+     1,
+     40
+    ],
+    [
+     "Carrer de Jordi Savall",
+     1,
+     30
+    ],
+    [
+     "Carrer d'Arnau d'Oms",
+     1,
+     30
+    ]
+   ]
+  },
+  "40": {
+   "lat": 41.43,
+   "lon": 2.145,
+   "cp": [
+    "08035"
+   ],
+   "calles": [
+    [
+     "Carrer de Peu del Funicular",
+     1,
+     40
+    ],
+    [
+     "Passeig de la Vall d'Hebron",
+     100,
+     180
+    ],
+    [
+     "Carrer de Fèlix Tió",
+     1,
+     40
+    ]
+   ]
+  },
+  "41": {
+   "lat": 41.427,
+   "lon": 2.143,
+   "cp": [
+    "08035"
+   ],
+   "calles": [
+    [
+     "Passeig de la Vall d'Hebron",
+     1,
+     100
+    ],
+    [
+     "Carrer de Feliu i Codina",
+     1,
+     40
+    ],
+    [
+     "Carrer de Lisboa",
+     1,
+     30
+    ]
+   ]
+  },
+  "42": {
+   "lat": 41.43,
+   "lon": 2.152,
+   "cp": [
+    "08031"
+   ],
+   "calles": [
+    [
+     "Carrer de la Clota",
+     1,
+     40
+    ],
+    [
+     "Passeig de la Vall d'Hebron",
+     200,
+     260
+    ]
+   ]
+  },
+  "43": {
+   "lat": 41.433,
+   "lon": 2.165,
+   "cp": [
+    "08031"
+   ],
+   "calles": [
+    [
+     "Carrer d'Horta",
+     1,
+     60
+    ],
+    [
+     "Carrer de Campoamor",
+     1,
+     60
+    ],
+    [
+     "Carrer de Feliu i Codina",
+     40,
+     100
+    ]
+   ]
+  },
+  "44": {
+   "lat": 41.432,
+   "lon": 2.179,
+   "cp": [
+    "08016"
+   ],
+   "calles": [
+    [
+     "Carrer de Vilapicina",
+     1,
+     100
+    ],
+    [
+     "Carrer de la Torre Llobeta",
+     1,
+     40
+    ],
+    [
+     "Passeig de Fabra i Puig",
+     100,
+     200
+    ]
+   ]
+  },
+  "45": {
+   "lat": 41.438,
+   "lon": 2.177,
+   "cp": [
+    "08016"
+   ],
+   "calles": [
+    [
+     "Avinguda de Rio de Janeiro",
+     1,
+     100
+    ],
+    [
+     "Carrer de Pi i Molist",
+     1,
+     60
+    ],
+    [
+     "Carrer de Concepción Arenal",
+     200,
+     300
+    ]
+   ]
+  },
+  "46": {
+   "lat": 41.436,
+   "lon": 2.17,
+   "cp": [
+    "08042"
+   ],
+   "calles": [
+    [
+     "Avinguda de la Meridiana",
+     350,
+     450
+    ],
+    [
+     "Carrer del Turó de la Peira",
+     1,
+     40
+    ],
+    [
+     "Carrer de Pi i Molist",
+     100,
+     160
+    ]
+   ]
+  },
+  "47": {
+   "lat": 41.439,
+   "lon": 2.175,
+   "cp": [
+    "08042"
+   ],
+   "calles": [
+    [
+     "Carrer de Dolors Piera",
+     1,
+     40
+    ],
+    [
+     "Carrer del Doctor Pi i Molist",
+     1,
+     60
+    ],
+    [
+     "Avinguda de Rio de Janeiro",
+     100,
+     160
+    ]
+   ]
+  },
+  "48": {
+   "lat": 41.441,
+   "lon": 2.175,
+   "cp": [
+    "08042"
+   ],
+   "calles": [
+    [
+     "Passeig de Valldaura",
+     100,
+     200
+    ],
+    [
+     "Carrer de Turó de la Peira",
+     1,
+     40
+    ],
+    [
+     "Avinguda de Rio de Janeiro",
+     200,
+     300
+    ]
+   ]
+  },
+  "49": {
+   "lat": 41.443,
+   "lon": 2.168,
+   "cp": [
+    "08042"
+   ],
+   "calles": [
+    [
+     "Carrer de Canyelles",
+     1,
+     60
+    ],
+    [
+     "Passeig de Valldaura",
+     200,
+     300
+    ]
+   ]
+  },
+  "50": {
+   "lat": 41.445,
+   "lon": 2.174,
+   "cp": [
+    "08033"
+   ],
+   "calles": [
+    [
+     "Via Favència",
+     1,
+     100
+    ],
+    [
+     "Passeig de Valldaura",
+     300,
+     380
+    ],
+    [
+     "Carrer del Doctor Pi i Molist",
+     100,
+     160
+    ]
+   ]
+  },
+  "51": {
+   "lat": 41.443,
+   "lon": 2.178,
+   "cp": [
+    "08042"
+   ],
+   "calles": [
+    [
+     "Passeig de Fabra i Puig",
+     250,
+     350
+    ],
+    [
+     "Avinguda de Rio de Janeiro",
+     300,
+     400
+    ]
+   ]
+  },
+  "52": {
+   "lat": 41.445,
+   "lon": 2.18,
+   "cp": [
+    "08033"
+   ],
+   "calles": [
+    [
+     "Avinguda de Rio de Janeiro",
+     400,
+     500
+    ],
+    [
+     "Carrer de Via Favència",
+     100,
+     200
+    ],
+    [
+     "Carrer d'Almansa",
+     1,
+     50
+    ]
+   ]
+  },
+  "53": {
+   "lat": 41.449,
+   "lon": 2.184,
+   "cp": [
+    "08033"
+   ],
+   "calles": [
+    [
+     "Passeig de Valldaura",
+     400,
+     500
+    ],
+    [
+     "Carrer de Pla de Fornells",
+     1,
+     40
+    ],
+    [
+     "Avinguda de Rio de Janeiro",
+     500,
+     560
+    ]
+   ]
+  },
+  "54": {
+   "lat": 41.454,
+   "lon": 2.178,
+   "cp": [
+    "08033"
+   ],
+   "calles": [
+    [
+     "Carrer de Torre Baró",
+     1,
+     50
+    ],
+    [
+     "Carrer de Capellades",
+     1,
+     40
+    ]
+   ]
+  },
+  "55": {
+   "lat": 41.46,
+   "lon": 2.172,
+   "cp": [
+    "08033"
+   ],
+   "calles": [
+    [
+     "Avinguda de Borbó",
+     1,
+     100
+    ],
+    [
+     "Passeig de Valldaura",
+     500,
+     580
+    ]
+   ]
+  },
+  "56": {
+   "lat": 41.472,
+   "lon": 2.17,
+   "cp": [
+    "08033"
+   ],
+   "calles": [
+    [
+     "Carrer de Vallbona",
+     1,
+     40
+    ]
+   ]
+  },
+  "57": {
+   "lat": 41.451,
+   "lon": 2.195,
+   "cp": [
+    "08027"
+   ],
+   "calles": [
+    [
+     "Avinguda de la Meridiana",
+     800,
+     900
+    ],
+    [
+     "Carrer de Costa Rica",
+     1,
+     40
+    ],
+    [
+     "Passeig de Santa Coloma",
+     1,
+     80
+    ]
+   ]
+  },
+  "58": {
+   "lat": 41.443,
+   "lon": 2.2,
+   "cp": [
+    "08030"
+   ],
+   "calles": [
+    [
+     "Passeig de Santa Coloma",
+     100,
+     200
+    ],
+    [
+     "Carrer de Baró de Viver",
+     1,
+     40
+    ]
+   ]
+  },
+  "59": {
+   "lat": 41.438,
+   "lon": 2.205,
+   "cp": [
+    "08030"
+   ],
+   "calles": [
+    [
+     "Carrer del Bon Pastor",
+     1,
+     60
+    ],
+    [
+     "Carrer de Sant Adrià",
+     1,
+     60
+    ]
+   ]
+  },
+  "60": {
+   "lat": 41.437,
+   "lon": 2.19,
+   "cp": [
+    "08030"
+   ],
+   "calles": [
+    [
+     "Carrer de Sant Andreu",
+     1,
+     100
+    ],
+    [
+     "Carrer del Gran de Sant Andreu",
+     1,
+     200
+    ],
+    [
+     "Passeig de Santa Coloma",
+     1,
+     100
+    ]
+   ]
+  },
+  "61": {
+   "lat": 41.422,
+   "lon": 2.19,
+   "cp": [
+    "08027",
+    "08030"
+   ],
+   "calles": [
+    [
+     "Carrer de Gran de la Sagrera",
+     1,
+     100
+    ],
+    [
+     "Carrer de Garcilaso",
+     1,
+     100
+    ],
+    [
+     "Carrer d'Hondures",
+     1,
+     60
+    ]
+   ]
+  },
+  "62": {
+   "lat": 41.423,
+   "lon": 2.185,
+   "cp": [
+    "08027"
+   ],
+   "calles": [
+    [
+     "Carrer de Garcilaso",
+     100,
+     200
+    ],
+    [
+     "Carrer de Gran de la Sagrera",
+     100,
+     160
+    ],
+    [
+     "Carrer de Telègraf",
+     100,
+     160
+    ]
+   ]
+  },
+  "63": {
+   "lat": 41.417,
+   "lon": 2.193,
+   "cp": [
+    "08027"
+   ],
+   "calles": [
+    [
+     "Carrer de Joan Torras",
+     1,
+     60
+    ],
+    [
+     "Carrer de Gran de la Sagrera",
+     1,
+     60
+    ],
+    [
+     "Carrer de Navas de Tolosa",
+     1,
+     60
+    ]
+   ]
+  },
+  "64": {
+   "lat": 41.413,
+   "lon": 2.178,
+   "cp": [
+    "08025",
+    "08041"
+   ],
+   "calles": [
+    [
+     "Carrer de Rogent",
+     1,
+     80
+    ],
+    [
+     "Carrer de Escorial",
+     1,
+     100
+    ],
+    [
+     "Carrer de Sant Antoni Maria Claret",
+     1,
+     80
+    ]
+   ]
+  },
+  "65": {
+   "lat": 41.409,
+   "lon": 2.187,
+   "cp": [
+    "08018"
+   ],
+   "calles": [
+    [
+     "Carrer del Clot",
+     1,
+     100
+    ],
+    [
+     "Carrer de Escorial",
+     1,
+     60
+    ],
+    [
+     "Carrer d'Aragó",
+     600,
+     680
+    ]
+   ]
+  },
+  "66": {
+   "lat": 41.399,
+   "lon": 2.199,
+   "cp": [
+    "08018"
+   ],
+   "calles": [
+    [
+     "Carrer de Pallars",
+     1,
+     100
+    ],
+    [
+     "Rambla del Poblenou",
+     1,
+     60
+    ],
+    [
+     "Avinguda Diagonal",
+     300,
+     400
+    ]
+   ]
+  },
+  "67": {
+   "lat": 41.392,
+   "lon": 2.205,
+   "cp": [
+    "08005"
+   ],
+   "calles": [
+    [
+     "Carrer de Ramon Trias Fargas",
+     1,
+     40
+    ],
+    [
+     "Carrer de Marina",
+     1,
+     100
+    ]
+   ]
+  },
+  "68": {
+   "lat": 41.401,
+   "lon": 2.204,
+   "cp": [
+    "08005",
+    "08018"
+   ],
+   "calles": [
+    [
+     "Rambla del Poblenou",
+     1,
+     150
+    ],
+    [
+     "Carrer de Pere IV",
+     150,
+     260
+    ],
+    [
+     "Carrer de Joncar",
+     1,
+     60
+    ],
+    [
+     "Carrer de Pujades",
+     100,
+     200
+    ]
+   ]
+  },
+  "69": {
+   "lat": 41.41,
+   "lon": 2.217,
+   "cp": [
+    "08019"
+   ],
+   "calles": [
+    [
+     "Avinguda Diagonal",
+     1,
+     100
+    ],
+    [
+     "Carrer de Josep Pla",
+     1,
+     60
+    ],
+    [
+     "Avinguda del Litoral",
+     1,
+     60
+    ]
+   ]
+  },
+  "70": {
+   "lat": 41.418,
+   "lon": 2.215,
+   "cp": [
+    "08019"
+   ],
+   "calles": [
+    [
+     "Rambla de Prim",
+     1,
+     100
+    ],
+    [
+     "Carrer del Taulat",
+     150,
+     260
+    ],
+    [
+     "Carrer de Pere IV",
+     400,
+     500
+    ]
+   ]
+  },
+  "71": {
+   "lat": 41.414,
+   "lon": 2.203,
+   "cp": [
+    "08019"
+   ],
+   "calles": [
+    [
+     "Carrer de Pere IV",
+     350,
+     450
+    ],
+    [
+     "Carrer de Provençals",
+     1,
+     60
+    ],
+    [
+     "Carrer del Perú",
+     100,
+     200
+    ]
+   ]
+  },
+  "72": {
+   "lat": 41.415,
+   "lon": 2.198,
+   "cp": [
+    "08019"
+   ],
+   "calles": [
+    [
+     "Carrer de Guipúscoa",
+     1,
+     100
+    ],
+    [
+     "Carrer de Pere IV",
+     250,
+     350
+    ],
+    [
+     "Carrer de Provençals",
+     60,
+     160
+    ]
+   ]
+  },
+  "73": {
+   "lat": 41.423,
+   "lon": 2.206,
+   "cp": [
+    "08020"
+   ],
+   "calles": [
+    [
+     "Carrer de Cristòbal de Moura",
+     1,
+     100
+    ],
+    [
+     "Carrer de Garcilaso",
+     250,
+     350
+    ],
+    [
+     "Avinguda de la Verneda",
+     1,
+     60
+    ]
+   ]
+  }
+ },
+ "metro": {
+  "01": [
+   "L3 - Liceu",
+   "L3 - Drassanes",
+   "L4 - Jaume I",
+   "L4 - Barceloneta",
+   "L2 - Paral·lel"
+  ],
+  "02": [
+   "L2 - Sant Antoni",
+   "L1 - Urgell",
+   "L5 - Sagrada Família",
+   "L4 - Girona",
+   "L5 - Hospital de Sant Pau",
+   "L3 - Diagonal",
+   "L2 - Monumental"
+  ],
+  "03": [
+   "L3 - Poble Sec",
+   "L1 - Espanya",
+   "L1 - Hostafrancs",
+   "L5 - Badal",
+   "L3 - Sants Estació",
+   "L5 - Plaça de Sants",
+   "L9 - Zona Franca"
+  ],
+  "04": [
+   "L3 - Les Corts",
+   "L3 - Maria Cristina",
+   "L3 - Palau Reial",
+   "L3 - Zona Universitària",
+   "L5 - Badal"
+  ],
+  "05": [
+   "L6 - Sant Gervasi",
+   "L6 - Muntaner",
+   "L6 - La Bonanova",
+   "L7 - Avinguda del Tibidabo",
+   "L6 - Sarrià"
+  ],
+  "06": [
+   "L3 - Fontana",
+   "L3 - Lesseps",
+   "L3 - Vallcarca",
+   "L4 - Joanic",
+   "L3 - Penitents",
+   "L4 - Alfons X"
+  ],
+  "07": [
+   "L5 - Horta",
+   "L5 - El Carmel",
+   "L5 - El Coll | La Teixonera",
+   "L3 - Montbau",
+   "L5 - Vall d'Hebron",
+   "L4 - Guinardó | Hospital de Sant Pau"
+  ],
+  "08": [
+   "L1 - Fabra i Puig",
+   "L5 - Virrei Amat",
+   "L5 - Maragall",
+   "L3 - Trinitat Nova",
+   "L11 - Ciutat Meridiana",
+   "L3 - Roquetes",
+   "L3 - Canyelles",
+   "L3 - Valldaura"
+  ],
+  "09": [
+   "L1 - Sant Andreu",
+   "L1 - Fabra i Puig",
+   "L1 - La Sagrera",
+   "L1 - Trinitat Vella",
+   "L9 - Onze de Setembre",
+   "L10 - Bon Pastor"
+  ],
+  "10": [
+   "L4 - Poblenou",
+   "L4 - Selva de Mar",
+   "L4 - Llacuna",
+   "L4 - El Maresme | Fòrum",
+   "L1 - Clot",
+   "L2 - Sant Martí",
+   "L1 - Glòries",
+   "L4 - Besòs Mar"
+  ]
+ },
+ "bus": {
+  "01": [
+   "Línies 59, V15 i H14",
+   "Línies 14, 120 i V13",
+   "Línies 39, 45 i H14"
+  ],
+  "02": [
+   "Línies 19, 20 i H10",
+   "Línies 6, 54 i V15",
+   "Línies 7, 50 i V17",
+   "Línies 55, 56 i V21"
+  ],
+  "03": [
+   "Línies 21, 79 i 109",
+   "Línies 9, 50 i 55",
+   "Línies 13, 150 i V9"
+  ],
+  "04": [
+   "Línies 7, 33 i 54",
+   "Línies 6, 54 i 67",
+   "Línies 60 i V3"
+  ],
+  "05": [
+   "Línies 16, 17 i 22",
+   "Línies 34, 58 i 63",
+   "Línies 60, 75 i V17"
+  ],
+  "06": [
+   "Línies 22, 24 i 92",
+   "Línies 31, 32 i 116",
+   "Línies 39 i V17"
+  ],
+  "07": [
+   "Línies 19, 39 i 119",
+   "Línies 10, 27 i 87",
+   "Línies 45, 86 i 92"
+  ],
+  "08": [
+   "Línies 11, 51 i 62",
+   "Línies 76, 135 i H4",
+   "Línies 11, 40 i 42"
+  ],
+  "09": [
+   "Línies 35, 40 i 42",
+   "Línies 11, 126 i H12",
+   "Línies 34, 62 i B25"
+  ],
+  "10": [
+   "Línies 6, 7 i 92",
+   "Línies 36, 41 i H16",
+   "Línies 19, 40 i V27"
+  ]
+ }
+}

@@ -1,0 +1,613 @@
+{
+ "note": "Photos and links of the saved example pages in ../gestion-inmobiliaria-examples, labelled by hand from a contact sheet. `archivo` is searched in `<ejemplo>/*_files/`. Photos are third-party images: dev use only, never committed or published.",
+ "ejemplos": {
+  "atb-01": {
+   "fotos": [
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_897.jpg",
+     "tipo": "piscina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_898.jpg",
+     "tipo": "piscina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_899.jpg",
+     "tipo": "jardin"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_900.jpg",
+     "tipo": "jardin"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_901.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_902.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_903.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_904.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_905.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_906.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_907.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_908.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_909.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_910.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_911.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_912.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_913.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_914.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_915.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_916.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_917.jpg",
+     "tipo": "vistas"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_918.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_919.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_920.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g767_fotos_921.jpg",
+     "tipo": "banio"
+    }
+   ],
+   "defecto": "scale_850_566__inmuebles_g767_fotos_905.jpg",
+   "medios": [
+    {
+     "tipo": "tour",
+     "url": "https://my.matterport.com/show/?m=nRziYnR5rg9",
+     "titulo": "Visita virtual"
+    }
+   ]
+  },
+  "atb-02": {
+   "fotos": [
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_901.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_902.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_903.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_904.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_905.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_906.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_907.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_908.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_909.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_910.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_911.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_912.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_913.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_914.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_915.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_916.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_917.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_918.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_919.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_g753-b-1_fotos_920p.jpg",
+     "tipo": "plano"
+    }
+   ],
+   "defecto": "scale_850_566__inmuebles_g753-b-1_fotos_901.jpg",
+   "medios": [
+    {
+     "tipo": "tour",
+     "url": "https://my.matterport.com/show/?m=yQThzKaRCuR",
+     "titulo": "Visita virtual"
+    }
+   ]
+  },
+  "atb-03": {
+   "fotos": [
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_001.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_002.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_003.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_004.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_005.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_006.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_007.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_008.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_009.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_010.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_011.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_012.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_013.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_014.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_015.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_016.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_017.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_018.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_019.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_020.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_021.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_022.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_023.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_024.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_025.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_026.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_027.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_028.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_029.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_030.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_031.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_032.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "scale_850_566__inmuebles_576_fotos_ribes_033.jpg",
+     "tipo": "plano"
+    }
+   ],
+   "defecto": "scale_850_566__inmuebles_576_fotos_ribes_001.jpg",
+   "medios": [
+    {
+     "tipo": "tour",
+     "url": "https://my.matterport.com/show/?m=bium5vKYA1f",
+     "titulo": "Visita virtual"
+    }
+   ]
+  },
+  "idealista-01": {
+   "fotos": [
+    {
+     "archivo": "1365646471.jpg",
+     "tipo": "piscina"
+    },
+    {
+     "archivo": "1365646498.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1444240374.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1444240381.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1465758739.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "1465758740.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "1465758741.jpg",
+     "tipo": "jardin"
+    },
+    {
+     "archivo": "1465758742.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1465758743.jpg",
+     "tipo": "vistas"
+    },
+    {
+     "archivo": "1465758756.jpg",
+     "tipo": "jardin"
+    },
+    {
+     "archivo": "1465758757.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "1465758758.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758768.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1465758771.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "1465758772.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "1465758773.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "1465758778.jpg",
+     "tipo": "banio"
+    },
+    {
+     "archivo": "1465758780.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "1465758784.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "1465758785.jpg",
+     "tipo": "jardin"
+    },
+    {
+     "archivo": "1465758786.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1465758788.jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "1465758789(1).jpg",
+     "tipo": "terraza"
+    },
+    {
+     "archivo": "1465758796.jpg",
+     "tipo": "cocina"
+    },
+    {
+     "archivo": "1465758800.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758804.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758806.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "1465758807.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758808.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758809.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758811.jpg",
+     "tipo": "jardin"
+    },
+    {
+     "archivo": "1465758815.jpg",
+     "tipo": "otro"
+    },
+    {
+     "archivo": "1465758819.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "1465758820.jpg",
+     "tipo": "fachada"
+    },
+    {
+     "archivo": "1485846511.jpg",
+     "tipo": "vistas"
+    },
+    {
+     "archivo": "1485846512.jpg",
+     "tipo": "vistas"
+    }
+   ],
+   "defecto": "1444240374.jpg",
+   "medios": [
+    {
+     "tipo": "tour",
+     "url": "https://floorfy.com/es/tour/2690507",
+     "titulo": "Tour virtual"
+    }
+   ]
+  },
+  "idealista-02": {
+   "fotos": [
+    {
+     "archivo": "1429830553.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "1429830692.jpg",
+     "tipo": "salon"
+    }
+   ],
+   "defecto": "1429830553.jpg",
+   "medios": [
+    {
+     "tipo": "tour",
+     "url": "https://my.matterport.com/show/?m=m7BjdXuTgxm",
+     "titulo": "Tour virtual"
+    }
+   ]
+  },
+  "idealista-03": {
+   "fotos": [
+    {
+     "archivo": "1440588760.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "1440588820.jpg",
+     "tipo": "salon"
+    }
+   ],
+   "defecto": "1440588760.jpg",
+   "medios": [
+    {
+     "tipo": "tour",
+     "url": "https://my.matterport.com/show/?m=MxukLe3UAcV",
+     "titulo": "Tour virtual"
+    }
+   ]
+  },
+  "locb-01": {
+   "fotos": [
+    {
+     "archivo": "0763be46-1bf2-4ee6-8fe7-c51134c3cab0-818x417.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "95f382d0-e0e9-42da-90eb-08df58af571d-4-488x326.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "c0fb31da-95d1-4664-8ea9-c38d0e4d112b-8-488x326.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "c288d6c3-8f96-47d9-ba38-19c6d8802793-2-488x326.jpg",
+     "tipo": "salon"
+    }
+   ],
+   "defecto": "0763be46-1bf2-4ee6-8fe7-c51134c3cab0-818x417.jpg",
+   "medios": [
+    {
+     "tipo": "video",
+     "url": "https://youtu.be/vnSmOQNtmPU",
+     "titulo": "Vídeo"
+    }
+   ]
+  },
+  "locb-02": {
+   "fotos": [
+    {
+     "archivo": "32113921-87ad-4b6f-875e-feed0b82e5f0-2-488x326.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "42cea44a-0e34-445c-a56d-b6944a820f14-2-488x326.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "f9f2520d-fce9-4a26-b30d-854f9b95d9d5-2-488x326.jpg",
+     "tipo": "salon"
+    }
+   ],
+   "defecto": "32113921-87ad-4b6f-875e-feed0b82e5f0-2-488x326.jpg",
+   "medios": []
+  },
+  "locb-03": {
+   "fotos": [
+    {
+     "archivo": "2e75face-651d-43de-8313-649a76a15bba-488x326.jpg",
+     "tipo": "salon"
+    },
+    {
+     "archivo": "6e709f4d-7971-4eb3-bdd3-e0460e70b994-488x326.jpg",
+     "tipo": "dormitorio"
+    },
+    {
+     "archivo": "99e322d7-13ad-4953-9c34-2f15b117f66e-2-488x326.jpg",
+     "tipo": "salon"
+    }
+   ],
+   "defecto": "2e75face-651d-43de-8313-649a76a15bba-488x326.jpg",
+   "medios": []
+  }
+ }
+}
