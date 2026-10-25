@@ -23,6 +23,9 @@ class Distribucion(models.Model):
         help_text='Cuántos de los dormitorios (dobles o individuales) tienen baño propio. No suma al total.',
     )
     banios = models.PositiveIntegerField(null=True, blank=True)
+    aseos = models.PositiveIntegerField(
+        null=True, blank=True, help_text='Aseos (medio baño: sin ducha ni bañera). No suman a los baños.',
+    )
     capacidad_personas = models.PositiveIntegerField(null=True, blank=True)
     suelo_banio = models.CharField(max_length=20, choices=MATERIALES_SUELO, blank=True, default='')
 

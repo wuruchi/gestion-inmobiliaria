@@ -1,3 +1,4 @@
+from .agencia import Agencia
 from .modalidad import Modalidad
 from .inmueble import Inmueble
 from .inmueble_modalidad import InmuebleModalidad
@@ -16,6 +17,7 @@ from .suministro import Suministro
 from .descripcion_inmueble import DescripcionInmueble
 from .caracteristicas import Caracteristicas
 from .terminos_alquiler import TerminosAlquiler
+from .inclusiones_alquiler import InclusionesAlquiler
 from .condiciones import Condiciones
 from .solicitud_reserva import SolicitudReserva
 from .historial_precio import HistorialPrecio

@@ -3,7 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from .models import Inmueble, ImageInmueble, Barrio, Modalidad, Distrito, Municipio, Provincia, Caracteristicas, PlazaAparcamiento, Distribucion, Instalaciones, Dotacion, AreaRecreo, Estancias
 from .models import Seguridad, Entorno, TransporteInmueble, OtrosEspacios
-from .models import CertificadoEnergetico, Condiciones, InmuebleModalidad, MediaInmueble, RegistroLegal, RegulacionAlquiler, SolicitudReserva, TerminosAlquiler
+from .models import Agencia, CertificadoEnergetico, Condiciones, InclusionesAlquiler, InmuebleModalidad, MediaInmueble, RegistroLegal, RegulacionAlquiler, SolicitudReserva, TerminosAlquiler
 
 class ProvinciasSerializer(serializers.ModelSerializer):
     class Meta:
@@ -183,19 +183,29 @@ class RegulacionAlquilerSerializer(serializers.ModelSerializer):
 class TerminosAlquilerSerializer(serializers.ModelSerializer):
    class Meta:
       model = TerminosAlquiler
-      fields = ['acepta_animales', 'estancia_minima', 'estancia_minima_unidad',
+      fields = ['acepta_animales', 'acepta_fumadores', 'uso_temporada', 'estancia_minima', 'estancia_minima_unidad',
                 'estancia_maxima', 'estancia_maxima_unidad']
+
+class InclusionesAlquilerSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = InclusionesAlquiler
+      fields = ['gastos_comunidad', 'ibi', 'seguro', 'wifi', 'suministros']
 
 class PrecioModalidadDetalleSerializer(PrecioModalidadSerializer):
    # Rent regulation of a rental offer: null for a sale; a rental without a record is "desconocida".
    regulacion = serializers.SerializerMethodField()
    # Stay limits and pets of a rental offer: null for a sale or when nothing was recorded.
    terminos = serializers.SerializerMethodField()
+   # What the rent includes: null for a sale or when nothing was recorded.
+   inclusiones = serializers.SerializerMethodField()
+   # Deposit of a rental: months of rent and the amount (price x months); null for a sale or when not set.
+   fianza_total = serializers.SerializerMethodField()
    # The listing's own conditions for this modalidad, else the modalidad's default.
    condiciones = serializers.SerializerMethodField()
 
    class Meta(PrecioModalidadSerializer.Meta):
-      fields = PrecioModalidadSerializer.Meta.fields + ['regulacion', 'terminos', 'condiciones']
+      fields = PrecioModalidadSerializer.Meta.fields + [
+         'fianza_meses', 'fianza_total', 'regulacion', 'terminos', 'inclusiones', 'condiciones']
 
    def get_regulacion(self, obj):
       if obj.modalidad.unidad_precio != 'mensual':
@@ -210,6 +220,16 @@ class PrecioModalidadDetalleSerializer(PrecioModalidadSerializer):
          return TerminosAlquilerSerializer(obj.terminos).data
       except ObjectDoesNotExist:
          return None
+
+   def get_inclusiones(self, obj):
+      try:
+         return InclusionesAlquilerSerializer(obj.inclusiones).data
+      except ObjectDoesNotExist:
+         return None
+
+   def get_fianza_total(self, obj):
+      importe = obj.fianza_total
+      return None if importe is None else str(importe)
 
    def get_condiciones(self, obj):
       if obj.condiciones_id:
@@ -232,7 +252,12 @@ class CertificadoEnergeticoSerializer(serializers.ModelSerializer):
 class RegistroLegalSerializer(serializers.ModelSerializer):
    class Meta:
       model = RegistroLegal
-      fields = ['tipo', 'numero', 'organismo']
+      fields = ['tipo', 'estado', 'numero', 'organismo']
+
+class AgenciaSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = Agencia
+      fields = ['nombre', 'aicat', 'numero_api']
 
 class SolicitudReservaSerializer(serializers.ModelSerializer):
    class Meta:
@@ -248,6 +273,15 @@ class SolicitudReservaSerializer(serializers.ModelSerializer):
 # Address columns withheld when the listing asks to hide its exact location.
 DIRECCION_FIELDS = ('direccion', 'direccion_short', 'dir_descripcion')
 
+# With a hidden address the point is snapped to a grid of this many degrees (about 550 m of latitude).
+PASO_COORDENADAS_OCULTAS = 0.005
+
+def difuminar(valor):
+  """Centre of the grid cell that holds the coordinate; the exact point cannot be recovered."""
+  if valor is None:
+    return None
+  return round(round(valor / PASO_COORDENADAS_OCULTAS) * PASO_COORDENADAS_OCULTAS, 3)
+
 class OcultarDireccionMixin(serializers.Serializer):
   def to_representation(self, instance):
     data = super().to_representation(instance)
@@ -255,6 +289,9 @@ class OcultarDireccionMixin(serializers.Serializer):
       for name in DIRECCION_FIELDS:
         if name in data:
           data[name] = ''
+      for name in ('geo_latitude', 'geo_longitude'):
+        if name in data:
+          data[name] = difuminar(data[name])
     return data
 
 class DerivedFieldsMixin(serializers.Serializer):
@@ -344,7 +381,7 @@ INMUEBLE_PUBLIC_FIELDS = [
   'fecha_alta',
   'sup_construida', 'sup_cont_comun', 'sup_util',
   'usos',
-  'gtos_comunidad', 'gastos_comunidad_incluidos', 'ibi', 'ibi_incluido', 'situacion_actual',
+  'gtos_comunidad', 'ibi', 'situacion_actual',
   'notas_web',
 ]
 # Owner and internal data: never serialized publicly.
@@ -354,7 +391,7 @@ INMUEBLE_PRIVATE_FIELDS = [
 ]
 # Nested objects and computed values (declared on the serializer, not columns).
 INMUEBLE_NESTED_FIELDS = [
-  'n_banios', 'n_habitaciones', 'zona', 'zona_ref', 'modalidades', 'es_venta', 'importe_alquiler', 'importe_venta', 'n_plz_garaje', 'plazas', 'images', 'planos', 'medios', 'provincia', 'municipio', 'distrito', 'barrio', 'registros_legales', 'certificado_energetico',
+  'n_banios', 'n_habitaciones', 'zona', 'zona_ref', 'modalidades', 'es_venta', 'importe_alquiler', 'importe_venta', 'n_plz_garaje', 'plazas', 'images', 'planos', 'medios', 'provincia', 'municipio', 'distrito', 'barrio', 'agencia', 'registros_legales', 'certificado_energetico',
   'caracteristicas', 'distribucion', 'instalaciones', 'arearecreo', 'dotacion',
   'cocina', 'terraza', 'salon', 'carpinteria', 'otros_espacios', 'seguridad',
   'entorno', 'transporte', 'descripciones', 'gran_tenedor', 'zona_tensionada', 'estado', 'fecha_disponibilidad',
@@ -380,17 +417,19 @@ class SingleInmuebleSerializer(OcultarDireccionMixin, ImagenesMixin, DerivedFiel
   entorno = EntornoSerializer(read_only=True)
   modalidades = PrecioModalidadDetalleSerializer(source='precios', many=True, read_only=True)
   plazas = PlazaAparcamientoSerializer(many=True, read_only=True)
+  agencia = AgenciaSerializer(read_only=True)
   registros_legales = RegistroLegalSerializer(many=True, read_only=True)
   certificado_energetico = CertificadoEnergeticoSerializer(read_only=True)
   n_plz_garaje = serializers.SerializerMethodField()
   # True when any owner is a large holder; the owners themselves are never serialized.
-  gran_tenedor = serializers.BooleanField(read_only=True)
+  # None when no owner is recorded: unknown is not "no".
+  gran_tenedor = serializers.BooleanField(read_only=True, allow_null=True)
   transporte = serializers.SerializerMethodField()
 
   def get_transporte(self, obj):
     return transporte_plano(obj)
-  # True when the municipality has a declaration in force today.
-  zona_tensionada = serializers.BooleanField(read_only=True)
+  # True with a declaration in force today; None when the municipality's declarations are not loaded.
+  zona_tensionada = serializers.BooleanField(read_only=True, allow_null=True)
 
   def get_planos(self, obj):
     return self._imagenes(obj, planos=True)

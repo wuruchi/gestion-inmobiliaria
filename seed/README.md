@@ -71,7 +71,9 @@ Committed, so seeding works offline. Each file records its sources and retrieval
   (131) from the Generalitat's list, with municipality names as printed there. The command matches them to the
   municipios in the database; those whose province is not loaded (112 today, outside Barcelona province) are listed
   as "not loaded" and picked up by a later run. Existing declarations are kept as staff left them. The 140's start
-  date is assumed, and the 2026 changes are not loaded (see ADR 0015).
+  date is assumed, and the 2026 changes are not loaded (see ADR 0015). Every loaded municipio of Catalonia is also
+  marked `declaraciones_cargadas`: the list covers all of Catalonia, so a municipio not on it is known not to be stressed.
+  Municipios elsewhere stay unmarked and report `zona_tensionada: null` (ADR 0019).
 - Modalidades (`data/modalidades.json`): application configuration maintained by hand, not downloaded.
 - Conditions (`data/condiciones.json`): one default `Condiciones` per modalidad, written by hand from the
   AT Barcelona (rent: deposit, fees, ITP, utilities, final cleaning, tenant documents) and idealista (sale: ITP,

@@ -98,6 +98,10 @@ class Inmueble(models.Model):
     id = models.AutoField(primary_key=True, editable=False)
     # The province is `municipio.provincia` (see the `provincia` property).
     municipio = models.ForeignKey(Municipio, on_delete=models.PROTECT)
+    agencia = models.ForeignKey(
+        'base.Agencia', on_delete=models.PROTECT, null=True, blank=True, related_name='inmuebles',
+        help_text='Agencia que anuncia el inmueble; su AICAT y número API se muestran en el anuncio.',
+    )
     distrito = models.ForeignKey(
         Distrito, on_delete=models.PROTECT, null=True, blank=True
     )
@@ -209,8 +213,6 @@ class Inmueble(models.Model):
         validators=[MinValueValidator(0)], blank=True,
     )
     ibi = models.DecimalField(max_digits=9, decimal_places=2, null=True, validators=[MinValueValidator(0)], blank=True)
-    gastos_comunidad_incluidos = models.BooleanField(default=False)
-    ibi_incluido = models.BooleanField(default=False)
     situacion_actual = models.CharField(max_length=20, choices=SITUACIONES, blank=True, default='')
 
     # Room, bathroom and equipment data lives in the one-to-one detail tables
@@ -368,13 +370,16 @@ class Inmueble(models.Model):
 
     @property
     def zona_tensionada(self):
-        """The municipality is a stressed residential market today (uses prefetched declarations)."""
-        return self.municipio.es_zona_tensionada()
+        """The municipality is a stressed residential market today; None when its declarations are not loaded."""
+        return self.municipio.zona_tensionada()
 
     @property
     def gran_tenedor(self):
-        """True when any owner of the listing is a large holder (uses prefetched `propietarios`)."""
-        return any(p.gran_tenedor for p in self.propietarios.all())
+        """True when any owner is a large holder; None (unknown) when no owner is recorded (uses prefetched `propietarios`)."""
+        propietarios = list(self.propietarios.all())
+        if not propietarios:
+            return None
+        return any(p.gran_tenedor for p in propietarios)
 
     @property
     def n_habitaciones(self):

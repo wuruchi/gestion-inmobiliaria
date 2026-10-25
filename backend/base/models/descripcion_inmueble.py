@@ -8,7 +8,9 @@ class DescripcionInmueble(models.Model):
     ES = 'es'
     EN = 'en'
     CA = 'ca'
-    IDIOMAS = [(ES, 'Español'), (EN, 'English'), (CA, 'Català')]
+    FR = 'fr'
+    IT = 'it'
+    IDIOMAS = [(ES, 'Español'), (EN, 'English'), (CA, 'Català'), (FR, 'Français'), (IT, 'Italiano')]
 
     inmueble = models.ForeignKey(
         Inmueble, on_delete=models.CASCADE, related_name='descripciones'

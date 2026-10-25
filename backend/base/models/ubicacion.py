@@ -63,6 +63,11 @@ class Municipio(SlugMixin):
     slug = models.SlugField()
     latitud = models.FloatField(null=True, blank=True)
     longitud = models.FloatField(null=True, blank=True)
+    declaraciones_cargadas = models.BooleanField(
+        default=False, verbose_name='declaraciones de zona tensionada cargadas',
+        help_text='Marcar cuando las declaraciones de zona tensionada de este municipio están registradas, '
+                  'aunque no tenga ninguna. Sin marcar, si es zona tensionada se desconoce.',
+    )
 
     class Meta:
         ordering = ['nombre']
@@ -93,6 +98,12 @@ class Municipio(SlugMixin):
         """A declaration is in force on `fecha` (today); uses prefetched `declaraciones_tensionada`."""
         fecha = fecha or timezone.localdate()
         return any(d.en_vigor(fecha) for d in self.declaraciones_tensionada.all())
+
+    def zona_tensionada(self, fecha=None):
+        """True with a declaration in force, False when the declarations are loaded and none applies, else None (unknown)."""
+        if self.es_zona_tensionada(fecha):
+            return True
+        return False if self.declaraciones_cargadas else None
 
     def __str__(self) -> str:
         return self.nombre

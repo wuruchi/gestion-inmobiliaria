@@ -29,6 +29,12 @@ class Dotacion(models.Model):
     camas = models.PositiveIntegerField(default=0)
     sofas = models.PositiveIntegerField(default=0)
     tendedero = models.BooleanField(default=False)
+    cafetera = models.BooleanField(default=False)
+    plancha = models.BooleanField(default=False, help_text='Plancha y tabla de planchar.')
+    kit_limpieza = models.BooleanField(default=False)
+    secador_pelo = models.BooleanField(default=False)
+    papel_higienico = models.BooleanField(default=False, help_text='Papel higiénico de cortesía.')
+    sofa_cama = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return f'{self.inmueble.referencia} - Dotación'

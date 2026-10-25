@@ -27,6 +27,15 @@ def _estancia_en_dias(campo):
     )
 
 
+USOS_TEMPORADA = (
+    ('ocio_vacaciones', 'Ocio / vacaciones'),
+    ('trabajo', 'Trabajo'),
+    ('estudios', 'Estudios'),
+    ('tratamiento_medico', 'Tratamiento médico'),
+    ('otro', 'Otro'),
+)
+
+
 class TerminosAlquiler(models.Model):
     """Terms of one rental offer (an `InmuebleModalidad` with a monthly price): stay limits and pets.
 
@@ -38,6 +47,11 @@ class TerminosAlquiler(models.Model):
         InmuebleModalidad, on_delete=models.CASCADE, related_name='terminos'
     )
     acepta_animales = models.BooleanField(default=False)
+    acepta_fumadores = models.BooleanField(default=False)
+    uso_temporada = models.CharField(
+        max_length=20, choices=USOS_TEMPORADA, blank=True, default='',
+        help_text='Solo en ofertas temporales: para qué se alquila por temporada.',
+    )
     estancia_minima = models.PositiveSmallIntegerField(blank=True, null=True)
     estancia_minima_unidad = models.CharField(
         max_length=10, choices=UNIDADES_ESTANCIA, default=MESES
@@ -66,6 +80,7 @@ class TerminosAlquiler(models.Model):
         super().clean()
         self.validate_estancia()
         self.validate_oferta_de_alquiler()
+        self.validate_uso_temporada()
 
     def validate_estancia(self):
         if (
@@ -83,8 +98,14 @@ class TerminosAlquiler(models.Model):
         if self.oferta_id and self.oferta.modalidad.unidad_precio != 'mensual':
             raise ValidationError({'oferta': 'Solo las ofertas de alquiler tienen términos de alquiler.'})
 
+    def validate_uso_temporada(self):
+        """Only a temporary offer has a seasonal purpose."""
+        if self.uso_temporada and self.oferta_id and self.oferta.modalidad.codigo != 'temporal':
+            raise ValidationError({'uso_temporada': 'Solo las ofertas temporales tienen uso de temporada.'})
+
     def save(self, *args, **kwargs):
         self.validate_oferta_de_alquiler()
+        self.validate_uso_temporada()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:

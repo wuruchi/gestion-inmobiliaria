@@ -21,6 +21,7 @@ erDiagram
     Municipio ||--o{ DeclaracionZonaTensionada : "declared stressed"
     Distrito ||--o{ Barrio : has
 
+    Agencia ||--o{ Inmueble : advertises
     Inmueble }o--|| Municipio : located
     Inmueble }o--o| Distrito : located
     Inmueble }o--o| Barrio : located
@@ -57,6 +58,7 @@ erDiagram
     Inmueble ||--o| AreaRecreo : detail
     Inmueble ||--o| Caracteristicas : detail
     InmuebleModalidad ||--o| TerminosAlquiler : "stay limits, pets (rentals)"
+    InmuebleModalidad ||--o| InclusionesAlquiler : "what the rent includes (rentals)"
 ```
 
 The model groups:
@@ -64,8 +66,8 @@ The model groups:
 | Group | Models | Public in the API? |
 |---|---|---|
 | Locations | `Provincia`, `Comarca`, `Municipio`, `Distrito`, `Barrio` | Yes (reference lists, nested in a listing) |
-| Offer | `Modalidad`, `InmuebleModalidad`, `Condiciones`, `RegulacionAlquiler`, `TerminosAlquiler` | Yes |
-| Listing | `Inmueble` | Only published listings, only allow-listed columns |
+| Offer | `Modalidad`, `InmuebleModalidad`, `Condiciones`, `RegulacionAlquiler`, `TerminosAlquiler`, `InclusionesAlquiler` | Yes |
+| Listing | `Inmueble`, `Agencia` | Only published listings, only allow-listed columns; the agency shows `nombre`, `aicat`, `numero_api` |
 | Detail tables | `Distribucion`, `Estancias`, `OtrosEspacios`, `Dotacion`, `Instalaciones`, `Seguridad`, `Entorno`, `AreaRecreo`, `Caracteristicas` | Yes |
 | Repeating groups (one row per member) | `Suministro`, `TransporteInmueble`, `DescripcionInmueble` | Yes (supplies and transport are flattened per kind; descriptions are an object by language) |
 | Media and parking | `ImageInmueble`, `MediaInmueble`, `PlazaAparcamiento` | Yes (parking value and rent are private; the optional price is public) |
@@ -89,7 +91,7 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 **`Comarca`**: a Catalan comarca. It only groups municipios and has no province, because one comarca can span two.
 - `Municipio`: one comarca groups many municipios; `Municipio.comarca` is optional (PROTECT).
 
-**`Municipio`**: a municipality, identified by its 5-digit INE code, which must start with its province's code.
+**`Municipio`**: a municipality, identified by its 5-digit INE code, which must start with its province's code. `declaraciones_cargadas` says its stressed-zone declarations are recorded (even if it has none), so "no declaration" can mean "not stressed" instead of "unknown".
 - `Provincia`: belongs to exactly one province (required, PROTECT).
 - `Comarca`: may belong to one comarca (optional, PROTECT).
 - `Distrito`: has many districts (each `Distrito` holds the key, PROTECT); only Barcelona's are loaded.
@@ -107,7 +109,7 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 
 **`DeclaracionZonaTensionada`**: a period in which a municipality is declared a stressed residential market (private).
 - `Municipio`: concerns exactly one municipality (required, PROTECT).
-- `Inmueble`: *no foreign key*. A listing is in a stressed zone when its municipality has a declaration in force; the detail shows this as the derived `zona_tensionada`.
+- `Inmueble`: *no foreign key*. A listing is in a stressed zone when its municipality has a declaration in force; the detail shows this as the derived `zona_tensionada` (`true`, `false` when the declarations are loaded and none applies, `null` when they are not loaded).
 
 ### Offer
 
@@ -123,6 +125,7 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 - `Condiciones`: may use its own conditions record (optional, PROTECT); it must be of the same modalidad. Empty means the modalidad's default.
 - `RegulacionAlquiler`: a rental offer may have one rent-regulation record (one-to-one, CASCADE); a sale cannot.
 - `TerminosAlquiler`: a rental offer may have one record of stay limits and pets (one-to-one, CASCADE); a sale cannot.
+- `InclusionesAlquiler`: a rental offer may have one record of what the rent includes (one-to-one, CASCADE); a sale cannot.
 - `HistorialPrecio`: *no foreign key*. Saving a new or changed price appends a row to the listing's price log for that modalidad.
 - `User`: `created_by` and `updated_by`, filled by the admin (optional, SET_NULL).
 
@@ -137,6 +140,9 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 **`TerminosAlquiler`**: minimum and maximum stay and whether pets are accepted, for one rental offer.
 - `InmuebleModalidad`: belongs to exactly one rental offer (one-to-one, CASCADE).
 
+**`InclusionesAlquiler`**: what the rent of one rental offer includes: community fees, IBI, insurance, wifi, utilities.
+- `InmuebleModalidad`: belongs to exactly one rental offer (one-to-one, CASCADE).
+
 **`HistorialPrecio`**: our private log of the prices of a listing under a modalidad, by date.
 - `Inmueble`: belongs to one listing (required, CASCADE).
 - `Modalidad`: is of one modalidad (required, PROTECT).
@@ -144,10 +150,14 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 
 ### The listing
 
+**`Agencia`**: the real-estate agency that advertises listings, with its AICAT and API numbers and contact data. Those numbers are the agency's, the same on every listing it advertises.
+- `Inmueble`: advertises many listings (each `Inmueble.agencia` is optional, PROTECT: an agency in use cannot be deleted).
+
 **`Inmueble`**: a property offered by the agency; everything else hangs from it. Only published listings and allow-listed columns are public.
 - `Municipio`: located in one municipality (required, PROTECT).
 - `Distrito`: may be in one district (optional, PROTECT); it must belong to the municipality.
 - `Barrio`: may be in one barrio (optional, PROTECT); it must belong to the district, or to the municipality without a district.
+- `Agencia`: may be advertised by one agency (optional, PROTECT).
 - `Modalidad`: many-to-many through `InmuebleModalidad`: the modalidades it is offered under.
 - `InmuebleModalidad`: has one or more offers with their prices (CASCADE); the listing's `estado` and `fecha_disponibilidad` are derived from them.
 - `HistorialPrecio`: has many price-log rows (CASCADE).
@@ -156,7 +166,7 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 - `DatosInternos`: may have one private internal-data record (one-to-one, CASCADE).
 - `AcuerdoAdministracion`: has many management agreements, a history of renewals (CASCADE).
 - `CertificadoEnergetico`: may have one energy certificate (one-to-one, CASCADE).
-- `RegistroLegal`: has many registry numbers: AICAT, habitability certificate, tourist licence (CASCADE).
+- `RegistroLegal`: has many registrations: habitability certificate, NRUA, tourist licence (CASCADE).
 - `ImageInmueble`: has many photos and floor plans (CASCADE).
 - `MediaInmueble`: has many videos and virtual tours (CASCADE).
 - `PlazaAparcamiento`: has many parking spaces of its own (CASCADE).
@@ -212,7 +222,7 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 **`TransporteInmueble`**: one transport mode near a listing (bus, metro, tram, train, railway) with a description.
 - `Inmueble`: belongs to one listing (required, CASCADE); unique per listing and mode.
 
-**`DescripcionInmueble`**: the text description of a listing in one language (`es`, `en`, `ca`).
+**`DescripcionInmueble`**: the text description of a listing in one language (`es`, `en`, `ca`, `fr`, `it`).
 - `Inmueble`: belongs to one listing (required, CASCADE); unique per listing and language.
 
 ### Media, parking and legal
@@ -226,7 +236,7 @@ referenced row cannot be deleted while this one exists; "CASCADE" means this row
 **`PlazaAparcamiento`**: a parking space that belongs to a listing (to a flat, say). A space sold or let on its own is a listing of type `parking`. Its value and rent are private notes; its optional price is public.
 - `Inmueble`: belongs to one listing (required, CASCADE).
 
-**`RegistroLegal`**: a registration or licence number a listing must show (AICAT, habitability certificate, tourist licence).
+**`RegistroLegal`**: a registration or licence a listing must show (habitability certificate, NRUA, tourist licence), with its status (`vigente`, `en_tramite`, `no_aplica`). The AICAT is the agency's, not the property's: see `Agencia`.
 - `Inmueble`: belongs to one listing (required, CASCADE); each type at most once except `otro`.
 
 **`CertificadoEnergetico`**: the energy performance certificate of a listing: number, rating A to G, consumption, emissions and dates.
@@ -262,7 +272,7 @@ Direction: "A → B" means A holds the foreign key to B.
 | `Municipio` → `Provincia` | | `PROTECT` |
 | `Municipio` → `Comarca` (optional) | | `PROTECT` |
 | `Distrito` → `Municipio`, `Barrio` → `Distrito` | | `PROTECT` |
-| `Inmueble` → `Municipio` (required), `Distrito`, `Barrio` (optional) | | `PROTECT` |
+| `Inmueble` → `Municipio` (required), `Distrito`, `Barrio`, `Agencia` (optional) | | `PROTECT` |
 | `InmuebleModalidad` → `Condiciones` (optional) | | `PROTECT` (conditions in use cannot be deleted) |
 | `Condiciones` → `Modalidad` | | `PROTECT` |
 | `HistorialPrecio` → `Modalidad` | | `PROTECT` |
@@ -270,7 +280,7 @@ Direction: "A → B" means A holds the foreign key to B.
 | `InmuebleModalidad` → `Inmueble` | | `CASCADE` (a listing's prices go with it) |
 | `InmuebleModalidad` → `Modalidad` | | `PROTECT` (a modalidad in use cannot be deleted) |
 | `ImageInmueble`, `MediaInmueble`, `PlazaAparcamiento`, `RegistroLegal`, `HistorialPrecio`, `DatosInternos`, `AcuerdoAdministracion`, `CertificadoEnergetico`, `Suministro`, `TransporteInmueble`, `DescripcionInmueble` → `Inmueble` | | `CASCADE` |
-| `RegulacionAlquiler`, `TerminosAlquiler` → `InmuebleModalidad` (one-to-one) | | `CASCADE` (the offer's records go with it) |
+| `RegulacionAlquiler`, `TerminosAlquiler`, `InclusionesAlquiler` → `InmuebleModalidad` (one-to-one) | | `CASCADE` (the offer's records go with it) |
 | `DeclaracionZonaTensionada` → `Municipio` | | `PROTECT` |
 | Every detail table (`Distribucion`, `Estancias`, `OtrosEspacios`, `Dotacion`, `Instalaciones`, `Seguridad`, `Entorno`, `AreaRecreo`, `Caracteristicas`) → `Inmueble` (one-to-one, field `inmueble`) | | `CASCADE` |
 | `InmueblePropietario` → `Inmueble` | | `CASCADE` |
@@ -291,7 +301,7 @@ neighborhoods are defined by each city; only Barcelona's are loaded, and `Barrio
 |---|---|---|
 | `Provincia` | `codigo_ine` (2 digits), `nombre`, `slug` | `codigo_ine`, `nombre` and `slug` unique (DB) |
 | `Comarca` | `codigo`, `nombre`, `slug` | `codigo` and `slug` unique (DB). No province: it is on each `Municipio` |
-| `Municipio` | `provincia`, `comarca`, `codigo_ine` (5 digits: province + municipality), `nombre`, `slug`, `latitud`, `longitud` | `codigo_ine` unique; `slug` unique within the province (DB) |
+| `Municipio` | `provincia`, `comarca`, `codigo_ine` (5 digits: province + municipality), `nombre`, `slug`, `latitud`, `longitud`, `declaraciones_cargadas` | `codigo_ine` unique; `slug` unique within the province (DB). `declaraciones_cargadas` (default `false`) is set by `python seed.py zonas-tensionadas` for every loaded municipio of Catalonia and by staff in the admin (ADR 0019) |
 | `Distrito` | `municipio`, `codigo`, `nombre`, `slug` | `codigo` and `slug` unique within the municipality (DB); ordered by `codigo` |
 | `Barrio` | `distrito`, `codigo`, `nombre`, `slug` | `codigo` and `slug` unique within the district (DB); ordered by `codigo` |
 
@@ -328,6 +338,7 @@ One row per modalidad a listing is offered under. This is the only place prices 
 | `fecha_disponibilidad` ("disponible desde") is required and defaults to today in the admin; it is the date this offer can be taken. The listing's `fecha_disponibilidad` in the API is derived: the earliest date among its offers that are not `cerrado` (null when all are closed); a closed offer never affects the listing, the list order or a date search (ADR 0017) | DB (not null) + property |
 | `condiciones` (optional) must be conditions of the same modalidad | model `clean()` and `save()`; `python manage.py comprobar_condiciones` lists offers that bypassed them (`update()`, `bulk_create()`, SQL) and fails if any (ADR 0012) |
 | `estado` of the offer: `disponible` (default), `reservado` or `cerrado` (rented or sold) | DB choices + model validator |
+| `fianza_meses` (optional, 1-12): months of rent of the deposit; rental offers only. The API derives `fianza_total` = `precio` x months (net of VAT). `Condiciones.fianza` stays as text (ADR 0020) | DB range check + model `clean()` and `save()` |
 
 The availability of a listing is not stored: `Inmueble.estado` is derived from its offers and returned in the list
 and the detail. `Disponible` if any offer is `disponible` (or there are no offers); else `Reservado` if any is
@@ -337,7 +348,7 @@ closed), then by the listing's derived availability date (see the `fecha_disponi
 
 Because the price is required, a listing offered for sale always has a sale price, and a rental always has a
 rent price. `precio` is always the amount as advertised: with a `tipo_iva` it is the net price. The API returns
-`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva, fecha_disponibilidad}]` (the detail adds `regulacion`, `terminos` and `condiciones`)
+`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva, fecha_disponibilidad}]` (the detail adds `fianza_meses`, `fianza_total`, `regulacion`, `terminos`, `inclusiones` and `condiciones`)
 and keeps two derived fields for the frontend: `importe_venta` (the venta price) and `importe_alquiler` (the
 lowest monthly price), both as stored, without VAT added.
 
@@ -356,7 +367,7 @@ shows `renta_previa: "desconocida"` and null values.
 | `ultima_renta` | Rent of the last contract (not negative, DB). Exactly when `renta_previa` is `con_renta` (DB) |
 | `ultima_renta_fin` | When that contract ended, to check the 5-year window. Only with `con_renta` (DB); optional |
 
-`python manage.py comprobar_regulacion_alquiler` (its legal scope is unverified, see ADR 0007: a work aid, not proof of compliance) lists the published, open `habitual` offers in a stressed zone
+`python manage.py comprobar_regulacion_alquiler` (its legal scope is unverified, see ADR 0007: a work aid, not proof of compliance) lists the published, open `habitual` offers whose municipality has no declarations loaded (`zona_tensionada_desconocida`) and those in a stressed zone
 (see `DeclaracionZonaTensionada`) whose last-rent status is unconfirmed or whose contract has no end date or ended
 more than 5 years ago, or that lack the index maximum; it fails if there are any (read only; run it before
 publishing or from cron). The rent-update clause (`actualizacion_renta`, for example IRAV) is a contract term, so
@@ -369,7 +380,7 @@ Contracting conditions of one modalidad (`modalidad`, required), as text.
 |---|---|
 | Rent and sale | `honorarios`, `itp`, `incluido`, `no_incluido` |
 | Rent | `fianza`, `pago_adelantado`, `suministros`, `limpieza_final`, `requisitos` (documents the tenant must supply) |
-| Sale | `notaria`, `registro`, `gestoria`, `honorarios_comprador` (costs on top of the price) |
+| Sale | `notaria`, `registro`, `gestoria`, `honorarios_comprador` (costs on top of the price), `itp_porcentaje` (general ITP rate, 0-100) and `honorarios_incluidos_en_precio` (the seller's agency fee is in the price). Sale conditions only (model `clean()`/`save()`); a rental's ITP stays in the `itp` text (ADR 0020) |
 
 - Each modalidad has at most one record with `por_defecto=True` (DB, conditional unique constraint).
 - A listing chooses its own conditions per price (`InmuebleModalidad.condiciones`, same modalidad). When empty
@@ -383,15 +394,15 @@ Primary key `id`; `referencia` is unique. Main groups of columns:
 
 | Group | Columns |
 |---|---|
-| Identity | `referencia`, `original_id` (id in the legacy system), `titulo`, `tipo`, `subtipo` |
+| Identity | `referencia`, `original_id` (id in the legacy system), `titulo`, `tipo`, `subtipo`, `agencia` (advertiser; owns the AICAT and API numbers) |
 | Building | `conservacion`, `anio_construccion`, `anio_ultima_reforma`, `planta` (floor of a flat), `n_plantas` (levels of the property) |
 | Location | `municipio`, `distrito`, `barrio`, `codigo_postal`, `direccion`, `direccion_short` (short form for lists; written by staff, never computed), `dir_descripcion`, `ocultar_direccion`, `geo_latitude`, `geo_longitude` |
 | Dates | `fecha_alta`, `fecha_baja`, `fecha_entrega` (all dates, no time). Availability is not a column: each offer has its own `fecha_disponibilidad` |
 | Surfaces (m²) | `sup_construida`, `sup_cont_comun`, `sup_util`, `sup_parcela` (plot) |
-| Costs | `gtos_comunidad`, `ibi` (whether they are included in the rent: `gastos_comunidad_incluidos` and `ibi_incluido`, next to them) |
+| Costs | `gtos_comunidad`, `ibi` (the amounts; whether the rent includes them is per rental offer, in `InclusionesAlquiler`) |
 | Energy | none are columns: see `CertificadoEnergetico` (section 8) |
 | Cadastre | `referencia_catastral` (private: not in the public allow-list) |
-| Catalan rental rules | none are columns: the index range and the last rent are in `RegulacionAlquiler` (section 5) and the update clause in `Condiciones`. `zona_tensionada` and `gran_tenedor` are not columns either: `gran_tenedor` is a property of the owner (`Propietario.gran_tenedor`) and the detail returns `true` when any owner of the listing has it; `zona_tensionada` comes from the municipality's declarations (section 4) and is `true` when one is in force today |
+| Catalan rental rules | none are columns: the index range and the last rent are in `RegulacionAlquiler` (section 5) and the update clause in `Condiciones`. `zona_tensionada` and `gran_tenedor` are not columns either: `gran_tenedor` is a property of the owner (`Propietario.gran_tenedor`) and the detail returns `true` when any owner of the listing has it, `false` when it has owners and none does, and `null` (unknown) when no owner is recorded; `zona_tensionada` comes from the municipality's declarations (section 4): `true` when one is in force today, `false` when the municipality's declarations are loaded and none applies, `null` when they are not loaded |
 | Web | `publicar_web`, `usos`, `notas_web`, `situacion_actual` (libre, ocupado, alquilado, alquiler_vacacional, otro); the descriptions are `DescripcionInmueble` rows (one per language) |
 | Audit | `created_at`, `updated_at`, `created_by`, `updated_by` (also on `InmuebleModalidad` and `Condiciones`; ADR 0013) |
 
@@ -412,7 +423,7 @@ Choices: `tipo` is `vivienda`, `oficina`, `local`, `parking`, `terreno`, `traste
 | A new listing is not published (`publicar_web=False`) | model default |
 | `created_by` is set on creation and `updated_by` on every save, from the logged-in user | admin (`AuditoriaAdminMixin`) |
 | Text columns are never NULL; the empty state is `''` | DB |
-| With `ocultar_direccion` the API returns `direccion`, `direccion_short` and `dir_descripcion` as `''` (detail and list). The coordinates and postal code are still returned | API |
+| With `ocultar_direccion` the API returns `direccion`, `direccion_short` and `dir_descripcion` as `''` (detail and list). The postal code is still returned. The coordinates are snapped to the centre of a 0.005° grid cell (about 550 m), so the exact point is never public; a missing point stays `null` (ADR 0019) | API |
 
 ### Derived values (computed, not stored)
 
@@ -427,7 +438,7 @@ Choices: `tipo` is `vivienda`, `oficina`, `local`, `parking`, `terreno`, `traste
 | `importe_venta`, `importe_alquiler` (API) | See section 5 |
 | `estado` (API) | Availability of the listing, derived from its offers; see section 5 |
 | `fecha_disponibilidad` (API) | The earliest availability date among the offers that are not `cerrado`; `null` when all are closed (ADR 0017) |
-| `gran_tenedor`, `zona_tensionada` (API) | Derived from the owners and from the municipality's declarations; see the Catalan rental rules row above |
+| `gran_tenedor`, `zona_tensionada` (API) | Derived from the owners and from the municipality's declarations; `null` when unknown; see the Catalan rental rules row above |
 | `provincia` (API) | `municipio.provincia`; not stored |
 
 ## 7. Detail tables
@@ -438,16 +449,16 @@ are `PositiveIntegerField` (never negative, DB). All are public in the API.
 
 | Model | Contents |
 |---|---|
-| `Distribucion` | `dobles`, `individuales`, `exteriores`, `suites`, `banios`, `capacidad_personas`, `suelo_banio` (floor material). Every count may be empty: **empty is unknown, 0 is confirmed none**. `suites` and `exteriores` are subsets of the bedrooms, so neither can exceed `dobles + individuales` (DB) |
+| `Distribucion` | `dobles`, `individuales`, `exteriores`, `suites`, `banios`, `aseos` (half-baths, not added to `banios`), `capacidad_personas`, `suelo_banio` (floor material). Every count may be empty: **empty is unknown, 0 is confirmed none**. `suites` and `exteriores` are subsets of the bedrooms, so neither can exceed `dobles + individuales` (DB) |
 | `Estancias` | Living room area (`salon_m2`), terraces and balconies as a count plus an area each (`n_terrazas`, `terraza_m2`, `n_balcones`, `balcones_m2`; areas in m², not negative), kitchen (`cocina`, `cocina_amueblada`, `tipo_cocina` and `suelo_cocina`, both from lists), carpentry material from a list (`carpinteria_interior`, `carpinteria_exterior`: madera, aluminio, pvc, hierro, otro) and one shared `descripcion`. The API still returns it as four blocks: `salon`, `terraza`, `cocina`, `carpinteria` |
-| `OtrosEspacios` | Counts of `despachos`, `vestidores`, `trastero`, `estudios`, `bibliotecas`; yes/no for `altillo`, `galeria`, `buhardilla`, `bodega`, `lavadero` |
-| `Dotacion` | `amueblado`, `utensilios_cocina`, `vajilla`, `cuberteria`, `cristaleria`, `ropa_cama`, `toallas`, yes/no for appliances and fixtures where the number is irrelevant (`lavadora`, `secadora`, `lavavajillas`, `microondas`, `nevera`, `horno`, `radio`, `toldo`, `tendedero`, `jacuzzi_hidromasaje`), and counts where it matters (`armarios_empotrados`, `ropero`, `estufa`, `ventilador`, `camas`, `sofas`). Rule in ADR 0010 |
-| `Instalaciones` | Heating (`tipo_calefaccion` central/individual, `subtipo_calefaccion` from a list), TV, internet, phone, air conditioning, `ascensor` (count), `acceso_silla_ruedas`... Water, electricity and gas are `Suministro` rows |
+| `OtrosEspacios` | Counts of `despachos`, `vestidores`, `trastero`, `estudios`, `bibliotecas`; yes/no for `altillo`, `galeria`, `buhardilla`, `bodega`, `lavadero`, `patio`, `porche` |
+| `Dotacion` | `amueblado`, `utensilios_cocina`, `vajilla`, `cuberteria`, `cristaleria`, `ropa_cama`, `toallas`, yes/no for appliances and fixtures where the number is irrelevant (`lavadora`, `secadora`, `lavavajillas`, `microondas`, `nevera`, `horno`, `radio`, `toldo`, `tendedero`, `jacuzzi_hidromasaje`, and the short-let items `cafetera`, `plancha` (iron and board), `kit_limpieza`, `secador_pelo`, `papel_higienico`, `sofa_cama`), and counts where it matters (`armarios_empotrados`, `ropero`, `estufa`, `ventilador`, `camas`, `sofas`). Rule in ADR 0010 |
+| `Instalaciones` | Heating (`tipo_calefaccion` central/individual, `subtipo_calefaccion` from a list), TV, internet (and `internet_velocidad_mbps`, only with internet, above 0, DB), phone, air conditioning, `ascensor` (count), `acceso_silla_ruedas`... Water, electricity and gas are `Suministro` rows |
 | `Seguridad` | Doorman, private security, cameras, armoured door, safe, armoured glass, alarm, anti-theft, fire protection, video entry, automatic door |
 | `Entorno` | Garden (`jardin`, and its area `jardin_m2` in m², only with a garden), community areas, `cerca_*` flags for services, `distancia_playa_m`, `distancia_poblacion_m`, `distancia_ciudad_m` (metres, may be unknown) |
 | `Suministro` | One row per supply of the listing: `tipo` (agua, electricidad, gas), `contador`, `compania`, and for gas `tipo_suministro` (natural, butano, propano, otro). Unique per listing and `tipo`; no row means no supply |
 | `TransporteInmueble` | One row per transport mode near the listing: `tipo` (bus, metro, tranvia, tren, ferrocarril) and `descripcion`. Unique per listing and `tipo`; no row means none nearby |
-| `DescripcionInmueble` | One row per language (`es`, `en`, `ca`) with the `texto`. Unique per listing and `idioma` |
+| `DescripcionInmueble` | One row per language (`es`, `en`, `ca`, `fr`, `it`) with the `texto`. Unique per listing and `idioma` |
 | `AreaRecreo` | Sports area, gym, pool, solarium, children's garden, social room |
 | `Caracteristicas` | `suelo_piso` (floor material), `exterior` (yes/no), `altura_real_m`, `orientacion_norte/sur/este/oeste` (one flag per direction, several can be true), `chimenea`, `vistas_al_mar`, `vistas_montania`, `tipo_fachada` (list) |
 
@@ -458,12 +469,19 @@ are not recorded (unknown); the counts of `Distribucion` can be empty one by one
 One optional record per rental offer (an `InmuebleModalidad` with a monthly price); a sale cannot have one
 (model `clean()`/`save()`). The terms belong to the offer because a temporary and a habitual offer of the same
 dwelling have different limits. In the detail, each rental entry of `modalidades[]` has `terminos` (`null` for a
-sale or when nothing was recorded). `acepta_animales` is a yes/no.
+sale or when nothing was recorded). `acepta_animales` and `acepta_fumadores` are yes/no. `uso_temporada` (`ocio_vacaciones`, `trabajo`, `estudios`, `tratamiento_medico`, `otro`, or empty) says what a seasonal lease is for and is accepted only on a `temporal` offer (model `clean()`/`save()`, ADR 0021).
 
 Stay limits are a number plus a unit: `estancia_minima` / `estancia_minima_unidad` and `estancia_maxima` /
 `estancia_maxima_unidad`, with units `dias`, `meses` (default) or `anios`. Either limit can be empty. The
 minimum cannot exceed the maximum once both are converted to days (30 per month, 365 per year) (DB + model
 `clean()`).
+
+### `InclusionesAlquiler` (what the rent includes, per rental offer)
+One optional record per rental offer; a sale cannot have one (model `clean()`/`save()`). It belongs to the offer
+because a temporary and a habitual offer of the same dwelling can include different things. Fields: `gastos_comunidad`,
+`ibi`, `seguro`, `wifi`, `suministros` (water, electricity, gas), all yes/no. A missing row means unknown. In the detail
+each rental entry of `modalidades[]` has `inclusiones` (`null` for a sale or without a row). The amounts stay on
+`Inmueble` (`gtos_comunidad`, `ibi`). ADR 0020.
 
 ## 8. Photos, videos, parking and legal records
 
@@ -474,7 +492,7 @@ minimum cannot exceed the maximum once both are converted to days (30 per month,
 | `image` | `ImageField`, stored under `<inmueble id>/<file name>` |
 | `posicion` | Display order; photos sort by `posicion`, then creation |
 | `alt_text` | Alternative text for accessibility |
-| `tipo` | What it shows: `fachada`, `salon`, `cocina`, `dormitorio`, `banio`, `terraza`, `jardin`, `vistas`, `plano` or `otro` (default) |
+| `tipo` | What it shows: `fachada`, `salon`, `cocina`, `dormitorio`, `banio`, `terraza`, `jardin`, `vistas`, `piscina`, `detalles`, `plano` or `otro` (default) |
 | `default` | At most one default photo per listing (DB, conditional unique constraint); a `plano` can never be the default (DB) |
 
 Floor plans are images with `tipo='plano'`. The API returns them apart: `images` holds the photos and the
@@ -509,18 +527,31 @@ or let on its own is a listing with `tipo='parking'` and is priced through `Inmu
 
 A `tipo='parking'` listing may also have plaza rows; it is optional.
 
+### `Agencia`
+The agency that advertises a listing. Its registry numbers are the agency's: the same AICAT appears on every listing
+of ATBarcelona (5205), Locabarcelona (11525) and GrupLiving (3366), and the API number (A13529, A10580) likewise.
+
+| Field | Rule |
+|---|---|
+| `nombre` | Unique |
+| `aicat`, `numero_api` | Registry numbers of the agency; empty = not recorded; a filled number is unique (DB, conditional unique constraints) |
+| `direccion`, `telefono`, `email` | Contact data; private for now (the detail returns only `nombre`, `aicat`, `numero_api`) |
+
+`Inmueble.agencia` is optional and `PROTECT`. The detail returns `agencia` (`null` without one). ADR 0019.
+
 ### `RegistroLegal` (many per listing)
-Registration or licence numbers a listing must show. Not tied to one region: each row says its type and the
+Registrations or licences a listing must show. Not tied to one region: each row says its type and the
 issuing body, so other provinces can use their own registries.
 
 | Field | Rule |
 |---|---|
-| `tipo` | `aicat`, `cedula_habitabilidad`, `licencia_turistica` or `otro` (the energy certificate has its own table) |
+| `tipo` | `cedula_habitabilidad`, `nrua` (registro único de arrendamientos; "NRA/NRUA" in atb-03), `licencia_turistica` or `otro` (the energy certificate has its own table; the AICAT is on `Agencia`) |
+| `estado` | `vigente` (default), `en_tramite` (applied for, no number yet; locb-02 "NRU: in process") or `no_aplica` (exempt). Only `vigente` may have a `numero` (DB) |
 | `numero` | The registry number as printed (may be masked, e.g. `CHB0333*******`). May be empty when the listing has the registration but the advert does not publish the number (a tourist licence, in idealista-03) |
 | `organismo` | Issuing body, free text (optional) |
 
 - Each type appears at most once per listing, except `otro` which can repeat (DB, conditional unique constraint).
-- Deleted with the listing. Returned in the detail as `registros_legales: [{tipo, numero, organismo}]`.
+- Deleted with the listing. Returned in the detail as `registros_legales: [{tipo, estado, numero, organismo}]`.
 - Replaces `Inmueble.cedula` (copied into a `cedula_habitabilidad` row by migration `0004`).
 
 ### `CertificadoEnergetico` (one per listing)
@@ -543,7 +574,7 @@ The energy performance certificate, as one document (ADR 0013). Public: the deta
 | `InmueblePropietario` | Link between a listing and an owner (many to many): optional `porcentaje` (share, above 0 and up to 100, DB); an owner appears once per listing (DB). Removed with the listing |
 | `DatosInternos` | One per listing: `notas_internas`, `otros_datos`, and `tasacion_propietario` (the owner's valuation, not negative, DB) with its `fecha_tasacion` (only with an amount, DB) |
 | `AcuerdoAdministracion` | Acuerdo de Administración: one row per agreement of a listing, so renewals keep a history: `fecha_firma`, `fecha_fin` (empty = in force; never before `fecha_firma`, DB) and the three independent yes/no flags `exclusiva`, `gestion_comercial`, `administracion`. Removed with the listing |
-| `DeclaracionZonaTensionada` | Municipality declared a stressed residential market for a period: `municipio` (`PROTECT`), `desde`, `hasta` (empty = still in force, never before `desde`, DB), `referencia` (resolution). One per municipality and start date (DB). `Municipio.es_zona_tensionada()` is true when one is in force on the date; overlaps are allowed. Staff maintain it in the admin; `python seed.py zonas-tensionadas` loads the Catalan declarations of the municipios already in the database (ADR 0015) |
+| `DeclaracionZonaTensionada` | Municipality declared a stressed residential market for a period: `municipio` (`PROTECT`), `desde`, `hasta` (empty = still in force, never before `desde`, DB), `referencia` (resolution). One per municipality and start date (DB). `Municipio.es_zona_tensionada()` is true when one is in force on the date; `Municipio.zona_tensionada()` adds the unknown case; overlaps are allowed. Staff maintain it in the admin; `python seed.py zonas-tensionadas` loads the Catalan declarations of the municipios already in the database and marks every loaded Catalan municipio as `declaraciones_cargadas` (ADR 0015, ADR 0019) |
 | `HistorialPrecio` | Price by date for a listing under one `modalidad` (rent or sale): `fecha`, `importe` (≥ 0, model validator), `nota`; one entry per modalidad and date per listing (DB); newest first. Rows are appended automatically when an `InmuebleModalidad` price is created or changed (`save()`; a second change on the same day replaces the day's row; `QuerySet.update()` and `bulk_create()` skip it), so the latest row equals the current price. Rows can also be entered by hand, for example past prices. Private and never serialized: it is our own price log, not a record of leases, so it does not feed the last rent (see `RegulacionAlquiler`). A modalidad with history cannot be deleted (`PROTECT`) |
 | `Inmueble` columns | `original_id`, `publicar_web`, `fecha_baja`, `fecha_entrega`, `referencia_catastral`, `created_at`, `updated_at`, `created_by`, `updated_by` |
 
@@ -583,7 +614,7 @@ The API accepts `tipo`, `fecha_desde` and `mensaje` besides the name, email, pho
   5 per page, with a subset of the nested data.
 - `GET /api/inmuebles/<id>/`: one published listing with all the public columns and every public nested
   block (locations, modalidades with prices, VAT, availability date, rent regulation, stay terms and conditions, detail tables,
-  supplies and transport, descriptions by language, plazas, photos, plans, videos and tours, registry numbers, energy certificate).
+  supplies and transport, descriptions by language, plazas, photos, plans, videos and tours, agency, registrations, energy certificate).
 - Search filters: `provincia`, `municipio`, `distrito`, `barrio`, `referencia`, `habitaciones` (exact
   computed count), `tipo`, `subtipo`, `sup_min` / `sup_max` (built surface in m²), `max_precio`,
   `fecha_entrada` (an open offer available on or before that date; with a modalidad in the URL or a `max_precio`
@@ -617,3 +648,6 @@ The reasons behind the model are in `docs/adr/`; where a later ADR revises an ea
 | [0016](docs/adr/0016-scans-run-by-hand.md) | Consistency scans run by hand for now |
 | [0017](docs/adr/0017-fecha-disponibilidad-per-offer.md) | `fecha_disponibilidad` belongs to each offer |
 | [0018](docs/adr/0018-keep-wide-equipment-tables.md) | Keep the wide equipment tables |
+| [0021](docs/adr/0021-additive-fields-from-locabarcelona.md) | Additive fields from the Locabarcelona pages, and what was left out |
+| [0020](docs/adr/0020-deposit-sale-costs-and-rent-inclusions.md) | Deposit months on the offer, sale costs, rent inclusions per offer |
+| [0019](docs/adr/0019-gaps-from-locabarcelona-and-examples.md) | Gaps found in the examples: `Agencia`, NRUA and registry status (done); unknown-vs-no, money fields and scans (planned) |

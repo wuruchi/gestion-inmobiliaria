@@ -30,7 +30,7 @@ counts into 0.
 
 ### Split of `Otros` (`0033`)
 - `anio_ultima_reforma` goes to `Inmueble`, next to `anio_construccion`, with the same range check.
-- `gastos_comunidad_incluidos` and `ibi_incluido` go to `Inmueble`, next to the amounts `gtos_comunidad` and `ibi`.
+- (Revised by ADR 0020: the flags now live in `InclusionesAlquiler`, per rental offer.) `gastos_comunidad_incluidos` and `ibi_incluido` go to `Inmueble`, next to the amounts `gtos_comunidad` and `ibi`.
   The text `Condiciones.incluido` stays as the description of what a price includes.
 - `capacidad_personas` goes to `Distribucion`.
 - `acepta_animales` and the stay limits go to a new `TerminosAlquiler`, one optional record per rental offer, like

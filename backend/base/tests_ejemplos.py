@@ -4,7 +4,7 @@ For every example the listing is created the way staff would enter it, and the p
 return every fact the original page shows. Where the page shows something the model does not
 hold, the test says so in a `NO MODELADO` comment instead of pretending it fits.
 
-The reference pages are in ../gestion-inmobiliaria-examples/ (atb-01..03, idealista-01..03).
+The reference pages are in ../gestion-inmobiliaria-examples/ (atb-01..03, idealista-01..03, locb-01..03).
 """
 from datetime import date
 
@@ -12,7 +12,7 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from base.models import (
-    DeclaracionZonaTensionada, RegulacionAlquiler,
+    InclusionesAlquiler, Propietario, InmueblePropietario, Agencia, DeclaracionZonaTensionada, RegulacionAlquiler,
     AreaRecreo, CertificadoEnergetico, AcuerdoAdministracion, Comarca, Condiciones, DatosInternos, Distrito, Barrio, Distribucion, Dotacion,
     Entorno, Estancias, ImageInmueble, Inmueble, InmuebleModalidad, Instalaciones, MediaInmueble,
     Modalidad, Municipio, Caracteristicas, OtrosEspacios, TerminosAlquiler, PlazaAparcamiento, Provincia, RegistroLegal,
@@ -89,6 +89,8 @@ class Atb01Test(EjemploTestCase):
                            'y dos piscinas comunitarias. ALARMA Y WIFI INCLUIDO. Finca con ascensor.',
             eficiencia='D', consumo_energetico='71')
         DeclaracionZonaTensionada.objects.create(municipio=cls.barcelona, desde=date(2021, 9, 20))
+        # "El propietario es gran tenedor: no" needs a recorded owner, otherwise it is unknown.
+        InmueblePropietario.objects.create(inmueble=inm, propietario=Propietario.objects.create(nombre='Propietario G767'))
         precio_condiciones = Condiciones.objects.create(
             nombre='Temporada', modalidad=cls.temporal, por_defecto=True,
             fianza='Mínimo 2 mensualidades de alquiler.', honorarios='1 mensualidad + IVA',
@@ -106,7 +108,9 @@ class Atb01Test(EjemploTestCase):
             indice_referencia_fecha=date(2026, 10, 1), renta_previa='con_renta',
             ultima_renta='1750', ultima_renta_fin=date(2026, 6, 30))
         RegistroLegal.objects.create(inmueble=inm, tipo='cedula_habitabilidad', numero='CHB0333*******')
-        RegistroLegal.objects.create(inmueble=inm, tipo='aicat', numero='5205')
+        # AICAT 5205 is the agency's number: the same on every ATBarcelona listing.
+        Inmueble.objects.filter(pk=inm.pk).update(agencia=Agencia.objects.get_or_create(
+            nombre='ATBarcelona', aicat='5205')[0])
         Distribucion.objects.create(
             inmueble=inm, dobles=2, exteriores=2, suites=1, banios=2, capacidad_personas=4)
         Estancias.objects.create(
@@ -154,8 +158,9 @@ class Atb01Test(EjemploTestCase):
             'renta_previa': 'con_renta', 'ultima_renta': '1750.00', 'ultima_renta_fin': '2026-06-30'})
         self.assertEqual(oferta['condiciones']['actualizacion_renta'], 'IRAV')
         self.assertEqual(
-            sorted((r['tipo'], r['numero']) for r in data['registros_legales']),
-            [('aicat', '5205'), ('cedula_habitabilidad', 'CHB0333*******')])
+            [(r['tipo'], r['numero']) for r in data['registros_legales']],
+            [('cedula_habitabilidad', 'CHB0333*******')])
+        self.assertEqual(data['agencia'], {'nombre': 'ATBarcelona', 'aicat': '5205', 'numero_api': ''})
 
     def test_characteristics_tables(self):
         data = self.detalle(self.inm)
@@ -238,7 +243,8 @@ class Atb02Test(EjemploTestCase):
         PlazaAparcamiento.objects.create(
             inmueble=inm, opcional=True, precio_opcional='60', precio_opcional_unidad='mensual',
             valor='25000', renta='45')
-        Inmueble.objects.filter(pk=inm.pk).update(ibi_incluido=True, gastos_comunidad_incluidos=True)
+        # "En el precio están incluidos los gastos de comunidad, el seguro y el IBI."
+        InclusionesAlquiler.objects.create(oferta=oferta, gastos_comunidad=True, ibi=True, seguro=True)
         TerminosAlquiler.objects.create(
             oferta=oferta, estancia_minima=1, estancia_minima_unidad='anios',
             estancia_maxima=3, estancia_maxima_unidad='anios')
@@ -253,7 +259,8 @@ class Atb02Test(EjemploTestCase):
 
     def test_included_costs_and_stay_in_years(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data, {'ibi_incluido': True, 'gastos_comunidad_incluidos': True})
+        self.assertContiene(data['modalidades'][0]['inclusiones'], {
+            'gastos_comunidad': True, 'ibi': True, 'seguro': True, 'wifi': False})
         self.assertContiene(data['modalidades'][0]['terminos'], {
             'estancia_minima': 1, 'estancia_minima_unidad': 'anios',
             'estancia_maxima': 3, 'estancia_maxima_unidad': 'anios'})
@@ -288,6 +295,8 @@ class Atb03Test(EjemploTestCase):
             subtipo='piso', sup_construida='90', publicar_web=True,
             descripcion_es='ALQUILER DE TEMPORADA. Piso reformado de 4 habitaciones dobles con 2 baños, '
                            'balcón. Cocina office con lavadero. Salón-comedor de 22 m2. WIFI incluido.')
+        RegistroLegal.objects.create(
+            inmueble=inm, tipo='nrua', numero='ESFCNT00000807200037322600000000000000000000000000009')
         oferta = InmuebleModalidad.objects.create(
             inmueble=inm, modalidad=cls.temporal, precio='2200', fecha_disponibilidad=date(2026, 10, 25))
         Distribucion.objects.create(inmueble=inm, dobles=4, exteriores=2, banios=2, capacidad_personas=4)
@@ -309,7 +318,8 @@ class Atb03Test(EjemploTestCase):
         TransporteInmueble.objects.create(inmueble=inm, tipo='bus')
         TransporteInmueble.objects.create(inmueble=inm, tipo='metro')
         Caracteristicas.objects.create(inmueble=inm, suelo_piso='terrazo', altura_real_m='3')
-        Inmueble.objects.filter(pk=inm.pk).update(anio_ultima_reforma=2014, gastos_comunidad_incluidos=True)
+        Inmueble.objects.filter(pk=inm.pk).update(anio_ultima_reforma=2014)
+        InclusionesAlquiler.objects.create(oferta=oferta, gastos_comunidad=True, wifi=True)
         # The description says "32 días hasta 4-6 meses"; the structured field says 6 and 6 meses.
         TerminosAlquiler.objects.create(
             oferta=oferta, estancia_minima=32, estancia_minima_unidad='dias', estancia_maxima=6)
@@ -317,6 +327,11 @@ class Atb03Test(EjemploTestCase):
         DatosInternos.objects.create(inmueble=inm, tasacion_propietario='1200')
         AcuerdoAdministracion.objects.create(
             inmueble=inm, exclusiva=True, gestion_comercial=True, administracion=True)
+
+    def test_nrua_is_a_registry_of_the_property(self):
+        registro = self.detalle(self.inm)['registros_legales'][0]
+        self.assertContiene(registro, {'tipo': 'nrua', 'estado': 'vigente'})
+        self.assertTrue(registro['numero'].startswith('ESFCNT'))
 
     def test_card_and_rooms(self):
         data = self.detalle(self.inm)
@@ -346,7 +361,8 @@ class Atb03Test(EjemploTestCase):
         data = self.detalle(self.inm)
         self.assertContiene(data['caracteristicas'], {'suelo_piso': 'terrazo', 'altura_real_m': '3.00'})
         self.assertContiene(data['distribucion'], {'capacidad_personas': 4})
-        self.assertContiene(data, {'anio_ultima_reforma': 2014, 'gastos_comunidad_incluidos': True})
+        self.assertContiene(data, {'anio_ultima_reforma': 2014})
+        self.assertContiene(data['modalidades'][0]['inclusiones'], {'gastos_comunidad': True, 'wifi': True})
         self.assertContiene(data['modalidades'][0]['terminos'], {
             'estancia_minima': 32, 'estancia_minima_unidad': 'dias',
             'estancia_maxima': 6, 'estancia_maxima_unidad': 'meses'})
@@ -362,6 +378,181 @@ class Atb03Test(EjemploTestCase):
     # NO MODELADO (decided): "Empresas / Estudiantes / Particulares / Propietarios Serv. Alquiler" and
     # "Relación calidad precio" are not stored. The description says the balcony is 6 m2 while the
     # structured field says 4: the page contradicts itself; the structured value is used.
+
+
+class LocabarcelonaMixin:
+    """What the three Locabarcelona pages share: the agency, its numbers and the amenity list."""
+
+    @classmethod
+    def agencia(cls):
+        return Agencia.objects.get_or_create(
+            nombre='Loca Barcelona', defaults={'aicat': '11525', 'numero_api': 'A13529'})[0]
+
+    @classmethod
+    def propietario_no_gran_tenedor(cls, inm):
+        InmueblePropietario.objects.create(
+            inmueble=inm, propietario=Propietario.objects.create(nombre=f'Propietario {inm.referencia}'))
+
+    @classmethod
+    def equipamiento(cls, inm, internet=True):
+        Instalaciones.objects.create(
+            inmueble=inm, calefaccion=True, aire_acondicionado=True, tvs=1, ascensor=1, internet=internet)
+        Dotacion.objects.create(
+            inmueble=inm, amueblado=True, lavadora=True, secadora=True, lavavajillas=True, horno=True, nevera=True,
+            microondas=True, tendedero=True, ventilador=1, sofa_cama=True, cafetera=True, plancha=True,
+            kit_limpieza=True, secador_pelo=True, papel_higienico=True, ropa_cama=True, toallas=True)
+        OtrosEspacios.objects.create(inmueble=inm, vestidores=1, despachos=1, trastero=1, patio=True)
+        AreaRecreo.objects.create(inmueble=inm, piscina=True)
+        Seguridad.objects.create(inmueble=inm, portero_conserje=True, portero_automatico=True)
+
+
+class Locb01Test(LocabarcelonaMixin, EjemploTestCase):
+    """Passeig de la Zona Franca, LCPC82MOT322: long-term rental (6 months to 5 years) in Sants."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        sants = Distrito.objects.create(municipio=cls.barcelona, codigo='03', nombre='Sants-Montjuïc')
+        cls.inm = inm = crear_inmueble(
+            referencia='LCPC82MOT322', municipio=cls.barcelona, distrito=sants, tipo='vivienda', subtipo='piso',
+            conservacion='buen_estado', sup_construida='70', planta=8, publicar_web=True,
+            eficiencia='A', numero_certificado='1Z1R5Z8HN',
+            titulo='New-build property on Passeig de la Zona Franca in Barcelona, with a swimming pool, '
+                   'storage room and parking space')
+        Inmueble.objects.filter(pk=inm.pk).update(agencia=cls.agencia())
+        DeclaracionZonaTensionada.objects.create(municipio=cls.barcelona, desde=date(2021, 9, 20))
+        cls.propietario_no_gran_tenedor(inm)
+        oferta = InmuebleModalidad.objects.create(
+            inmueble=inm, modalidad=cls.habitual, precio='1900', fianza_meses=3,
+            fecha_disponibilidad=date(2026, 10, 1))
+        # The page shows one index value (1900 €/month): the maximum, with no minimum.
+        RegulacionAlquiler.objects.create(
+            oferta=oferta, indice_referencia_max='1900', renta_previa='sin_renta',
+            indice_referencia_fecha=date(2026, 10, 1))
+        Condiciones.objects.create(nombre='Larga duración', modalidad=cls.habitual, por_defecto=True,
+                                   actualizacion_renta='IPC')
+        TerminosAlquiler.objects.create(
+            oferta=oferta, acepta_animales=True, acepta_fumadores=True,
+            estancia_minima=6, estancia_maxima=5, estancia_maxima_unidad='anios')
+        Distribucion.objects.create(inmueble=inm, dobles=2, banios=2, aseos=1)
+        Estancias.objects.create(inmueble=inm, n_balcones=1, n_terrazas=1)
+        PlazaAparcamiento.objects.create(inmueble=inm)
+        cls.equipamiento(inm)
+
+    def test_price_deposit_and_single_index_value(self):
+        data = self.detalle(self.inm)
+        oferta = data['modalidades'][0]
+        self.assertContiene(oferta, {
+            'codigo': 'habitual', 'precio': '1900.00', 'fianza_meses': 3, 'fianza_total': '5700.00'})
+        self.assertContiene(oferta['regulacion'], {
+            'indice_referencia_min': None, 'indice_referencia_max': '1900.00', 'renta_previa': 'sin_renta'})
+        self.assertEqual(oferta['condiciones']['actualizacion_renta'], 'IPC')
+        self.assertContiene(oferta['terminos'], {
+            'acepta_fumadores': True, 'estancia_minima': 6, 'estancia_minima_unidad': 'meses',
+            'estancia_maxima': 5, 'estancia_maxima_unidad': 'anios'})
+        self.assertContiene(data, {'zona_tensionada': True, 'gran_tenedor': False, 'n_plz_garaje': 1})
+
+    def test_agency_numbers_and_energy_certificate(self):
+        data = self.detalle(self.inm)
+        self.assertEqual(data['agencia'], {'nombre': 'Loca Barcelona', 'aicat': '11525', 'numero_api': 'A13529'})
+        self.assertContiene(data['certificado_energetico'], {'eficiencia': 'A', 'numero': '1Z1R5Z8HN'})
+
+    def test_rooms_amenities_and_extra_spaces(self):
+        data = self.detalle(self.inm)
+        self.assertContiene(data['distribucion'], {'dobles': 2, 'banios': 2, 'aseos': 1})
+        self.assertContiene(data['dotacion'], {
+            'cafetera': True, 'plancha': True, 'kit_limpieza': True, 'secador_pelo': True,
+            'papel_higienico': True, 'sofa_cama': True, 'secadora': True, 'tendedero': True})
+        self.assertContiene(data['otros_espacios'], {'patio': True, 'vestidores': 1, 'despachos': 1, 'trastero': 1})
+        self.assertContiene(data['arearecreo'], {'piscina': True})
+
+    def test_available_since_a_date_in_the_past(self):
+        self.assertEqual(self.detalle(self.inm)['fecha_disponibilidad'], '2026-10-01')
+
+    # NO MODELADO: "Available now" is shown from the date; the "cooktop" (placa de cocción), the "Room" feature,
+    # "Similar properties" and the favourites are not stored. The flat is called new-build but "in perfect
+    # condition": `conservacion` has no level above buen estado.
+
+
+class Locb02Test(LocabarcelonaMixin, EjemploTestCase):
+    """TAPARODF99: short-term rental (up to 11 months) in Dreta de l'Eixample, NRU in process."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        eixample = Distrito.objects.create(municipio=cls.barcelona, codigo='02', nombre='Eixample')
+        cls.inm = inm = crear_inmueble(
+            referencia='TAPARODF99', municipio=cls.barcelona, distrito=eixample, tipo='vivienda', subtipo='piso',
+            conservacion='buen_estado', sup_construida='65', publicar_web=True,
+            eficiencia='C', numero_certificado='2TPR806LB')
+        Inmueble.objects.filter(pk=inm.pk).update(agencia=cls.agencia(), ibi='618.13')
+        DeclaracionZonaTensionada.objects.create(municipio=cls.barcelona, desde=date(2021, 9, 20))
+        cls.propietario_no_gran_tenedor(inm)
+        # The page rounds 1.163,50 € to 1.164 € and shows a deposit of 2.327 € (two months).
+        oferta = InmuebleModalidad.objects.create(
+            inmueble=inm, modalidad=cls.temporal, precio='1163.50', fianza_meses=2,
+            fecha_disponibilidad=date(2027, 6, 21))
+        RegulacionAlquiler.objects.create(oferta=oferta, indice_referencia_max='1066.97', renta_previa='sin_renta')
+        Condiciones.objects.create(
+            nombre='Temporada', modalidad=cls.temporal, por_defecto=True, actualizacion_renta='IPC',
+            itp='El inquilino paga el ITP: 0,5 % del total de las rentas, en el primer mes del contrato.')
+        TerminosAlquiler.objects.create(
+            oferta=oferta, acepta_animales=True, acepta_fumadores=True, estancia_maxima=11)
+        RegistroLegal.objects.create(inmueble=inm, tipo='nrua', estado='en_tramite')
+        Distribucion.objects.create(inmueble=inm, dobles=3, banios=1, aseos=1)
+        cls.equipamiento(inm)
+
+    def test_nru_in_process_has_no_number(self):
+        registro = self.detalle(self.inm)['registros_legales'][0]
+        self.assertContiene(registro, {'tipo': 'nrua', 'estado': 'en_tramite', 'numero': ''})
+
+    def test_price_deposit_ibi_and_far_availability(self):
+        data = self.detalle(self.inm)
+        self.assertContiene(data, {'ibi': '618.13', 'fecha_disponibilidad': '2027-06-21'})
+        self.assertContiene(data['modalidades'][0], {'fianza_total': '2327.00', 'precio': '1163.50'})
+        self.assertContiene(data['modalidades'][0]['regulacion'], {'indice_referencia_max': '1066.97'})
+        self.assertIn('0,5 %', data['modalidades'][0]['condiciones']['itp'])
+        self.assertContiene(data['modalidades'][0]['terminos'], {'estancia_maxima': 11, 'estancia_maxima_unidad': 'meses'})
+
+    def test_energy_certificate_and_bedrooms(self):
+        data = self.detalle(self.inm)
+        self.assertContiene(data['certificado_energetico'], {'eficiencia': 'C', 'numero': '2TPR806LB'})
+        self.assertContiene(data, {'n_habitaciones': 3, 'n_banios': 1})
+
+
+class Locb03Test(LocabarcelonaMixin, EjemploTestCase):
+    """VA12COU837: flat for sale in Antiga Esquerra de l'Eixample; the certificate has a rating but no number."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        eixample = Distrito.objects.create(municipio=cls.barcelona, codigo='02', nombre='Eixample')
+        cls.inm = inm = crear_inmueble(
+            referencia='VA12COU837', municipio=cls.barcelona, distrito=eixample, tipo='vivienda', subtipo='piso',
+            conservacion='buen_estado', sup_construida='94', planta=1, publicar_web=True, eficiencia='E')
+        Inmueble.objects.filter(pk=inm.pk).update(agencia=cls.agencia(), ibi='800')
+        cls.propietario_no_gran_tenedor(inm)
+        InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.venta, precio='610000')
+        Distribucion.objects.create(inmueble=inm, dobles=4, banios=1)
+        cls.equipamiento(inm)
+        Instalaciones.objects.filter(inmueble=inm).update(internet_velocidad_mbps=300)
+
+    def test_sale_with_internet_speed_and_certificate_without_number(self):
+        data = self.detalle(self.inm)
+        self.assertContiene(data, {'importe_venta': '610000.00', 'ibi': '800.00', 'gran_tenedor': False,
+                                   'n_habitaciones': 4, 'planta': 1})
+        self.assertContiene(data['certificado_energetico'], {'eficiencia': 'E', 'numero': ''})
+        self.assertEqual(data['instalaciones']['internet_velocidad_mbps'], 300)
+        self.assertEqual(data['agencia']['numero_api'], 'A13529')
+
+    def test_a_sale_has_no_rental_data(self):
+        oferta = self.detalle(self.inm)['modalidades'][0]
+        self.assertContiene(oferta, {
+            'codigo': 'venta', 'fianza_meses': None, 'fianza_total': None, 'regulacion': None,
+            'terminos': None, 'inclusiones': None})
+
+    # NO MODELADO: the page shows no stay limits, deposit or index for a sale; "Check in" in the contact form is
+    # the optional `fecha_desde` of a request.
 
 
 class Idealista01Test(EjemploTestCase):
@@ -474,7 +665,8 @@ class Idealista02Test(EjemploTestCase):
             municipio=aviles, codigo='01', nombre='El Pozón - Villalegre - La Luz')
         cls.inm = inm = crear_inmueble(
             referencia='IDEA-02', municipio=aviles, distrito=distrito, direccion='Calle Carmen',
-            ocultar_direccion=True, tipo='vivienda', subtipo='chalet_independiente',
+            ocultar_direccion=True, geo_latitude=43.5547, geo_longitude=-5.9248,
+            tipo='vivienda', subtipo='chalet_independiente',
             conservacion='buen_estado', anio_construccion=2008, n_plantas=2, sup_construida='265',
             sup_util='260', consumo_energetico='210', emisiones_co2='36',
             situacion_actual='alquiler_vacacional', publicar_web=True,
@@ -506,6 +698,8 @@ class Idealista02Test(EjemploTestCase):
         data = respuesta.json()
         self.assertContiene(data, {'ocultar_direccion': True, 'direccion': '', 'direccion_short': ''})
         self.assertNotIn('Calle Carmen', respuesta.content.decode())
+        # The map shows an area, not the exact point.
+        self.assertEqual((data['geo_latitude'], data['geo_longitude']), (43.555, -5.925))
         self.assertEqual(data['zona_ref'], 'El Pozón - Villalegre - La Luz')
         self.assertEqual(data['municipio']['nombre'], 'Avilés')
         listado = self.client.get('/api/inmuebles/').content.decode()
@@ -554,7 +748,10 @@ class Idealista03Test(EjemploTestCase):
             incluido='Honorarios de la agencia del vendedor', no_incluido='ITP, notaría, registro y gestoría')
         InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.venta, precio='295000')
         RegistroLegal.objects.create(inmueble=inm, tipo='cedula_habitabilidad', numero='CHB00523426001')
-        RegistroLegal.objects.create(inmueble=inm, tipo='aicat', numero='3366')
+        InmueblePropietario.objects.create(inmueble=inm, propietario=Propietario.objects.create(nombre='Propietario VSIT2576'))
+        # AICAT 3366 and API A10580 are the agency's (GrupLiving), not the flat's.
+        Inmueble.objects.filter(pk=inm.pk).update(agencia=Agencia.objects.create(
+            nombre='GrupLiving Agents Immobiliaris', aicat='3366', numero_api='A10580'))
         # The page says the flat has a tourist licence but does not publish the number.
         RegistroLegal.objects.create(inmueble=inm, tipo='licencia_turistica')
         Distribucion.objects.create(inmueble=inm, dobles=1, banios=1)
@@ -577,7 +774,8 @@ class Idealista03Test(EjemploTestCase):
     def test_registry_numbers_and_the_licence_without_a_number(self):
         registros = {r['tipo']: r['numero'] for r in self.detalle(self.inm)['registros_legales']}
         self.assertEqual(registros, {
-            'cedula_habitabilidad': 'CHB00523426001', 'aicat': '3366', 'licencia_turistica': ''})
+            'cedula_habitabilidad': 'CHB00523426001', 'licencia_turistica': ''})
+        self.assertContiene(self.detalle(self.inm)['agencia'], {'aicat': '3366', 'numero_api': 'A10580'})
 
     def test_sale_costs_clause(self):
         condiciones = self.detalle(self.inm)['modalidades'][0]['condiciones']
@@ -597,7 +795,7 @@ class Idealista03Test(EjemploTestCase):
         self.assertEqual(data['direccion'], '')
         self.assertEqual(data['municipio']['nombre'], 'Sitges')
 
-    # NO MODELADO: "Número API: A10580" is the agency's licence, not the listing's. "Enlace adicional"
+    # NO MODELADO: "Enlace adicional"
     # (a link to the agency's own page) has no field. The page says both that it is sold furnished
     # and "sin muebles"; the model stores one answer (amueblado). The clause text about Ley 10/2025
     # stays in the description; only the amounts and bodies of the costs are structured.

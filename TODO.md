@@ -115,3 +115,57 @@ suite is red or has a skip.
 - [ ] Re-pin the public API with the allow-list tests; the fixtures in `backend/base/tests_ejemplos.py` must
       still load.
 - [ ] Write an ADR for each decision that revises ADR 0001.
+
+## 8. Gaps found in the examples (ADR 0019)
+
+Source: second pass over `../gestion-inmobiliaria-examples`, now including locb-01..03. Decided out of scope: nightly
+price unit / vacation modalidad, rooms, renaming modalidades (`habitual` is the long-term one), urbanización,
+building/unit links, price tiers, availability wording, price-drop alerts.
+
+### Step 1: agency and NRUA
+- [x] `Agencia` (`nombre`, `aicat`, `numero_api`, contact); `Inmueble.agencia` optional, `PROTECT`; the detail returns
+      `agencia`. `aicat` leaves `RegistroLegal` (migration `0043` moves existing rows).
+- [x] `RegistroLegal`: type `nrua` and `estado` (`vigente`, `en_tramite`, `no_aplica`); only `vigente` may have a number.
+- [x] Fixtures atb-01, atb-03 and idealista-03 updated; `MODELS.md` updated.
+- [ ] Add fixtures for locb-01..03 to `tests_ejemplos.py` (agency 11525 / A13529, NRU in process, certificate with a
+      rating but no number, half-bath, patio, smoking).
+- [ ] Rename the agencies created by migration `0043` (`AICAT <number>`) in a real database; fill their API number.
+- [ ] Frontend `interfaces.ts` still lists `aicat` as a registry type; update it when the backend is done.
+
+### Step 2: unknown is not "no"; hidden address
+- [x] `gran_tenedor`: `null` when the listing has no owner rows.
+- [x] `zona_tensionada`: `null` when the municipality's declarations are not loaded; `Municipio.declaraciones_cargadas`
+      says they are, and the seed command sets it for Catalonia. `comprobar_regulacion_alquiler` reports the unknown ones.
+- [x] With `ocultar_direccion`, the detail returns coordinates snapped to a 0.005° grid (`OcultarDireccionMixin`).
+- [ ] Mark `declaraciones_cargadas` in the admin for municipios outside Catalonia once their rules are known.
+- [ ] Review whether the grid step (0.005°, about 550 m) is right for small towns, where one cell can hold few streets.
+
+### Step 3: money (ADR 0020)
+- [x] `InmuebleModalidad.fianza_meses` (1-12, rentals only); the API derives `fianza_total`. `Condiciones.fianza` stays text.
+- [x] Sale costs: `Condiciones.itp_porcentaje` and `honorarios_incluidos_en_precio` (sale conditions only).
+- [ ] VAT / AJD for new-build sales: waits for the agency to confirm the rule (no example page shows it).
+- [x] `InclusionesAlquiler` per rental offer (community, IBI, insurance, wifi, utilities); `Inmueble.gastos_comunidad_incluidos`
+      and `ibi_incluido` dropped (migration `0045` copies them to the rental offers).
+- [x] `RegulacionAlquiler.indice_referencia_min` may be empty while the maximum is set (was already allowed; test added).
+- [x] Fixtures `Locb01Test` to `Locb03Test` use the deposit months and the single index value (and every field above).
+- [ ] Deposit limits by law (cap on months, regional deposit registry): needs a lawyer.
+
+### Step 4: small additive fields (ADR 0021, migration `0046`)
+Each candidate was checked against the existing models first.
+- [x] `Distribucion.aseos` (half-baths).
+- [x] `OtrosEspacios.patio` and `porche`; `Instalaciones.internet_velocidad_mbps` (only with internet).
+- [x] `Dotacion`: `cafetera`, `plancha`, `kit_limpieza`, `secador_pelo`, `papel_higienico`, `sofa_cama`.
+- [x] `TerminosAlquiler.acepta_fumadores` and `uso_temporada` (temporal offers only).
+- [x] `ImageInmueble.TIPOS`: `piscina`, `detalles`.
+- [x] `DescripcionInmueble.IDIOMAS`: `fr` and `it`.
+- [x] Left out, no evidence in the examples: `CertificadoEnergetico.estado`, photo tag `entrada`, a `conservacion` level above
+      "buen estado", internet type. Revisit if a real listing needs one.
+
+### Step 5: scans (legal scope unverified, as in ADR 0007: work aids, not proof of compliance)
+- [ ] Published temporal offer without an NRUA in force or in process.
+- [ ] Stay limits by modalidad: temporal 32 days to 11 months; habitual above 11 months (locb-01 allows 6 months as the
+      minimum of a long-term offer, so make this a warning). Warn when the description and the structured stay disagree
+      (ATB-01, ATB-03).
+- [ ] Habitual offer in a stressed zone with `precio` above `indice_referencia_max`.
+- [ ] Sale offer without the cost fields filled (Ley 10/2025 clause in idealista-03).
+- [ ] Soft warning on surface per bedroom (locb "8 bedrooms, 8 m2").

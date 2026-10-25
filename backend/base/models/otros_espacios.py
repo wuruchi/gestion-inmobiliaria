@@ -14,6 +14,8 @@ class OtrosEspacios(models.Model):
     buhardilla = models.BooleanField(default=False)
     bodega = models.BooleanField(default=False)
     lavadero = models.BooleanField(default=False)
+    patio = models.BooleanField(default=False)
+    porche = models.BooleanField(default=False)
     estudios = models.PositiveIntegerField(default=0)
     bibliotecas = models.PositiveIntegerField(default=0)
 

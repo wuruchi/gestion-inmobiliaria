@@ -19,6 +19,8 @@ class ImageInmueble(models.Model):
         ('terraza', 'Terraza'),
         ('jardin', 'Jardín'),
         ('vistas', 'Vistas'),
+        ('piscina', 'Piscina'),
+        ('detalles', 'Detalles'),
         (PLANO, 'Plano'),
         ('otro', 'Otro'),
     )

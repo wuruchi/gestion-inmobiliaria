@@ -94,9 +94,15 @@ def pendientes_regulacion_alquiler(hoy=None):
     )
     problemas = []
     for oferta in ofertas:
-        if not oferta.inmueble.municipio.es_zona_tensionada(hoy):
-            continue
         ref = oferta.inmueble.referencia
+        zona = oferta.inmueble.municipio.zona_tensionada(hoy)
+        if zona is None:
+            problemas.append((
+                'zona_tensionada_desconocida',
+                f'{ref}: no se sabe si {oferta.inmueble.municipio} es zona tensionada (declaraciones sin cargar)'))
+            continue
+        if not zona:
+            continue
         try:
             reg = oferta.regulacion
         except RegulacionAlquiler.DoesNotExist:

@@ -95,11 +95,16 @@ class SeedLocationsTest(unittest.TestCase):
             self.run_seed(db, 'locations')
             self.run_seed(db, 'zonas-tensionadas', '--dry-run')
             self.assertEqual(self.count(db, 'declaracionzonatensionada'), 0)
+            self.assertEqual(sqlite3.connect(db).execute(
+                "select count(*) from base_municipio where declaraciones_cargadas = 1").fetchone()[0], 0)
             salida = self.run_seed(db, 'zonas-tensionadas').stdout
             self.assertIn('not loaded', salida)
             # 101 of the 140 and 58 of the 131 are in Barcelona province, the only one loaded.
             self.assertEqual(self.count(db, 'declaracionzonatensionada'), 159)
             conn = sqlite3.connect(db)
+            # The list is complete for Catalonia: every loaded municipio is marked, even without a declaration.
+            self.assertEqual(conn.execute(
+                "select count(*) from base_municipio where declaraciones_cargadas = 0").fetchone()[0], 0)
             filas = conn.execute(
                 "select d.desde, d.hasta, d.referencia from base_declaracionzonatensionada d "
                 "join base_municipio m on m.id = d.municipio_id where m.codigo_ine = '08019'").fetchall()
@@ -139,8 +144,9 @@ class SeedLocationsTest(unittest.TestCase):
             conn.execute(
                 "insert into base_condiciones (nombre, modalidad_id, por_defecto, honorarios, itp, incluido, "
                 "no_incluido, fianza, pago_adelantado, suministros, actualizacion_renta, limpieza_final, "
-                "requisitos, notaria, registro, gestoria, honorarios_comprador, created_at, updated_at) "
-                "select 'Mi venta', id, 1, '', '', '', '', '', '', '', '', '', '', '', '', '', '', "
+                "requisitos, notaria, registro, gestoria, honorarios_comprador, honorarios_incluidos_en_precio, "
+                "created_at, updated_at) "
+                "select 'Mi venta', id, 1, '', '', '', '', '', '', '', '', '', '', '', '', '', '', 0, "
                 "datetime('now'), datetime('now') "
                 "from base_modalidad where codigo='venta'")
             conn.commit()

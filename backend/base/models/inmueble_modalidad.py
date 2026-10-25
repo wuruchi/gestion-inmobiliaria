@@ -47,6 +47,11 @@ class InmuebleModalidad(Auditoria):
         max_length=10, choices=ESTADOS, default=DISPONIBLE,
         help_text='Disponibilidad de esta oferta; la del inmueble se deduce de todas sus ofertas.',
     )
+    fianza_meses = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)],
+        verbose_name='fianza (meses de renta)',
+        help_text='Solo alquiler. El importe de la fianza es el precio por estos meses; con IVA aparte, sobre el precio neto.',
+    )
     condiciones = models.ForeignKey(
         Condiciones,
         on_delete=models.PROTECT,
@@ -71,11 +76,16 @@ class InmuebleModalidad(Auditoria):
                 condition=models.Q(tipo_iva__isnull=True) | models.Q(tipo_iva__gte=0, tipo_iva__lte=100),
                 name='inmueble_modalidad_iva_rango',
             ),
+            models.CheckConstraint(
+                condition=models.Q(fianza_meses__isnull=True) | models.Q(fianza_meses__gte=1, fianza_meses__lte=12),
+                name='inmueble_modalidad_fianza_rango',
+            ),
         ]
 
     def clean(self):
         super().clean()
         self.validate_condiciones()
+        self.validate_fianza()
 
     @property
     def mas_iva(self) -> bool:
@@ -93,12 +103,25 @@ class InmuebleModalidad(Auditoria):
                 {'condiciones': 'Las condiciones no son de esta modalidad.'}
             )
 
+    @property
+    def fianza_total(self):
+        """Deposit: the price times `fianza_meses`; None when no months are set."""
+        if self.fianza_meses is None:
+            return None
+        return (Decimal(str(self.precio)) * self.fianza_meses).quantize(Decimal('0.01'))
+
+    def validate_fianza(self):
+        """Only a rental offer (monthly price) has a deposit."""
+        if self.fianza_meses is not None and self.modalidad_id and self.modalidad.unidad_precio != 'mensual':
+            raise ValidationError({'fianza_meses': 'Solo las ofertas de alquiler tienen fianza.'})
+
     def save(self, *args, **kwargs):
         """Saving a new or changed price also appends it to `HistorialPrecio`.
 
         `QuerySet.update()` and `bulk_create()` skip this; change prices through `save()`.
         """
         self.validate_condiciones()
+        self.validate_fianza()
         update_fields = kwargs.get('update_fields')
         toca_precio = update_fields is None or 'precio' in update_fields
         anterior = None

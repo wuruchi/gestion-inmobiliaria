@@ -6,6 +6,7 @@ from django.forms.models import BaseInlineFormSet
 from django.http import Http404, JsonResponse
 from django.urls import path, reverse
 from base.models import (
+    Agencia,
     AreaRecreo,
     Distribucion,
     Dotacion,
@@ -22,6 +23,7 @@ from base.models import (
     PlazaAparcamiento,
     Caracteristicas,
     TerminosAlquiler,
+    InclusionesAlquiler,
     RegistroLegal,
     RegulacionAlquiler,
     Seguridad,
@@ -311,6 +313,12 @@ admin.site.register(Comarca)
 admin.site.register(Distrito)
 admin.site.register(Barrio)
 
+@admin.register(Agencia)
+class AgenciaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'aicat', 'numero_api')
+    search_fields = ('nombre', 'aicat', 'numero_api')
+
+
 @admin.register(Modalidad)
 class ModalidadAdmin(admin.ModelAdmin):
     list_display = ('codigo', 'nombre', 'unidad_precio', 'orden')
@@ -340,8 +348,8 @@ class SolicitudReservaAdmin(admin.ModelAdmin):
 
 @admin.register(Municipio)
 class MunicipioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'codigo_ine', 'provincia', 'comarca')
-    list_filter = ('provincia',)
+    list_display = ('nombre', 'codigo_ine', 'provincia', 'comarca', 'declaraciones_cargadas')
+    list_filter = ('provincia', 'declaraciones_cargadas')
     search_fields = ('nombre', 'codigo_ine')
 
 
@@ -361,6 +369,10 @@ class TerminosAlquilerInline(admin.StackedInline):
     model = TerminosAlquiler
 
 
+class InclusionesAlquilerInline(admin.StackedInline):
+    model = InclusionesAlquiler
+
+
 @admin.register(InmuebleModalidad)
 class InmuebleModalidadAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     """One offer (price of a listing under a modalidad) with its rent regulation and terms."""
@@ -369,4 +381,4 @@ class InmuebleModalidadAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     list_filter = ('modalidad', 'estado')
     search_fields = ('inmueble__referencia',)
     list_select_related = ('inmueble', 'modalidad')
-    inlines = [RegulacionAlquilerInline, TerminosAlquilerInline]
+    inlines = [RegulacionAlquilerInline, TerminosAlquilerInline, InclusionesAlquilerInline]

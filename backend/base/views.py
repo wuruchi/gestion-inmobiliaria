@@ -145,11 +145,11 @@ def getInmueble(request, pk):
       'municipio__provincia', 'distrito', 'barrio', 'caracteristicas', 'distribucion',
       'instalaciones', 'arearecreo', 'dotacion', 'estancias',
       'otrosespacios', 'seguridad',
-      'entorno', 'certificado_energetico',
+      'entorno', 'certificado_energetico', 'agencia',
     ).prefetch_related(
       'images', 'descripciones', 'suministros', 'transportes', 'plazas', 'registros_legales', 'medios', 'propietarios',
       'municipio__declaraciones_tensionada',
-      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones', 'regulacion', 'terminos')),
+      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones', 'regulacion', 'terminos', 'inclusiones')),
     ),
     id=pk, publicar_web=True)
   serializer = SingleInmuebleSerializer(inmueble, many=False, context={'request': request})
