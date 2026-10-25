@@ -7,13 +7,11 @@ class RegistroLegal(models.Model):
 
     AICAT = 'aicat'
     CEDULA = 'cedula_habitabilidad'
-    CERTIFICADO_ENERGETICO = 'certificado_energetico'
     LICENCIA_TURISTICA = 'licencia_turistica'
     OTRO = 'otro'
     TIPOS = (
         (AICAT, 'Registro AICAT'),
         (CEDULA, 'Cédula de habitabilidad'),
-        (CERTIFICADO_ENERGETICO, 'Certificado energético'),
         (LICENCIA_TURISTICA, 'Licencia turística'),
         (OTRO, 'Otro'),
     )

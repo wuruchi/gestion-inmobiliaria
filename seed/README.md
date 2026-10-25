@@ -29,6 +29,8 @@ python seed.py modalidades          # the three Modalidad rows: temporal, habitu
 python seed.py modalidades --dry-run
 python seed.py condiciones         # the default Condiciones of each modalidad (needs modalidades first)
 python seed.py condiciones --dry-run
+python seed.py zonas-tensionadas  # the stressed-zone declarations of the municipios already loaded (never overwrites)
+python seed.py zonas-tensionadas --dry-run
 python seed.py check-locations      # check that listings' municipio/distrito/barrio nest (read only; exit 1 if not)
 python seed.py status               # row counts
 python seed.py fetch-locations      # refresh data/*.json from the official sources
@@ -65,6 +67,11 @@ Committed, so seeding works offline. Each file records its sources and retrieval
   Idescat (`fetch-locations` aborts if the two disagree or the total is not 311).
   `codigo_ine` is the 5-digit INE code (the official 6th digit is a check digit).
 - Distritos and barrios: Ajuntament de Barcelona open data (Barcelona city only).
+- Stressed zones (`data/zonas_tensionadas.json`): declarations TER/800/2024 (140 municipios) and TER/2408/2024
+  (131) from the Generalitat's list, with municipality names as printed there. The command matches them to the
+  municipios in the database; those whose province is not loaded (112 today, outside Barcelona province) are listed
+  as "not loaded" and picked up by a later run. Existing declarations are kept as staff left them. The 140's start
+  date is assumed, and the 2026 changes are not loaded (see ADR 0015).
 - Modalidades (`data/modalidades.json`): application configuration maintained by hand, not downloaded.
 - Conditions (`data/condiciones.json`): one default `Condiciones` per modalidad, written by hand from the
   AT Barcelona (rent: deposit, fees, ITP, utilities, final cleaning, tenant documents) and idealista (sale: ITP,

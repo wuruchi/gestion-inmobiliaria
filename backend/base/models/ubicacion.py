@@ -17,7 +17,7 @@ class SlugMixin(models.Model):
 
 
 class Provincia(SlugMixin):
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
     codigo_ine = models.CharField(max_length=2, unique=True)  # '08'
     nombre = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(unique=True)
@@ -33,7 +33,7 @@ class Comarca(SlugMixin):
     """A Catalan comarca. It has no province: a comarca can span two (Cerdanya), so the
     province belongs to each `Municipio` and the comarca only groups municipios."""
 
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
     codigo = models.CharField(max_length=2, unique=True)  # official code, e.g. '21'
     nombre = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
@@ -46,7 +46,7 @@ class Comarca(SlugMixin):
 
 
 class Municipio(SlugMixin):
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
     provincia = models.ForeignKey(
         Provincia, on_delete=models.PROTECT, related_name='municipios'
     )
@@ -99,7 +99,7 @@ class Municipio(SlugMixin):
 
 
 class Distrito(SlugMixin):
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
     municipio = models.ForeignKey(
         Municipio, on_delete=models.PROTECT, related_name='distritos'
     )
@@ -123,7 +123,7 @@ class Distrito(SlugMixin):
 
 
 class Barrio(SlugMixin):
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
     distrito = models.ForeignKey(
         Distrito, on_delete=models.PROTECT, related_name='barrios'
     )

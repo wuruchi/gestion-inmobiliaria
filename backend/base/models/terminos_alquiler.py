@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Case, F, IntegerField, Value, When
 from django.db.models.lookups import LessThanOrEqual
-from base.models.inmueble import Inmueble
+from base.models.inmueble_modalidad import InmuebleModalidad
 
 DIAS = 'dias'
 MESES = 'meses'
@@ -26,24 +26,17 @@ def _estancia_en_dias(campo):
         output_field=IntegerField(),
     )
 
-class Otros(models.Model):
-    inmueble = models.OneToOneField(Inmueble, on_delete=models.CASCADE, null=False)
-    capacidad_personas = models.PositiveIntegerField(default=0)
-    suelo_piso = models.CharField(max_length=150, blank=True, default='')
-    exterior = models.BooleanField(default=False)
-    altura_real_m = models.DecimalField(
-        max_digits=5, decimal_places=2, blank=True, null=True,
-        verbose_name='Altura real (m)',
+
+class TerminosAlquiler(models.Model):
+    """Terms of one rental offer (an `InmuebleModalidad` with a monthly price): stay limits and pets.
+
+    They belong to the offer, not to the listing: a temporary and a habitual offer of the same
+    dwelling have different stay limits. Sale offers have none. Public in the API.
+    """
+
+    oferta = models.OneToOneField(
+        InmuebleModalidad, on_delete=models.CASCADE, related_name='terminos'
     )
-    anio_ultima_reforma = models.PositiveSmallIntegerField(blank=True, null=True)
-    gastos_comunidad_incluidos = models.BooleanField(default=False)
-    ibi_incluido = models.BooleanField(default=False)
-    orientacion = models.CharField(max_length=150, blank=True, default='')
-    chimenea = models.BooleanField(default=False)
-    vistas_al_mar = models.BooleanField(default=False)
-    vistas_montania = models.BooleanField(default=False)
-    tipo_fachada = models.CharField(max_length=150, blank=True, default='')
-    office = models.CharField(max_length=150, blank=True, default='')
     acepta_animales = models.BooleanField(default=False)
     estancia_minima = models.PositiveSmallIntegerField(blank=True, null=True)
     estancia_minima_unidad = models.CharField(
@@ -55,6 +48,8 @@ class Otros(models.Model):
     )
 
     class Meta:
+        verbose_name = 'términos del alquiler'
+        verbose_name_plural = 'términos del alquiler'
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(estancia_minima__isnull=True)
@@ -63,12 +58,16 @@ class Otros(models.Model):
                     _estancia_en_dias('estancia_minima'),
                     _estancia_en_dias('estancia_maxima'),
                 )),
-                name='otros_estancia_min_max',
+                name='terminos_estancia_min_max',
             )
         ]
 
     def clean(self):
         super().clean()
+        self.validate_estancia()
+        self.validate_oferta_de_alquiler()
+
+    def validate_estancia(self):
         if (
             self.estancia_minima is not None
             and self.estancia_maxima is not None
@@ -79,5 +78,14 @@ class Otros(models.Model):
                 {'estancia_minima': 'La estancia mínima supera a la máxima.'}
             )
 
+    def validate_oferta_de_alquiler(self):
+        """Only a rental offer (monthly price) has rental terms."""
+        if self.oferta_id and self.oferta.modalidad.unidad_precio != 'mensual':
+            raise ValidationError({'oferta': 'Solo las ofertas de alquiler tienen términos de alquiler.'})
+
+    def save(self, *args, **kwargs):
+        self.validate_oferta_de_alquiler()
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
-        return f'{self.inmueble.referencia} - Otros Datos'
+        return f'{self.oferta} - términos'

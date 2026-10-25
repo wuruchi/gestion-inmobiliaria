@@ -3,20 +3,19 @@ from base.models.inmueble import Inmueble
 
 
 class Instalaciones(models.Model):
+    # Water, electricity and gas supplies live in `Suministro`.
+    TIPOS_CALEFACCION = [('central', 'Central'), ('individual', 'Individual')]
+    SUBTIPOS_CALEFACCION = [
+        ('gas_natural', 'Gas natural'), ('electrica', 'Eléctrica'), ('gasoleo', 'Gasóleo'),
+        ('butano_propano', 'Butano / propano'), ('biomasa', 'Biomasa'), ('aerotermia', 'Aerotermia'),
+        ('solar', 'Solar'), ('otro', 'Otro'),
+    ]
     inmueble = models.OneToOneField(
         Inmueble, on_delete=models.CASCADE, null=False
     )
-    contador_agua = models.BooleanField(default=False)
-    compania_agua = models.CharField(max_length=150, blank=True, default='')
-    contador_electricidad = models.BooleanField(default=False)
-    compania_electricidad = models.CharField(max_length=150, blank=True, default='')
-    gas = models.BooleanField(default=False)
-    tipo_gas = models.CharField(max_length=150, blank=True, default='')
-    contador_gas = models.BooleanField(default=False)
-    compania_gas = models.CharField(max_length=150, blank=True, default='')
     calefaccion = models.BooleanField(default=False)
-    tipo_calefaccion = models.CharField(max_length=150, blank=True, default='')
-    subtipo_calefaccion = models.CharField(max_length=150, blank=True, default='')
+    tipo_calefaccion = models.CharField(max_length=20, choices=TIPOS_CALEFACCION, blank=True, default='')
+    subtipo_calefaccion = models.CharField(max_length=20, choices=SUBTIPOS_CALEFACCION, blank=True, default='')
     tvs = models.PositiveIntegerField(default=0)
     tv_internacional = models.BooleanField(default=False)
     antena_parabolica = models.BooleanField(default=False)

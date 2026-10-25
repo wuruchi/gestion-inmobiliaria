@@ -1,6 +1,7 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from base.models.inmueble import Inmueble
+from base.models.opciones import MATERIALES_CARPINTERIA, MATERIALES_SUELO
 
 
 SUPERFICIES = ('salon_m2', 'terraza_m2', 'balcones_m2')
@@ -13,6 +14,15 @@ def _superficie(nombre):
     )
 
 
+TIPOS_COCINA = (
+    ('independiente', 'Independiente'),
+    ('americana', 'Americana'),
+    ('abierta', 'Abierta'),
+    ('office', 'Office'),
+    ('otro', 'Otro'),
+)
+
+
 class Estancias(models.Model):
     """Living room, terrace, kitchen and carpentry of a listing (one row each)."""
 
@@ -20,17 +30,17 @@ class Estancias(models.Model):
         Inmueble, on_delete=models.CASCADE, null=False
     )
     salon_m2 = _superficie('Salón (m²)')
-    terraza = models.PositiveIntegerField(default=0, help_text='Número de terrazas.')
+    n_terrazas = models.PositiveIntegerField(default=0, help_text='Número de terrazas.')
     terraza_m2 = _superficie('Terrazas (m²)')
-    balcones = models.PositiveIntegerField(default=0, help_text='Número de balcones.')
+    n_balcones = models.PositiveIntegerField(default=0, help_text='Número de balcones.')
     balcones_m2 = _superficie('Balcones (m²)')
     descripcion = models.CharField(max_length=150, blank=True, default='')
     cocina = models.BooleanField(default=False)
     cocina_amueblada = models.BooleanField(default=False)
-    tipo_cocina = models.CharField(max_length=150, blank=True, default='')
-    suelo_cocina = models.CharField(max_length=150, blank=True, default='')
-    carpinteria_interior = models.CharField(max_length=150, blank=True, default='')
-    carpinteria_exterior = models.CharField(max_length=150, blank=True, default='')
+    tipo_cocina = models.CharField(max_length=20, choices=TIPOS_COCINA, blank=True, default='')
+    suelo_cocina = models.CharField(max_length=20, choices=MATERIALES_SUELO, blank=True, default='')
+    carpinteria_interior = models.CharField(max_length=20, choices=MATERIALES_CARPINTERIA, blank=True, default='')
+    carpinteria_exterior = models.CharField(max_length=20, choices=MATERIALES_CARPINTERIA, blank=True, default='')
 
     class Meta:
         verbose_name_plural = 'estancias'

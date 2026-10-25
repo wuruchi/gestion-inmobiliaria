@@ -13,11 +13,28 @@ from django.test import TestCase
 
 from base.models import (
     DeclaracionZonaTensionada, RegulacionAlquiler,
-    AreaRecreo, Banios, Comarca, Condiciones, DatosInternos, Distrito, Barrio, Dormitorios, Dotacion,
+    AreaRecreo, CertificadoEnergetico, AcuerdoAdministracion, Comarca, Condiciones, DatosInternos, Distrito, Barrio, Distribucion, Dotacion,
     Entorno, Estancias, ImageInmueble, Inmueble, InmuebleModalidad, Instalaciones, MediaInmueble,
-    Modalidad, Municipio, Otros, OtrosEspacios, PlazaAparcamiento, Provincia, RegistroLegal,
-    Seguridad, SolicitudReserva, Transporte,
+    Modalidad, Municipio, Caracteristicas, OtrosEspacios, TerminosAlquiler, PlazaAparcamiento, Provincia, RegistroLegal,
+    Seguridad, SolicitudReserva, Suministro, DescripcionInmueble, TransporteInmueble,
 )
+
+
+def crear_inmueble(**campos):
+    """Create an Inmueble; `descripcion_<idioma>` keywords become `DescripcionInmueble` rows and the
+    energy keywords (`eficiencia`, `consumo_energetico`, `emisiones_co2`, `numero_certificado`) a certificate."""
+    descripciones = {i: campos.pop(f'descripcion_{i}', '') for i, _ in DescripcionInmueble.IDIOMAS}
+    energia = {k: campos.pop(k) for k in ('eficiencia', 'consumo_energetico', 'emisiones_co2') if k in campos}
+    if 'numero_certificado' in campos:
+        energia['numero'] = campos.pop('numero_certificado')
+    inm = Inmueble.objects.create(**campos)
+    if energia:
+        CertificadoEnergetico.objects.create(inmueble=inm, **energia)
+    for idioma, texto in descripciones.items():
+        if texto:
+            DescripcionInmueble.objects.create(inmueble=inm, idioma=idioma, texto=texto)
+    return inm
+
 
 
 class EjemploTestCase(TestCase):
@@ -33,7 +50,7 @@ class EjemploTestCase(TestCase):
             provincia=cls.barcelona_prov, codigo_ine='08019', nombre='Barcelona')
 
     def detalle(self, inmueble):
-        response = self.client.get(f'/api/inmuebles/{inmueble._id}/')
+        response = self.client.get(f'/api/inmuebles/{inmueble.id}/')
         self.assertEqual(response.status_code, 200)
         return response.json()
 
@@ -52,7 +69,7 @@ class EjemploTestCase(TestCase):
         cuerpo = {'nombre': 'Ana', 'email': 'ana@example.com', 'telefono': '600000000',
                   'acepta_aviso_legal': True, **extra}
         return self.client.post(
-            f'/api/inmuebles/{inmueble._id}/reservas/', cuerpo, content_type='application/json')
+            f'/api/inmuebles/{inmueble.id}/reservas/', cuerpo, content_type='application/json')
 
 
 class Atb01Test(EjemploTestCase):
@@ -63,10 +80,10 @@ class Atb01Test(EjemploTestCase):
         super().setUpTestData()
         eixample = Distrito.objects.create(municipio=cls.barcelona, codigo='02', nombre='Eixample')
         sant_antoni = Barrio.objects.create(distrito=eixample, codigo='07', nombre='Sant Antoni')
-        cls.inm = inm = Inmueble.objects.create(
+        cls.inm = inm = crear_inmueble(
             referencia='G767', municipio=cls.barcelona, distrito=eixample, barrio=sant_antoni,
-            direccion='Carrer de la Cera', tipo='Vivienda', subtipo='piso',
-            fecha_disponibilidad=date(2026, 11, 23), sup_construida='70', publicar_web=True,
+            direccion='Carrer de la Cera', tipo='vivienda', subtipo='piso',
+            sup_construida='70', publicar_web=True,
             descripcion_es='ARRENDAMIENTO DE USO DISTINTO DEL DE VIVIENDA (USO EXCLUSIVO VACACIONES/OCIO). '
                            'Fantástico piso de obra nueva y de diseño con una terraza privada, un solarium '
                            'y dos piscinas comunitarias. ALARMA Y WIFI INCLUIDO. Finca con ascensor.',
@@ -81,7 +98,8 @@ class Atb01Test(EjemploTestCase):
             limpieza_final='Obligatoria y a cargo del inquilino',
             incluido='Gastos de comunidad y seguro', no_incluido='Honorarios de la agencia, agua y luz',
             requisitos='Trabajador por cuenta ajena: DNI/NIE, contrato y 3 últimas nóminas, IBAN.')
-        oferta = InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.temporal, precio='1750')
+        oferta = InmuebleModalidad.objects.create(
+            inmueble=inm, modalidad=cls.temporal, precio='1750', fecha_disponibilidad=date(2026, 11, 23))
         # The index range and the last rent (1750 €, ended 30/06/2026) are declared on the rental offer.
         RegulacionAlquiler.objects.create(
             oferta=oferta, indice_referencia_min='839.99', indice_referencia_max='1153.53',
@@ -89,36 +107,36 @@ class Atb01Test(EjemploTestCase):
             ultima_renta='1750', ultima_renta_fin=date(2026, 6, 30))
         RegistroLegal.objects.create(inmueble=inm, tipo='cedula_habitabilidad', numero='CHB0333*******')
         RegistroLegal.objects.create(inmueble=inm, tipo='aicat', numero='5205')
-        Dormitorios.objects.create(inmueble=inm, dobles=2, exteriores=2, suites=1)
-        Banios.objects.create(inmueble=inm, banios=2)
+        Distribucion.objects.create(
+            inmueble=inm, dobles=2, exteriores=2, suites=1, banios=2, capacidad_personas=4)
         Estancias.objects.create(
-            inmueble=inm, cocina=True, tipo_cocina='Americana', suelo_cocina='Baldosa',
-            cocina_amueblada=True, balcones=1, terraza=2)
+            inmueble=inm, cocina=True, tipo_cocina='americana', suelo_cocina='baldosa',
+            cocina_amueblada=True, n_balcones=1, n_terrazas=2)
         Dotacion.objects.create(
-            inmueble=inm, amueblado=True, lavadora=1, lavavajillas=1, microondas=1, nevera=1, horno=1,
-            utensilios_cocina=True, camas=2, sofas=1, tendedero=1,
+            inmueble=inm, amueblado=True, lavadora=True, lavavajillas=True, microondas=True, nevera=True, horno=True,
+            utensilios_cocina=True, camas=2, sofas=1, tendedero=True,
             vajilla=True, cuberteria=True, cristaleria=True, ropa_cama=True, toallas=True)
         Instalaciones.objects.create(
-            inmueble=inm, contador_agua=True, contador_electricidad=True, calefaccion=True,
-            aire_acondicionado=True, ascensor=1, internet=True)
+            inmueble=inm, calefaccion=True, aire_acondicionado=True, ascensor=1, internet=True)
+        Suministro.objects.create(inmueble=inm, tipo='agua', contador=True)
+        Suministro.objects.create(inmueble=inm, tipo='electricidad', contador=True)
         Entorno.objects.create(
             inmueble=inm, cerca_colegios=True, cerca_farmacia=True, cerca_guarderias=True,
             cerca_medico=True, cerca_supermercado=True, cerca_restaurantes=True)
         Seguridad.objects.create(
             inmueble=inm, puerta_blindada=True, sistema_alarma=True, portero_automatico=True)
         AreaRecreo.objects.create(inmueble=inm, piscina=True)
-        Transporte.objects.create(
-            inmueble=inm, cerca_bus=True, descripcion_bus='Ronda Sant Pau - Parlament',
-            cerca_metro=True, descripcion_metro='L2 - Sant Antoni')
-        Otros.objects.create(
-            inmueble=inm, capacidad_personas=4, exterior=True, anio_ultima_reforma=2019,
-            estancia_minima=2, estancia_maxima=11)
+        TransporteInmueble.objects.create(inmueble=inm, tipo='bus', descripcion='Ronda Sant Pau - Parlament')
+        TransporteInmueble.objects.create(inmueble=inm, tipo='metro', descripcion='L2 - Sant Antoni')
+        Caracteristicas.objects.create(inmueble=inm, exterior=True)
+        Inmueble.objects.filter(pk=inm.pk).update(anio_ultima_reforma=2019)
+        TerminosAlquiler.objects.create(oferta=oferta, estancia_minima=2, estancia_maxima=11)
 
     def test_header_price_location_and_surface(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
             'referencia': 'G767', 'direccion': 'Carrer de la Cera', 'fecha_disponibilidad': '2026-11-23',
-            'sup_construida': '70.00', 'tipo': 'Vivienda', 'subtipo': 'piso', 'zona': 'Sant Antoni',
+            'sup_construida': '70.00', 'tipo': 'vivienda', 'subtipo': 'piso', 'zona': 'Sant Antoni',
             'zona_ref': 'Eixample', 'importe_alquiler': '1750.00', 'importe_venta': None, 'es_venta': False,
             'n_habitaciones': 2, 'n_banios': 2})
         self.assertEqual(data['provincia']['nombre'], 'Barcelona')
@@ -128,7 +146,8 @@ class Atb01Test(EjemploTestCase):
     def test_regulatory_block(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
-            'zona_tensionada': True, 'gran_tenedor': False, 'eficiencia': 'D', 'consumo_energetico': '71.00'})
+            'zona_tensionada': True, 'gran_tenedor': False})
+        self.assertContiene(data['certificado_energetico'], {'eficiencia': 'D', 'consumo_energetico': '71.00'})
         oferta = data['modalidades'][0]
         self.assertContiene(oferta['regulacion'], {
             'indice_referencia_min': '839.99', 'indice_referencia_max': '1153.53',
@@ -140,13 +159,13 @@ class Atb01Test(EjemploTestCase):
 
     def test_characteristics_tables(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data['dormitorios'], {'dobles': 2, 'exteriores': 2, 'suites': 1})
+        self.assertContiene(data['distribucion'], {'dobles': 2, 'exteriores': 2, 'suites': 1})
         self.assertContiene(data['cocina'], {
-            'cocina': True, 'tipo_cocina': 'Americana', 'suelo_cocina': 'Baldosa', 'cocina_amueblada': True})
-        self.assertContiene(data['terraza'], {'balcones': 1, 'terraza': 2})
+            'cocina': True, 'tipo_cocina': 'americana', 'suelo_cocina': 'baldosa', 'cocina_amueblada': True})
+        self.assertContiene(data['terraza'], {'n_balcones': 1, 'n_terrazas': 2})
         self.assertContiene(data['dotacion'], {
-            'amueblado': True, 'lavadora': 1, 'lavavajillas': 1, 'microondas': 1, 'nevera': 1, 'horno': 1,
-            'utensilios_cocina': True, 'camas': 2, 'sofas': 1, 'tendedero': 1,
+            'amueblado': True, 'lavadora': True, 'lavavajillas': True, 'microondas': True, 'nevera': True, 'horno': True,
+            'utensilios_cocina': True, 'camas': 2, 'sofas': 1, 'tendedero': True,
             'vajilla': True, 'cuberteria': True, 'cristaleria': True, 'ropa_cama': True, 'toallas': True})
         self.assertContiene(data['instalaciones'], {
             'contador_agua': True, 'contador_electricidad': True, 'calefaccion': True,
@@ -160,8 +179,10 @@ class Atb01Test(EjemploTestCase):
         self.assertContiene(data['transporte'], {
             'cerca_bus': True, 'descripcion_bus': 'Ronda Sant Pau - Parlament',
             'cerca_metro': True, 'descripcion_metro': 'L2 - Sant Antoni'})
-        self.assertContiene(data['otros'], {
-            'capacidad_personas': 4, 'exterior': True, 'anio_ultima_reforma': 2019,
+        self.assertContiene(data['caracteristicas'], {'exterior': True})
+        self.assertContiene(data['distribucion'], {'capacidad_personas': 4})
+        self.assertContiene(data, {'anio_ultima_reforma': 2019})
+        self.assertContiene(data['modalidades'][0]['terminos'], {
             'estancia_minima': 2, 'estancia_minima_unidad': 'meses',
             'estancia_maxima': 11, 'estancia_maxima_unidad': 'meses'})
 
@@ -197,9 +218,9 @@ class Atb02Test(EjemploTestCase):
         valles = Comarca.objects.create(codigo='28', nombre='Vallès Occidental')
         sabadell = Municipio.objects.create(
             provincia=cls.barcelona_prov, comarca=valles, codigo_ine='08187', nombre='Sabadell')
-        cls.inm = inm = Inmueble.objects.create(
-            referencia='G753-B-1', municipio=sabadell, direccion='Carrer Industria', tipo='Oficina',
-            fecha_disponibilidad=date(2026, 10, 25), sup_construida='40', publicar_web=True,
+        cls.inm = inm = crear_inmueble(
+            referencia='G753-B-1', municipio=sabadell, direccion='Carrer Industria', tipo='oficina',
+            sup_construida='40', publicar_web=True,
             descripcion_es='Alquiler de Oficina (2 a 5 años). Oficina en Sabadell Centre a escasos metros '
                            'de la Gran Vía. Dos espacios diáfanos, uno (16 m2) con un baño con ducha y otro '
                            'independiente (18 m2) en el patio (60 m2). DETALLES: Persianas eléctricas.',
@@ -210,34 +231,35 @@ class Atb02Test(EjemploTestCase):
             incluido='Gastos de comunidad, seguro e IBI', no_incluido='Honorarios de la agencia, ITP y suministros')
         # The page says "+IVA" without the rate; 21 % is the general rate for commercial leases.
         oferta = InmuebleModalidad.objects.create(
-            inmueble=inm, modalidad=cls.habitual, precio='450', mas_iva=True, tipo_iva='21',
+            inmueble=inm, modalidad=cls.habitual, precio='450', tipo_iva='21', fecha_disponibilidad=date(2026, 10, 25),
             condiciones=propias)
         # The page says the office was let before (390 €); when that contract ended is not shown.
         RegulacionAlquiler.objects.create(oferta=oferta, renta_previa='con_renta', ultima_renta='390')
         PlazaAparcamiento.objects.create(
             inmueble=inm, opcional=True, precio_opcional='60', precio_opcional_unidad='mensual',
             valor='25000', renta='45')
-        Otros.objects.create(
-            inmueble=inm, ibi_incluido=True, gastos_comunidad_incluidos=True,
-            estancia_minima=1, estancia_minima_unidad='anios', estancia_maxima=3, estancia_maxima_unidad='anios')
+        Inmueble.objects.filter(pk=inm.pk).update(ibi_incluido=True, gastos_comunidad_incluidos=True)
+        TerminosAlquiler.objects.create(
+            oferta=oferta, estancia_minima=1, estancia_minima_unidad='anios',
+            estancia_maxima=3, estancia_maxima_unidad='anios')
 
     def test_office_price_with_vat_and_own_fees(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data, {'tipo': 'Oficina', 'subtipo': '', 'sup_construida': '40.00'})
+        self.assertContiene(data, {'tipo': 'oficina', 'subtipo': '', 'sup_construida': '40.00'})
         precio = data['modalidades'][0]
         self.assertContiene(precio, {'codigo': 'habitual', 'precio': '450.00', 'mas_iva': True, 'tipo_iva': '21.00'})
         self.assertContiene(precio['condiciones'], {
             'honorarios': '700 € + IVA', 'incluido': 'Gastos de comunidad, seguro e IBI'})
 
     def test_included_costs_and_stay_in_years(self):
-        otros = self.detalle(self.inm)['otros']
-        self.assertContiene(otros, {
-            'ibi_incluido': True, 'gastos_comunidad_incluidos': True,
+        data = self.detalle(self.inm)
+        self.assertContiene(data, {'ibi_incluido': True, 'gastos_comunidad_incluidos': True})
+        self.assertContiene(data['modalidades'][0]['terminos'], {
             'estancia_minima': 1, 'estancia_minima_unidad': 'anios',
             'estancia_maxima': 3, 'estancia_maxima_unidad': 'anios'})
 
     def test_optional_parking_has_a_public_price_and_hides_internal_amounts(self):
-        respuesta = self.client.get(f'/api/inmuebles/{self.inm._id}/')
+        respuesta = self.client.get(f'/api/inmuebles/{self.inm.id}/')
         plaza = respuesta.json()['plazas'][0]
         self.assertContiene(plaza, {
             'opcional': True, 'precio_opcional': '60.00', 'precio_opcional_unidad': 'mensual',
@@ -246,13 +268,13 @@ class Atb02Test(EjemploTestCase):
 
     def test_energy_and_last_rent(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data, {'eficiencia': 'E', 'consumo_energetico': '126.00'})
+        self.assertContiene(data['certificado_energetico'], {'eficiencia': 'E', 'consumo_energetico': '126.00'})
         self.assertContiene(data['modalidades'][0]['regulacion'], {
             'renta_previa': 'con_renta', 'ultima_renta': '390.00', 'ultima_renta_fin': None})
 
     # NO MODELADO: a long office lease has to use the `habitual` modalidad, whose name says "Vivienda
     # habitual". "Persianas eléctricas" has no field; it stays in the description. An office has no
-    # bedroom or bathroom count on the card ("0 0"), which matches a missing Dormitorios/Banios row.
+    # bedroom or bathroom count on the card ("0 0"), which matches a missing Distribucion row.
 
 
 class Atb03Test(EjemploTestCase):
@@ -261,75 +283,79 @@ class Atb03Test(EjemploTestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.inm = inm = Inmueble.objects.create(
-            referencia='576', municipio=cls.barcelona, direccion='Carrer Ribes', tipo='Vivienda',
-            subtipo='piso', fecha_disponibilidad=date(2026, 10, 25), sup_construida='90', publicar_web=True,
+        cls.inm = inm = crear_inmueble(
+            referencia='576', municipio=cls.barcelona, direccion='Carrer Ribes', tipo='vivienda',
+            subtipo='piso', sup_construida='90', publicar_web=True,
             descripcion_es='ALQUILER DE TEMPORADA. Piso reformado de 4 habitaciones dobles con 2 baños, '
                            'balcón. Cocina office con lavadero. Salón-comedor de 22 m2. WIFI incluido.')
-        InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.temporal, precio='2200')
-        Dormitorios.objects.create(inmueble=inm, dobles=4, exteriores=2)
-        Banios.objects.create(inmueble=inm, banios=2)
+        oferta = InmuebleModalidad.objects.create(
+            inmueble=inm, modalidad=cls.temporal, precio='2200', fecha_disponibilidad=date(2026, 10, 25))
+        Distribucion.objects.create(inmueble=inm, dobles=4, exteriores=2, banios=2, capacidad_personas=4)
         Estancias.objects.create(
-            inmueble=inm, salon_m2='22', balcones=1, balcones_m2='4', cocina=True, tipo_cocina='Office',
-            cocina_amueblada=True, carpinteria_interior='Madera', carpinteria_exterior='Aluminio')
-        OtrosEspacios.objects.create(inmueble=inm, vestidores=1, lavadero=1)
+            inmueble=inm, salon_m2='22', n_balcones=1, balcones_m2='4', cocina=True, tipo_cocina='office',
+            cocina_amueblada=True, carpinteria_interior='madera', carpinteria_exterior='aluminio')
+        OtrosEspacios.objects.create(inmueble=inm, vestidores=1, lavadero=True)
         Dotacion.objects.create(
-            inmueble=inm, amueblado=True, armarios_empotrados=1, lavadora=1, lavavajillas=1, microondas=1,
-            nevera=1, ropero=1, toldo=1, horno=1, utensilios_cocina=True, camas=3, sofas=2,
+            inmueble=inm, amueblado=True, armarios_empotrados=1, lavadora=True, lavavajillas=True, microondas=True,
+            nevera=True, ropero=1, toldo=True, horno=True, utensilios_cocina=True, camas=3, sofas=2,
             vajilla=True, cuberteria=True)
         Instalaciones.objects.create(
-            inmueble=inm, calefaccion=True, tipo_calefaccion='Central', subtipo_calefaccion='Gas natural',
+            inmueble=inm, calefaccion=True, tipo_calefaccion='central', subtipo_calefaccion='gas_natural',
             tvs=1, ascensor=1, instalacion_telefono=True)
         Entorno.objects.create(
             inmueble=inm, cerca_colegios=True, cerca_farmacia=True, cerca_guarderias=True, cerca_medico=True,
             cerca_centro_comercial=True, distancia_playa_m=2000, cerca_supermercado=True,
             cerca_restaurantes=True)
-        Transporte.objects.create(inmueble=inm, cerca_bus=True, cerca_metro=True)
-        Otros.objects.create(
-            inmueble=inm, capacidad_personas=4, suelo_piso='Terrazo', altura_real_m='3',
-            anio_ultima_reforma=2014, gastos_comunidad_incluidos=True,
-            # The description says "32 días hasta 4-6 meses"; the structured field says 6 and 6 meses.
-            estancia_minima=32, estancia_minima_unidad='dias', estancia_maxima=6)
-        # Agency-only data that the page leaked into its public "Otros" block.
-        DatosInternos.objects.create(
-            inmueble=inm, exclusiva=True, gestion_comercial=True, administracion=True,
-            tasacion_propietario='1200')
+        TransporteInmueble.objects.create(inmueble=inm, tipo='bus')
+        TransporteInmueble.objects.create(inmueble=inm, tipo='metro')
+        Caracteristicas.objects.create(inmueble=inm, suelo_piso='terrazo', altura_real_m='3')
+        Inmueble.objects.filter(pk=inm.pk).update(anio_ultima_reforma=2014, gastos_comunidad_incluidos=True)
+        # The description says "32 días hasta 4-6 meses"; the structured field says 6 and 6 meses.
+        TerminosAlquiler.objects.create(
+            oferta=oferta, estancia_minima=32, estancia_minima_unidad='dias', estancia_maxima=6)
+        # Agency-only data that the page leaked into its public "Otros" block (now `Caracteristicas`).
+        DatosInternos.objects.create(inmueble=inm, tasacion_propietario='1200')
+        AcuerdoAdministracion.objects.create(
+            inmueble=inm, exclusiva=True, gestion_comercial=True, administracion=True)
 
     def test_card_and_rooms(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
             'importe_alquiler': '2200.00', 'sup_construida': '90.00', 'n_habitaciones': 4, 'n_banios': 2})
-        self.assertContiene(data['dormitorios'], {'dobles': 4, 'exteriores': 2})
+        self.assertContiene(data['distribucion'], {'dobles': 4, 'exteriores': 2})
 
     def test_living_areas_and_carpentry_material(self):
         data = self.detalle(self.inm)
         self.assertEqual(data['salon']['salon_m2'], '22.00')
-        self.assertContiene(data['terraza'], {'balcones': 1, 'balcones_m2': '4.00'})
-        self.assertContiene(data['cocina'], {'tipo_cocina': 'Office', 'cocina_amueblada': True})
+        self.assertContiene(data['terraza'], {'n_balcones': 1, 'balcones_m2': '4.00'})
+        self.assertContiene(data['cocina'], {'tipo_cocina': 'office', 'cocina_amueblada': True})
         self.assertContiene(data['carpinteria'], {
-            'carpinteria_interior': 'Madera', 'carpinteria_exterior': 'Aluminio'})
-        self.assertContiene(data['otros_espacios'], {'vestidores': 1, 'lavadero': 1})
+            'carpinteria_interior': 'madera', 'carpinteria_exterior': 'aluminio'})
+        self.assertContiene(data['otros_espacios'], {'vestidores': 1, 'lavadero': True})
 
     def test_equipment_and_installations(self):
         data = self.detalle(self.inm)
         self.assertContiene(data['dotacion'], {
-            'amueblado': True, 'armarios_empotrados': 1, 'ropero': 1, 'toldo': 1, 'camas': 3, 'sofas': 2})
+            'amueblado': True, 'armarios_empotrados': 1, 'ropero': 1, 'toldo': True, 'camas': 3, 'sofas': 2})
         self.assertContiene(data['instalaciones'], {
-            'calefaccion': True, 'tipo_calefaccion': 'Central', 'subtipo_calefaccion': 'Gas natural',
+            'calefaccion': True, 'tipo_calefaccion': 'central', 'subtipo_calefaccion': 'gas_natural',
             'tvs': 1, 'ascensor': 1, 'instalacion_telefono': True})
         self.assertContiene(data['entorno'], {'cerca_centro_comercial': True, 'distancia_playa_m': 2000})
 
     def test_other_data_and_stay_with_days(self):
-        self.assertContiene(self.detalle(self.inm)['otros'], {
-            'capacidad_personas': 4, 'suelo_piso': 'Terrazo', 'altura_real_m': '3.00',
-            'anio_ultima_reforma': 2014, 'gastos_comunidad_incluidos': True,
+        data = self.detalle(self.inm)
+        self.assertContiene(data['caracteristicas'], {'suelo_piso': 'terrazo', 'altura_real_m': '3.00'})
+        self.assertContiene(data['distribucion'], {'capacidad_personas': 4})
+        self.assertContiene(data, {'anio_ultima_reforma': 2014, 'gastos_comunidad_incluidos': True})
+        self.assertContiene(data['modalidades'][0]['terminos'], {
             'estancia_minima': 32, 'estancia_minima_unidad': 'dias',
             'estancia_maxima': 6, 'estancia_maxima_unidad': 'meses'})
 
     def test_internal_data_is_kept_but_never_published(self):
         datos = DatosInternos.objects.get(inmueble=self.inm)
-        self.assertEqual((datos.exclusiva, str(datos.tasacion_propietario)), (True, '1200.00'))
-        cuerpo = self.client.get(f'/api/inmuebles/{self.inm._id}/').content.decode()
+        acuerdo = AcuerdoAdministracion.objects.get(inmueble=self.inm)
+        self.assertEqual((acuerdo.exclusiva, str(datos.tasacion_propietario)), (True, '1200.00'))
+        cuerpo = self.client.get(f'/api/inmuebles/{self.inm.id}/').content.decode()
         for secreto in ('1200.00', 'tasacion', 'exclusiva', 'gestion_comercial', 'administracion'):
             self.assertNotIn(secreto, cuerpo)
 
@@ -347,25 +373,24 @@ class Idealista01Test(EjemploTestCase):
         gijon = Municipio.objects.create(provincia=cls.asturias, codigo_ine='33024', nombre='Gijón')
         periurbano = Distrito.objects.create(municipio=gijon, codigo='99', nombre='Periurbano')
         vega = Barrio.objects.create(distrito=periurbano, codigo='01', nombre='Vega')
-        cls.inm = inm = Inmueble.objects.create(
+        cls.inm = inm = crear_inmueble(
             referencia='IDEA-01', municipio=gijon, distrito=periurbano, barrio=vega,
             direccion='C-vega, 18', dir_descripcion='Urb. Urbanización el Vaticano',
-            tipo='Vivienda', subtipo='chalet_adosado', conservacion='buen_estado', anio_construccion=1955,
+            tipo='vivienda', subtipo='chalet_adosado', conservacion='buen_estado', anio_construccion=1955,
             n_plantas=2, sup_construida='154', sup_parcela='142', gtos_comunidad='50', ibi='210',
             consumo_energetico='470.1', emisiones_co2='83', publicar_web=True,
             descripcion_es='Chalet adosado de dos plantas con amplio jardín de 79 m2, dos trasteros y '
                            'porche trasero con vistas y acceso directo al jardín.')
         InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.venta, precio='279000')
         # The page does not say which kind of bedroom the 3 are.
-        Dormitorios.objects.create(inmueble=inm, dobles=3)
-        Banios.objects.create(inmueble=inm, banios=1)
-        Estancias.objects.create(inmueble=inm, terraza=1)
+        Distribucion.objects.create(inmueble=inm, dobles=3, banios=1)
+        Estancias.objects.create(inmueble=inm, n_terrazas=1)
         Dotacion.objects.create(inmueble=inm, armarios_empotrados=1)
         OtrosEspacios.objects.create(inmueble=inm, trastero=2)
         Instalaciones.objects.create(
-            inmueble=inm, calefaccion=True, tipo_calefaccion='Individual', subtipo_calefaccion='Eléctrica')
+            inmueble=inm, calefaccion=True, tipo_calefaccion='individual', subtipo_calefaccion='electrica')
         Entorno.objects.create(inmueble=inm, jardin=True, jardin_m2='79')
-        Otros.objects.create(inmueble=inm, orientacion='norte, sur')
+        Caracteristicas.objects.create(inmueble=inm, orientacion_norte=True, orientacion_sur=True)
         for posicion, tipo in enumerate(
                 ['terraza', 'fachada', 'fachada', 'salon', 'cocina', 'dormitorio', 'banio', 'vistas', 'jardin']):
             ImageInmueble.objects.create(
@@ -378,7 +403,7 @@ class Idealista01Test(EjemploTestCase):
     def test_headline_and_derived_price_per_square_metre(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
-            'tipo': 'Vivienda', 'subtipo': 'chalet_adosado', 'importe_venta': '279000.00',
+            'tipo': 'vivienda', 'subtipo': 'chalet_adosado', 'importe_venta': '279000.00',
             'importe_alquiler': None, 'es_venta': True, 'sup_construida': '154.00', 'n_habitaciones': 3,
             'n_banios': 1})
         # idealista shows "1.812 €/m²": derived by the client from the two fields above.
@@ -399,13 +424,16 @@ class Idealista01Test(EjemploTestCase):
         self.assertContiene(data['entorno'], {'jardin': True, 'jardin_m2': '79.00'})
         self.assertEqual(data['otros_espacios']['trastero'], 2)
         self.assertEqual(data['dotacion']['armarios_empotrados'], 1)
-        self.assertEqual(data['terraza']['terraza'], 1)
+        self.assertEqual(data['terraza']['n_terrazas'], 1)
         self.assertContiene(data['instalaciones'], {
-            'calefaccion': True, 'tipo_calefaccion': 'Individual', 'subtipo_calefaccion': 'Eléctrica'})
-        self.assertEqual(data['otros']['orientacion'], 'norte, sur')
+            'calefaccion': True, 'tipo_calefaccion': 'individual', 'subtipo_calefaccion': 'electrica'})
+        self.assertEqual(
+            [data['caracteristicas'][f'orientacion_{lado}'] for lado in ('norte', 'sur', 'este', 'oeste')],
+            [True, True, False, False])
 
     def test_energy_certificate_with_emissions(self):
-        self.assertContiene(self.detalle(self.inm), {'consumo_energetico': '470.10', 'emisiones_co2': '83.00'})
+        self.assertContiene(self.detalle(self.inm)['certificado_energetico'], {
+            'consumo_energetico': '470.10', 'emisiones_co2': '83.00', 'eficiencia': ''})
 
     def test_tagged_photos_video_and_tour(self):
         data = self.detalle(self.inm)
@@ -444,22 +472,21 @@ class Idealista02Test(EjemploTestCase):
         aviles = Municipio.objects.create(provincia=cls.asturias, codigo_ine='33004', nombre='Avilés')
         distrito = Distrito.objects.create(
             municipio=aviles, codigo='01', nombre='El Pozón - Villalegre - La Luz')
-        cls.inm = inm = Inmueble.objects.create(
+        cls.inm = inm = crear_inmueble(
             referencia='IDEA-02', municipio=aviles, distrito=distrito, direccion='Calle Carmen',
-            ocultar_direccion=True, tipo='Vivienda', subtipo='chalet_independiente',
+            ocultar_direccion=True, tipo='vivienda', subtipo='chalet_independiente',
             conservacion='buen_estado', anio_construccion=2008, n_plantas=2, sup_construida='265',
             sup_util='260', consumo_energetico='210', emisiones_co2='36',
-            situacion_actual='Alquiler vacacional', publicar_web=True,
+            situacion_actual='alquiler_vacacional', publicar_web=True,
             descripcion_es='Edificio moderno (2008) con 2 dúplex reformados. Dúplex 1 (Planta baja + 1ª) '
                            '127M2. Dúplex 2 (3ª + 4ª planta) 138M2. Ambos con división horizontal.')
         InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.venta, precio='389500')
-        Dormitorios.objects.create(inmueble=inm, dobles=6, suites=2)
-        Banios.objects.create(inmueble=inm, banios=6)
+        Distribucion.objects.create(inmueble=inm, dobles=6, suites=2, banios=6)
         Dotacion.objects.create(inmueble=inm, armarios_empotrados=1)
         OtrosEspacios.objects.create(inmueble=inm, trastero=1)
         Instalaciones.objects.create(
-            inmueble=inm, calefaccion=True, tipo_calefaccion='Individual', subtipo_calefaccion='Gas natural')
-        Otros.objects.create(inmueble=inm, orientacion='sur, este')
+            inmueble=inm, calefaccion=True, tipo_calefaccion='individual', subtipo_calefaccion='gas_natural')
+        Caracteristicas.objects.create(inmueble=inm, orientacion_sur=True, orientacion_este=True)
         ImageInmueble.objects.create(inmueble=inm, image='p/1.jpg', tipo='fachada', default=True)
         ImageInmueble.objects.create(inmueble=inm, image='p/plan.jpg', tipo='plano', alt_text='Planta baja')
         MediaInmueble.objects.create(inmueble=inm, tipo='tour', url='https://example.com/tour/idea-02')
@@ -469,13 +496,13 @@ class Idealista02Test(EjemploTestCase):
         self.assertContiene(data, {
             'importe_venta': '389500.00', 'sup_construida': '265.00', 'sup_util': '260.00',
             'n_habitaciones': 6, 'n_banios': 6, 'n_plantas': 2, 'anio_construccion': 2008,
-            'subtipo': 'chalet_independiente', 'consumo_energetico': '210.00', 'emisiones_co2': '36.00',
-            'situacion_actual': 'Alquiler vacacional'})
-        self.assertContiene(data['dormitorios'], {'dobles': 6, 'suites': 2})
+            'subtipo': 'chalet_independiente', 'situacion_actual': 'alquiler_vacacional'})
+        self.assertContiene(data['certificado_energetico'], {'consumo_energetico': '210.00', 'emisiones_co2': '36.00'})
+        self.assertContiene(data['distribucion'], {'dobles': 6, 'suites': 2})
         self.assertEqual(round(float(data['importe_venta']) / float(data['sup_construida'])), 1470)
 
     def test_exact_address_is_withheld_but_the_zone_is_shown(self):
-        respuesta = self.client.get(f'/api/inmuebles/{self.inm._id}/')
+        respuesta = self.client.get(f'/api/inmuebles/{self.inm.id}/')
         data = respuesta.json()
         self.assertContiene(data, {'ocultar_direccion': True, 'direccion': '', 'direccion_short': ''})
         self.assertNotIn('Calle Carmen', respuesta.content.decode())
@@ -490,7 +517,7 @@ class Idealista02Test(EjemploTestCase):
         self.assertEqual([(i['tipo'], i['alt_text']) for i in data['planos']], [('plano', 'Planta baja')])
 
     def test_the_two_duplexes_survive_in_the_description(self):
-        descripcion = self.detalle(self.inm)['descripcion_es']
+        descripcion = self.detalle(self.inm)['descripciones']['es']
         self.assertIn('127M2', descripcion)
         self.assertIn('138M2', descripcion)
 
@@ -509,11 +536,11 @@ class Idealista03Test(EjemploTestCase):
         sitges = Municipio.objects.create(
             provincia=cls.barcelona_prov, comarca=garraf, codigo_ine='08270', nombre='Sitges')
         centre = Distrito.objects.create(municipio=sitges, codigo='01', nombre='Centre')
-        cls.inm = inm = Inmueble.objects.create(
+        cls.inm = inm = crear_inmueble(
             referencia='IDEA-03', municipio=sitges, distrito=centre, direccion='Calle de Sant Sebastià',
-            ocultar_direccion=True, tipo='Vivienda', subtipo='piso', conservacion='buen_estado',
+            ocultar_direccion=True, tipo='vivienda', subtipo='piso', conservacion='buen_estado',
             anio_construccion=2009, sup_construida='55', sup_util='46',
-            consumo_energetico='143', emisiones_co2='25', publicar_web=True,
+            consumo_energetico='143', emisiones_co2='25', numero_certificado='QWVL2082D', publicar_web=True,
             descripcion_es='Piso en el corazón de Sitges. La propiedad cuenta con licencia turística. '
                            'PRECIO DE VENTA: 295.000€ + 29.500€ (ITP).')
         compraventa = Condiciones.objects.create(
@@ -527,31 +554,30 @@ class Idealista03Test(EjemploTestCase):
             incluido='Honorarios de la agencia del vendedor', no_incluido='ITP, notaría, registro y gestoría')
         InmuebleModalidad.objects.create(inmueble=inm, modalidad=cls.venta, precio='295000')
         RegistroLegal.objects.create(inmueble=inm, tipo='cedula_habitabilidad', numero='CHB00523426001')
-        RegistroLegal.objects.create(inmueble=inm, tipo='certificado_energetico', numero='QWVL2082D')
         RegistroLegal.objects.create(inmueble=inm, tipo='aicat', numero='3366')
         # The page says the flat has a tourist licence but does not publish the number.
         RegistroLegal.objects.create(inmueble=inm, tipo='licencia_turistica')
-        Dormitorios.objects.create(inmueble=inm, dobles=1)
-        Banios.objects.create(inmueble=inm, banios=1)
+        Distribucion.objects.create(inmueble=inm, dobles=1, banios=1)
         Dotacion.objects.create(inmueble=inm, amueblado=True)
-        OtrosEspacios.objects.create(inmueble=inm, lavadero=1)
+        OtrosEspacios.objects.create(inmueble=inm, lavadero=True)
         Instalaciones.objects.create(inmueble=inm, calefaccion=False, aire_acondicionado=True, ascensor=1)
         Entorno.objects.create(inmueble=inm, zona_comunitaria=True)
-        Otros.objects.create(inmueble=inm, orientacion='norte', exterior=True)
+        Caracteristicas.objects.create(inmueble=inm, orientacion_norte=True, exterior=True)
 
     def test_price_surfaces_and_energy(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
             'importe_venta': '295000.00', 'sup_construida': '55.00', 'sup_util': '46.00',
             'anio_construccion': 2009, 'conservacion': 'buen_estado', 'gran_tenedor': False,
-            'consumo_energetico': '143.00', 'emisiones_co2': '25.00', 'n_habitaciones': 1, 'n_banios': 1})
+            'n_habitaciones': 1, 'n_banios': 1})
+        self.assertContiene(data['certificado_energetico'], {
+            'numero': 'QWVL2082D', 'consumo_energetico': '143.00', 'emisiones_co2': '25.00'})
         self.assertEqual(round(float(data['importe_venta']) / float(data['sup_construida'])), 5364)
 
     def test_registry_numbers_and_the_licence_without_a_number(self):
         registros = {r['tipo']: r['numero'] for r in self.detalle(self.inm)['registros_legales']}
         self.assertEqual(registros, {
-            'cedula_habitabilidad': 'CHB00523426001', 'certificado_energetico': 'QWVL2082D',
-            'aicat': '3366', 'licencia_turistica': ''})
+            'cedula_habitabilidad': 'CHB00523426001', 'aicat': '3366', 'licencia_turistica': ''})
 
     def test_sale_costs_clause(self):
         condiciones = self.detalle(self.inm)['modalidades'][0]['condiciones']
@@ -566,7 +592,7 @@ class Idealista03Test(EjemploTestCase):
     def test_equipment_building_and_hidden_address(self):
         data = self.detalle(self.inm)
         self.assertContiene(data['instalaciones'], {'calefaccion': False, 'aire_acondicionado': True, 'ascensor': 1})
-        self.assertEqual(data['otros']['exterior'], True)
+        self.assertEqual(data['caracteristicas']['exterior'], True)
         self.assertEqual(data['entorno']['zona_comunitaria'], True)
         self.assertEqual(data['direccion'], '')
         self.assertEqual(data['municipio']['nombre'], 'Sitges')

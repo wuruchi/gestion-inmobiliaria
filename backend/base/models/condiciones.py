@@ -1,8 +1,9 @@
 from django.db import models
+from base.models.auditoria import Auditoria
 from base.models.modalidad import Modalidad
 
 
-class Condiciones(models.Model):
+class Condiciones(Auditoria):
     """Contracting conditions of a modalidad (rent or sale), as text.
 
     A listing picks its own record on each of its prices (`InmuebleModalidad.condiciones`);

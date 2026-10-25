@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Tuple, Union
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
@@ -6,7 +7,7 @@ from rest_framework.exceptions import ParseError
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Prefetch, Q
+from django.db.models import F, Prefetch, Q
 from .models import Inmueble, InmuebleModalidad, Barrio, Modalidad, Distrito, Municipio, Provincia
 from .serializers import InmuebleSerializer, SingleInmuebleSerializer, SolicitudReservaSerializer, DistritosSerializer, MunicipiosSerializer, ProvinciasSerializer, MunicipiosListItemSerializer, DistritosListItemSerializer, BarriosSerializer, ModalidadSerializer
 
@@ -15,13 +16,14 @@ INMUEBLES_PER_PAGE = 5
 
 # Everything InmuebleSerializer reads, fetched in 2 queries instead of ~15 per listing.
 def inmuebles_publicados(**filters):
-  return Inmueble.objects.con_habitaciones().con_orden_estado().filter(publicar_web=True, **filters).select_related(
+  return Inmueble.objects.con_habitaciones().con_orden_estado().con_disponibilidad().filter(publicar_web=True, **filters).select_related(
     'municipio__provincia', 'distrito__municipio__provincia', 'barrio',
-    'otros', 'banios', 'dormitorios', 'instalaciones', 'arearecreo', 'dotacion',
+    'caracteristicas', 'distribucion', 'instalaciones', 'arearecreo', 'dotacion',
     'estancias',
   ).prefetch_related(
-    'images', Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
-  ).order_by('orden_estado', 'fecha_disponibilidad', '_id')
+    'images', 'descripciones', 'suministros',
+    Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
+  ).order_by('orden_estado', F('proxima_disponibilidad').asc(nulls_last=True), 'id')
 
 def parse_request(request, modalidad=None):
   fecha_entradata = request.query_params.get('fecha_entrada')
@@ -48,8 +50,14 @@ def parse_request(request, modalidad=None):
   except ValueError:
     raise ParseError('Invalid numeric query parameter')
   kwargs = {}
-  if fecha_entradata is not None and len(fecha_entradata) > 0:
-    kwargs['fecha_disponibilidad__lte'] = fecha_entradata
+  if fecha_entradata:
+    try:
+      fecha_entrada = date.fromisoformat(fecha_entradata)
+    except ValueError:
+      raise ParseError('Invalid fecha_entrada')
+    # One offer must be open and available by then; with a modalidad or a price it is that same offer.
+    kwargs['precios__fecha_disponibilidad__lte'] = fecha_entrada
+    kwargs['precios__estado__in'] = [InmuebleModalidad.DISPONIBLE, InmuebleModalidad.RESERVADO]
   if provincia > 0:
     kwargs['municipio__provincia'] = provincia
   if municipio > 0:
@@ -134,16 +142,16 @@ def getInmueblesVenta(request):
 def getInmueble(request, pk):
   inmueble = get_object_or_404(
     Inmueble.objects.select_related(
-      'municipio__provincia', 'distrito', 'barrio', 'otros', 'banios',
-      'dormitorios', 'instalaciones', 'arearecreo', 'dotacion', 'estancias',
+      'municipio__provincia', 'distrito', 'barrio', 'caracteristicas', 'distribucion',
+      'instalaciones', 'arearecreo', 'dotacion', 'estancias',
       'otrosespacios', 'seguridad',
-      'entorno', 'transporte',
+      'entorno', 'certificado_energetico',
     ).prefetch_related(
-      'images', 'plazas', 'registros_legales', 'medios', 'propietarios',
+      'images', 'descripciones', 'suministros', 'transportes', 'plazas', 'registros_legales', 'medios', 'propietarios',
       'municipio__declaraciones_tensionada',
-      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones', 'regulacion')),
+      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones', 'regulacion', 'terminos')),
     ),
-    _id=pk, publicar_web=True)
+    id=pk, publicar_web=True)
   serializer = SingleInmuebleSerializer(inmueble, many=False, context={'request': request})
   return Response(serializer.data)
 
@@ -153,7 +161,7 @@ class SolicitudReservaThrottle(AnonRateThrottle):
 @api_view(['POST'])
 @throttle_classes([SolicitudReservaThrottle])
 def crearSolicitudReserva(request, pk):
-  inmueble = get_object_or_404(Inmueble, _id=pk, publicar_web=True)
+  inmueble = get_object_or_404(Inmueble, id=pk, publicar_web=True)
   serializer = SolicitudReservaSerializer(data=request.data)
   serializer.is_valid(raise_exception=True)
   serializer.save(inmueble=inmueble)
@@ -204,9 +212,9 @@ def getModalidades(request):
 
 @api_view(['GET'])
 def getInmueblesCount(request, modalidad, distrito_id):
-  distrito = get_object_or_404(Distrito, _id=distrito_id)
+  distrito = get_object_or_404(Distrito, id=distrito_id)
   codigo = MODALIDAD_POR_URL.get(modalidad)
   if codigo is None:
     raise ParseError('Modalidad invalida')
   count = Inmueble.objects.filter(distrito_id=distrito_id, modalidades__codigo=codigo, publicar_web=True).count()
-  return Response({'distrito_id': distrito._id, 'distrito': distrito.nombre, 'modalidad': modalidad, 'count': count})
+  return Response({'distrito_id': distrito.id, 'distrito': distrito.nombre, 'modalidad': modalidad, 'count': count})

@@ -39,3 +39,24 @@ rented through another agency has no log here, and "no history" would read as "n
   `modalidades[].regulacion.ultima_renta`.
 - Staff must enter the regulation data by hand (admin: the offer's own page); the command shows what is missing.
 - Index values are as consulted on `indice_referencia_fecha`; they are not refreshed automatically.
+
+## Legal scope: not verified, deliberately left as it is (added 2026-10-25)
+
+The scope of `comprobar_regulacion_alquiler` was never checked against the legal texts (Llei 12/2023, Decret llei
+1/2025 and the Catalan law on seasonal and room rentals approved by the Parlament on 18 December 2025). Press and
+official summaries suggest it is probably too narrow:
+
+- Seasonal (`de temporada`) and room rentals appear to fall under the same price limits when their purpose is not
+  tourist, recreational or holiday use. The purpose of the contract, not its length, decides. The scan only looks at
+  `habitual` offers, so a `temporal` offer that the law treats as habitual is not checked.
+- The model has no field for the purpose of a temporary lease, so the system cannot tell which temporary offers are
+  covered. Room rentals have no modalidad.
+- Municipalities in stressed zones may ban seasonal lets; this is not modelled.
+- What an advert exactly must show, and how the five-year window is counted, were taken from the Generalitat's
+  summary pages and not from the texts. The sources found did not agree on how the three rules relate.
+
+Decision: keep the scan as it is and do not extend it. Settling the scope needs a lawyer, and guessing would only
+change one set of wrong alerts for another. For now the alerts are a work aid for the `habitual` offers, not proof of
+compliance: a clean result does not mean an ad is compliant, and a flagged offer is not necessarily non-compliant.
+Revisit in a later phase, with legal advice; the questions to ask are the list above, plus a purpose field for
+temporary leases.

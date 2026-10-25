@@ -44,6 +44,29 @@ def inconsistencias_ubicacion():
     return problemas
 
 
+def inconsistencias_condiciones():
+    """Offers whose `condiciones` belong to another modalidad, as `(tipo, descripcion)` pairs.
+
+    `InmuebleModalidad.save()` rejects this, but `QuerySet.update()`, `bulk_create()` and raw SQL skip
+    that check and the database cannot express it without a composite key, so this scan is the safety net.
+    """
+    ofertas = (
+        InmuebleModalidad.objects
+        .filter(condiciones__isnull=False)
+        .exclude(condiciones__modalidad=F('modalidad'))
+        .select_related('inmueble', 'modalidad', 'condiciones__modalidad')
+        .order_by('inmueble__referencia')
+    )
+    return [
+        (
+            'condiciones_de_otra_modalidad',
+            f'{o.inmueble.referencia} {o.modalidad.nombre}: las condiciones "{o.condiciones}" son de '
+            f'{o.condiciones.modalidad.nombre}',
+        )
+        for o in ofertas
+    ]
+
+
 def _hace_cinco_anios(hoy):
     try:
         return hoy.replace(year=hoy.year - 5)

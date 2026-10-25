@@ -30,3 +30,15 @@ Django, and awkward on SQLite). Research on Catalonia also showed that:
 - A database guarantee for the hierarchy, and a unified sub-municipal table (`Zona`). Revisit when a second city's
   divisions are loaded and the real structure is known (open item in `TODO.md`).
 - Entitats municipals descentralitzades and vegueries are not modelled.
+
+## Addendum: `Zona` deferred (2026-10-25)
+
+The two fixed sub-municipal levels (`distrito`, `barrio`) fit Barcelona, the only city with divisions loaded. Other cities
+may have one level, a different count of levels, other names, or areas that cross district limits. A unified table
+(`Zona(municipio, parent, nombre, nivel)`, a listing pointing at its most specific zone) would take any structure and make
+the nesting problem disappear, since the parent chain is the nesting. It would also rewrite the locations, the listing,
+the admin dropdowns, the API filters (`distrito`, `barrio`), the seed and many tests.
+
+Decision: do nothing until a second city's divisions are loaded and the real structure is known; designing it now would
+be guessing. If that city fits two levels, the current model stays. If not, the migration is mechanical: each distrito
+becomes a zone with `nivel='distrito'`, and each barrio a zone with its distrito as parent.

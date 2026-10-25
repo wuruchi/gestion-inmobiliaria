@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Case, Exists, F, OuterRef, Value, When
+from django.db.models import Case, Exists, F, IntegerField, OuterRef, Subquery, Value, When
 from django.db.models.functions import Coalesce
 from base.models.ubicacion import Municipio, Distrito, Barrio
 from base.models.modalidad import Modalidad
@@ -11,20 +11,31 @@ from base.models.modalidad import Modalidad
 # Decimal columns that cannot be negative (validator + database constraint).
 NO_NEGATIVOS = (
     'sup_construida', 'sup_cont_comun', 'sup_util', 'gtos_comunidad', 'ibi',
-    'consumo_energetico', 'emisiones_co2', 'sup_parcela',
+    'sup_parcela',
 )
 
 
 class InmuebleQuerySet(models.QuerySet):
     def con_habitaciones(self):
         """Annotate `habitaciones_total` (see `Inmueble.n_habitaciones`) for filtering in SQL."""
+        dobles, individuales = F('distribucion__dobles'), F('distribucion__individuales')
         return self.annotate(
-            habitaciones_total=Coalesce(
-                F('dormitorios__dobles')
-                + F('dormitorios__individuales'),
-                Value(0),
+            habitaciones_total=Case(
+                When(distribucion__dobles__isnull=True, distribucion__individuales__isnull=True, then=Value(None)),
+                default=Coalesce(dobles, Value(0)) + Coalesce(individuales, Value(0)),
+                output_field=IntegerField(),
             )
         )
+
+    def con_disponibilidad(self):
+        """Annotate `proxima_disponibilidad` (see `Inmueble.fecha_disponibilidad`) for ordering in SQL."""
+        from base.models.inmueble_modalidad import InmuebleModalidad
+        abiertas = (
+            InmuebleModalidad.objects.filter(inmueble=OuterRef('pk'))
+            .exclude(estado=InmuebleModalidad.CERRADO)
+            .order_by('fecha_disponibilidad')
+        )
+        return self.annotate(proxima_disponibilidad=Subquery(abiertas.values('fecha_disponibilidad')[:1]))
 
     def con_orden_estado(self):
         """Annotate `orden_estado` (see `Inmueble.estado`): 0 available, 1 reserved, 2 closed."""
@@ -45,11 +56,15 @@ class InmuebleQuerySet(models.QuerySet):
 
 class Inmueble(models.Model):
     TIPOS = (
-        ('Vivienda', ('Vivienda')),
-        ('Oficina', ('Oficina')),
-        ('Local', ('Local')),
-        ('Parking', ('Parking')),
-        ('Otro', ('Otro')),
+        ('vivienda', 'Vivienda'),
+        ('oficina', 'Oficina'),
+        ('local', 'Local'),
+        ('parking', 'Parking'),
+        ('terreno', 'Terreno'),
+        ('trastero', 'Trastero'),
+        ('edificio', 'Edificio'),
+        ('nave', 'Nave'),
+        ('otro', 'Otro'),
     )
     # Kinds of dwelling. Only a `Vivienda` has a subtipo; the other tipos have none.
     SUBTIPOS = (
@@ -57,17 +72,30 @@ class Inmueble(models.Model):
         ('atico', 'Ático'),
         ('duplex', 'Dúplex'),
         ('estudio', 'Estudio'),
+        ('loft', 'Loft'),
+        ('planta_baja', 'Planta baja'),
         ('chalet_adosado', 'Chalet adosado'),
+        ('chalet_pareado', 'Chalet pareado'),
         ('chalet_independiente', 'Chalet independiente'),
+        ('casa_pueblo', 'Casa de pueblo'),
+        ('masia', 'Masía'),
         ('otro', 'Otro'),
     )
-    SUBTIPOS_POR_TIPO = {'Vivienda': {codigo for codigo, _ in SUBTIPOS}}
+    SUBTIPOS_POR_TIPO = {'vivienda': {codigo for codigo, _ in SUBTIPOS}}
+    SITUACIONES = (
+        ('libre', 'Libre'),
+        ('ocupado', 'Ocupado'),
+        ('alquilado', 'Alquilado'),
+        ('alquiler_vacacional', 'Alquiler vacacional'),
+        ('otro', 'Otro'),
+    )
     CONSERVACIONES = (
         ('obra_nueva', 'Obra nueva'),
+        ('reformado', 'Reformado'),
         ('buen_estado', 'Buen estado'),
         ('a_reformar', 'A reformar'),
     )
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
     # The province is `municipio.provincia` (see the `provincia` property).
     municipio = models.ForeignKey(Municipio, on_delete=models.PROTECT)
     distrito = models.ForeignKey(
@@ -80,10 +108,9 @@ class Inmueble(models.Model):
     referencia = models.CharField(
         max_length=30, null=False, blank=False, unique=True
     )
-    fecha_disponibilidad = models.DateField(null=True, blank=True)
     titulo = models.CharField(max_length=200, blank=True, default='')
     tipo = models.CharField(
-        max_length=50, blank=True, choices=TIPOS, default='Otro'
+        max_length=50, blank=True, choices=TIPOS, default='otro'
     )
     subtipo = models.CharField(
         max_length=30, blank=True, choices=SUBTIPOS, default='',
@@ -95,6 +122,10 @@ class Inmueble(models.Model):
     )
     anio_construccion = models.PositiveSmallIntegerField(
         null=True, blank=True, verbose_name='Año de construcción',
+        validators=[MinValueValidator(1000), MaxValueValidator(2100)],
+    )
+    anio_ultima_reforma = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='Año de la última reforma',
         validators=[MinValueValidator(1000), MaxValueValidator(2100)],
     )
     planta = models.SmallIntegerField(
@@ -121,7 +152,10 @@ class Inmueble(models.Model):
     )
     codigo_postal = models.CharField(max_length=10, blank=True, default='')
     direccion = models.CharField(max_length=200, null=False, blank=True)
-    direccion_short = models.CharField(max_length=200, null=False, blank=True)
+    direccion_short = models.CharField(
+        max_length=200, null=False, blank=True, verbose_name='dirección corta',
+        help_text='Forma abreviada que se muestra en listados. La escribe el personal; no se calcula de la dirección.',
+    )
     dir_descripcion = models.TextField(blank=True, default='')
     ocultar_direccion = models.BooleanField(
         default=False,
@@ -167,38 +201,20 @@ class Inmueble(models.Model):
 
     publicar_web = models.BooleanField(default=False, null=False, blank=False)
 
-    eficiencia = models.CharField(max_length=20, blank=True, default='')
-    nombre_eficiencia = models.CharField(max_length=20, blank=True, default='')
-    consumo_energetico = models.DecimalField(
-        max_digits=7,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='Consumo energético (kWh/m²/año)',
-        validators=[MinValueValidator(0)],
-    )
-
-    emisiones_co2 = models.DecimalField(
-        max_digits=7,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='Emisiones (kg CO₂/m²/año)',
-        validators=[MinValueValidator(0)],
-    )
-    descripcion_es = models.TextField(blank=True, default='')
-    descripcion_en = models.TextField(blank=True, default='')
-    descripcion_cat = models.TextField(blank=True, default='')
+    # Private: identifies the property for the agency, so it is not in the public allow-list.
+    referencia_catastral = models.CharField(max_length=30, blank=True, default='')
     usos = models.TextField(blank=True, default='')
     gtos_comunidad = models.DecimalField(
         max_digits=9, decimal_places=2, null=True,
         validators=[MinValueValidator(0)], blank=True,
     )
     ibi = models.DecimalField(max_digits=9, decimal_places=2, null=True, validators=[MinValueValidator(0)], blank=True)
-    situacion_actual = models.CharField(max_length=100, blank=True, default='')
+    gastos_comunidad_incluidos = models.BooleanField(default=False)
+    ibi_incluido = models.BooleanField(default=False)
+    situacion_actual = models.CharField(max_length=20, choices=SITUACIONES, blank=True, default='')
 
     # Room, bathroom and equipment data lives in the one-to-one detail tables
-    # (Dormitorios, Banios, Instalaciones, AreaRecreo, Otros), the single source.
+    # (Distribucion, Instalaciones, AreaRecreo, Caracteristicas), the single source.
     notas_web = models.TextField(blank=True, default='')
 
     fecha_entrega = models.DateField(null=True, blank=True)
@@ -232,6 +248,11 @@ class Inmueble(models.Model):
                 name='inmueble_anio_construccion_rango',
             ),
             models.CheckConstraint(
+                condition=models.Q(anio_ultima_reforma__isnull=True)
+                | models.Q(anio_ultima_reforma__gte=1000, anio_ultima_reforma__lte=2100),
+                name='inmueble_anio_ultima_reforma_rango',
+            ),
+            models.CheckConstraint(
                 condition=models.Q(planta__isnull=True)
                 | models.Q(planta__gte=-5, planta__lte=100),
                 name='inmueble_planta_rango',
@@ -242,7 +263,19 @@ class Inmueble(models.Model):
                 name='inmueble_n_plantas_rango',
             ),
             models.CheckConstraint(
-                condition=models.Q(subtipo='') | models.Q(tipo='Vivienda'),
+                condition=models.Q(sup_util__isnull=True) | models.Q(sup_construida__isnull=True)
+                | models.Q(sup_util__lte=models.F('sup_construida')),
+                name='inmueble_sup_util_no_supera_construida',
+                violation_error_message='La superficie útil no puede superar la construida.',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(fecha_alta__isnull=True) | models.Q(fecha_baja__isnull=True)
+                | models.Q(fecha_baja__gte=models.F('fecha_alta')),
+                name='inmueble_fecha_baja_no_antes_de_alta',
+                violation_error_message='La fecha de baja no puede ser anterior a la de alta.',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(subtipo='') | models.Q(tipo='vivienda'),
                 name='inmueble_subtipo_solo_vivienda',
             ),
             *(
@@ -258,10 +291,6 @@ class Inmueble(models.Model):
             models.Index(
                 fields=['publicar_web', 'municipio', 'distrito', 'barrio'],
                 name='inm_web_loc',
-            ),
-            models.Index(
-                fields=['publicar_web', 'fecha_disponibilidad'],
-                name='inm_web_fecha',
             ),
         ]
 
@@ -328,6 +357,16 @@ class Inmueble(models.Model):
         return 'Vendido'
 
     @property
+    def fecha_disponibilidad(self):
+        """Earliest availability date among the offers that are not closed (uses prefetched `precios`).
+
+        A closed offer (rented or sold) says nothing about when the listing can be taken, so it is ignored.
+        None when every offer is closed, or there are none.
+        """
+        fechas = [o.fecha_disponibilidad for o in self.precios.all() if o.estado != 'cerrado']
+        return min(fechas) if fechas else None
+
+    @property
     def zona_tensionada(self):
         """The municipality is a stressed residential market today (uses prefetched declarations)."""
         return self.municipio.es_zona_tensionada()
@@ -339,14 +378,16 @@ class Inmueble(models.Model):
 
     @property
     def n_habitaciones(self):
-        """Bedrooms: dobles + individuales (`suites` and `exteriores` are subsets, not extra rooms)."""
-        total = getattr(self, 'habitaciones_total', None)
-        if total is not None:
-            return total
+        """Bedrooms: dobles + individuales (`suites` and `exteriores` are subsets, not extra rooms).
+
+        None when the layout is unknown (no `Distribucion` row, or both counts empty), not zero.
+        """
+        if hasattr(self, 'habitaciones_total'):
+            return self.habitaciones_total
         try:
-            return self.dormitorios.total
+            return self.distribucion.total
         except ObjectDoesNotExist:
-            return 0
+            return None
 
     def __str__(self) -> str:
         return f'{self.referencia} {self.direccion}'

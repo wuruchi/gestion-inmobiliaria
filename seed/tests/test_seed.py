@@ -88,6 +88,48 @@ class SeedLocationsTest(unittest.TestCase):
                 "select fianza from base_condiciones where nombre='Alquiler de temporada'").fetchone()[0], '1 mes')
             self.assertEqual(self.count(db, 'condiciones'), 3)
 
+    def test_stressed_zone_declarations_load_what_exists_and_never_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / 'test.sqlite3')
+            self.run_seed(db, 'migrate')
+            self.run_seed(db, 'locations')
+            self.run_seed(db, 'zonas-tensionadas', '--dry-run')
+            self.assertEqual(self.count(db, 'declaracionzonatensionada'), 0)
+            salida = self.run_seed(db, 'zonas-tensionadas').stdout
+            self.assertIn('not loaded', salida)
+            # 101 of the 140 and 58 of the 131 are in Barcelona province, the only one loaded.
+            self.assertEqual(self.count(db, 'declaracionzonatensionada'), 159)
+            conn = sqlite3.connect(db)
+            filas = conn.execute(
+                "select d.desde, d.hasta, d.referencia from base_declaracionzonatensionada d "
+                "join base_municipio m on m.id = d.municipio_id where m.codigo_ine = '08019'").fetchall()
+            self.assertEqual(filas, [('2024-03-16', None, 'TER/800/2024 (DOGC 9122, 14/03/2024)')])
+            # An article written after the name ("Hospitalet de Llobregat, l'") still finds its municipio.
+            self.assertEqual(conn.execute(
+                "select count(*) from base_declaracionzonatensionada d join base_municipio m on m.id = d.municipio_id "
+                "where m.nombre in (\"l'Hospitalet de Llobregat\", 'la Garriga', 'el Prat de Llobregat')").fetchone()[0], 3)
+
+            # Staff edits survive another run, and nothing is duplicated.
+            conn.execute("update base_declaracionzonatensionada set hasta='2025-01-01' "
+                         "where desde='2024-03-16' and municipio_id = "
+                         "(select id from base_municipio where codigo_ine = '08019')")
+            conn.commit()
+            conn.close()
+            self.run_seed(db, 'zonas-tensionadas')
+            conn = sqlite3.connect(db)
+            self.assertEqual(self.count(db, 'declaracionzonatensionada'), 159)
+            self.assertEqual(conn.execute(
+                "select hasta from base_declaracionzonatensionada where desde='2024-03-16' and municipio_id = "
+                "(select id from base_municipio where codigo_ine = '08019')").fetchone()[0], '2025-01-01')
+
+    def test_municipality_names_are_compared_without_the_trailing_article(self):
+        sys.path.insert(0, str(ROOT))
+        from seedlib.zonas_tensionadas import clave
+        self.assertEqual(clave("Bisbal d'Empordà, la"), "la bisbal d'empordà")
+        self.assertEqual(clave("Hospitalet de Llobregat, l'"), "l'hospitalet de llobregat")
+        self.assertEqual(clave("Franqueses del Vallès, les"), "les franqueses del vallès")
+        self.assertEqual(clave("Sant Cugat del Vallès"), "sant cugat del vallès")
+
     def test_a_modalidad_that_already_has_a_default_is_left_alone(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = str(Path(tmp) / 'test.sqlite3')
@@ -97,8 +139,9 @@ class SeedLocationsTest(unittest.TestCase):
             conn.execute(
                 "insert into base_condiciones (nombre, modalidad_id, por_defecto, honorarios, itp, incluido, "
                 "no_incluido, fianza, pago_adelantado, suministros, actualizacion_renta, limpieza_final, "
-                "requisitos, notaria, registro, gestoria, honorarios_comprador) "
-                "select 'Mi venta', id, 1, '', '', '', '', '', '', '', '', '', '', '', '', '', '' "
+                "requisitos, notaria, registro, gestoria, honorarios_comprador, created_at, updated_at) "
+                "select 'Mi venta', id, 1, '', '', '', '', '', '', '', '', '', '', '', '', '', '', "
+                "datetime('now'), datetime('now') "
                 "from base_modalidad where codigo='venta'")
             conn.commit()
             conn.close()

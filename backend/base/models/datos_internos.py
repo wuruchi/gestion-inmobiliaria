@@ -11,12 +11,6 @@ class DatosInternos(models.Model):
     )
     notas_internas = models.TextField(blank=True, default='')
     otros_datos = models.TextField(blank=True, default='')
-    cat_nrc = models.CharField(max_length=30, blank=True, default='')
-    fecha_firma = models.DateField(null=True, blank=True)
-    # How the agency works the listing for the owner.
-    exclusiva = models.BooleanField(default=False, help_text='La agencia tiene la exclusiva.')
-    gestion_comercial = models.BooleanField(default=False)
-    administracion = models.BooleanField(default=False)
     tasacion_propietario = models.DecimalField(
         max_digits=11,
         decimal_places=2,
@@ -25,6 +19,10 @@ class DatosInternos(models.Model):
         validators=[MinValueValidator(0)],
         verbose_name='tasación del propietario',
         help_text='Valor que el propietario da al inmueble.',
+    )
+    fecha_tasacion = models.DateField(
+        null=True, blank=True, verbose_name='fecha de la tasación',
+        help_text='Cuándo dio el propietario ese valor.',
     )
 
     class Meta:
@@ -35,7 +33,12 @@ class DatosInternos(models.Model):
                 condition=models.Q(tasacion_propietario__isnull=True)
                 | models.Q(tasacion_propietario__gte=0),
                 name='datos_internos_tasacion_no_negativa',
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(fecha_tasacion__isnull=True) | models.Q(tasacion_propietario__isnull=False),
+                name='datos_internos_fecha_tasacion_con_importe',
+                violation_error_message='La fecha de la tasación necesita un importe.',
+            ),
         ]
 
     def __str__(self) -> str:

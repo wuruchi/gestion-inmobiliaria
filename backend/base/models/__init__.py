@@ -3,8 +3,7 @@ from .inmueble import Inmueble
 from .inmueble_modalidad import InmuebleModalidad
 from .regulacion_alquiler import RegulacionAlquiler
 from .ubicacion import Barrio, Comarca, Distrito, Provincia, Municipio
-from .banios import Banios
-from .dormitorios import Dormitorios
+from .distribucion import Distribucion
 from .image_inmueble import ImageInmueble
 from .otros_espacios import OtrosEspacios
 from .dotacion import Dotacion
@@ -12,8 +11,11 @@ from .instalaciones import Instalaciones
 from .entorno import Entorno
 from .seguridad import Seguridad
 from .area_recreo import AreaRecreo
-from .transporte import Transporte
-from .otros import Otros
+from .transporte import TransporteInmueble
+from .suministro import Suministro
+from .descripcion_inmueble import DescripcionInmueble
+from .caracteristicas import Caracteristicas
+from .terminos_alquiler import TerminosAlquiler
 from .condiciones import Condiciones
 from .solicitud_reserva import SolicitudReserva
 from .historial_precio import HistorialPrecio
@@ -21,6 +23,8 @@ from .zona_tensionada import DeclaracionZonaTensionada
 from .propietario import Propietario
 from .inmueble_propietario import InmueblePropietario
 from .datos_internos import DatosInternos
+from .acuerdo_administracion import AcuerdoAdministracion
+from .certificado_energetico import CertificadoEnergetico
 from .estancias import Estancias
 from .plaza_aparcamiento import PlazaAparcamiento
 from .registro_legal import RegistroLegal

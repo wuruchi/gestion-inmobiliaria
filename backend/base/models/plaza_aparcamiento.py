@@ -7,7 +7,7 @@ from base.models.modalidad import Modalidad
 
 class PlazaAparcamiento(models.Model):
     """A parking space that belongs to a listing (a parking space sold or let
-    on its own is a listing with tipo='Parking' instead)."""
+    on its own is a listing with tipo='parking' instead)."""
 
     COCHE = 'coche'
     MOTO = 'moto'
@@ -29,13 +29,14 @@ class PlazaAparcamiento(models.Model):
         validators=[MinValueValidator(0)],
         verbose_name='Superficie (m²)',
     )
-    # Private: valor and renta are never serialized.
+    # Private internal notes: valor and renta are never serialized and do not use the price model.
     valor = models.DecimalField(
         max_digits=11,
         decimal_places=2,
         null=True,
         blank=True,
         validators=[MinValueValidator(0)],
+        help_text='Nota interna: valor de la plaza. No es un precio de oferta.',
     )
     renta = models.DecimalField(
         max_digits=9,
@@ -43,6 +44,7 @@ class PlazaAparcamiento(models.Model):
         null=True,
         blank=True,
         validators=[MinValueValidator(0)],
+        help_text='Nota interna: renta que paga la plaza. No es un precio de oferta.',
     )
     notas = models.CharField(max_length=200, blank=True, default='')
     # Public: a space the tenant or buyer can add for an extra price.
@@ -58,14 +60,13 @@ class PlazaAparcamiento(models.Model):
     precio_opcional_unidad = models.CharField(
         max_length=10, choices=Modalidad.UNIDADES_PRECIO, default=Modalidad.MENSUAL
     )
-    precio_opcional_mas_iva = models.BooleanField(default=False)
     precio_opcional_tipo_iva = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        help_text='Obligatorio con "más IVA"; vacío si el precio ya lo incluye.',
+        help_text='Si se indica, el precio no incluye el IVA; vacío si ya lo incluye.',
     )
 
     class Meta:
@@ -83,14 +84,9 @@ class PlazaAparcamiento(models.Model):
                 name='plaza_precio_solo_si_opcional',
             ),
             models.CheckConstraint(
-                condition=models.Q(precio_opcional_mas_iva=False, precio_opcional_tipo_iva__isnull=True)
-                | models.Q(
-                    precio_opcional_mas_iva=True,
-                    precio_opcional_tipo_iva__isnull=False,
-                    precio_opcional_tipo_iva__gte=0,
-                    precio_opcional_tipo_iva__lte=100,
-                ),
-                name='plaza_iva_coherente',
+                condition=models.Q(precio_opcional_tipo_iva__isnull=True)
+                | models.Q(precio_opcional_tipo_iva__gte=0, precio_opcional_tipo_iva__lte=100),
+                name='plaza_iva_rango',
             ),
             models.CheckConstraint(
                 condition=models.Q(precio_opcional__isnull=True) | models.Q(precio_opcional__gte=0),
@@ -102,12 +98,11 @@ class PlazaAparcamiento(models.Model):
         super().clean()
         if self.precio_opcional is not None and not self.opcional:
             raise ValidationError({'precio_opcional': 'Marca la plaza como opcional.'})
-        if self.precio_opcional_mas_iva and self.precio_opcional_tipo_iva is None:
-            raise ValidationError({'precio_opcional_tipo_iva': 'Indica el tipo de IVA.'})
-        if not self.precio_opcional_mas_iva and self.precio_opcional_tipo_iva is not None:
-            raise ValidationError(
-                {'precio_opcional_tipo_iva': 'Sin "más IVA" el tipo de IVA debe quedar vacío.'}
-            )
+
+    @property
+    def precio_opcional_mas_iva(self) -> bool:
+        """The optional price excludes VAT: derived from `precio_opcional_tipo_iva`."""
+        return self.precio_opcional_tipo_iva is not None
 
     def __str__(self) -> str:
         return f'{self.inmueble.referencia} - plaza {self.numero or self.pk}'

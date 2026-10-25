@@ -31,10 +31,10 @@ class ImageInmueble(models.Model):
     tipo = models.CharField(max_length=20, choices=TIPOS, default='otro')
     posicion = models.PositiveSmallIntegerField(default=0)
     default = models.BooleanField(default=False)
-    _id = models.AutoField(primary_key=True, editable=False)
+    id = models.AutoField(primary_key=True, editable=False)
 
     class Meta:
-        ordering = ['posicion', '_id']
+        ordering = ['posicion', 'id']
         constraints = [
             models.UniqueConstraint(
                 fields=['inmueble'],

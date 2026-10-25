@@ -4,9 +4,10 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
+from django.utils import timezone
 from django.test.utils import CaptureQueriesContext
 
-from base.models import Barrio, InmuebleModalidad, Modalidad, Condiciones, Distrito, Inmueble, Municipio, Provincia, RegistroLegal
+from base.models import AcuerdoAdministracion, CertificadoEnergetico, Propietario, DescripcionInmueble, Instalaciones, Suministro, TransporteInmueble, Barrio, InmuebleModalidad, Modalidad, Condiciones, Distrito, Inmueble, Municipio, Provincia, RegistroLegal
 
 
 def default_municipio():
@@ -18,7 +19,12 @@ def default_municipio():
 def inmueble(**fields):
     """Create an Inmueble; `municipio` is required, so default to Barcelona."""
     fields.setdefault('municipio', default_municipio())
-    return Inmueble.objects.create(**fields)
+    descripciones = {i: fields.pop(f'descripcion_{i}', '') for i, _ in DescripcionInmueble.IDIOMAS}
+    inm = Inmueble.objects.create(**fields)
+    for idioma, texto in descripciones.items():
+        if texto:
+            DescripcionInmueble.objects.create(inmueble=inm, idioma=idioma, texto=texto)
+    return inm
 
 
 class LocationModelTests(TestCase):
@@ -160,18 +166,18 @@ class BarrioTests(TestCase):
     def test_api(self):
         inm = inmueble(referencia='B1', publicar_web=True, municipio=self.mun,
                                       distrito=self.cv, barrio=self.raval)
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
         self.assertEqual(data['barrio']['nombre'], 'el Raval')
-        self.assertEqual(len(self.client.get(f'/api/inmuebles/?barrio={self.raval._id}').json()['inmuebles']), 1)
-        self.assertEqual(len(self.client.get(f'/api/inmuebles/?barrio={self.raval._id + 1}').json()['inmuebles']), 0)
-        self.assertEqual(self.client.get(f'/api/distritos/{self.cv._id}/barrios').json()[0]['codigo'], '01')
+        self.assertEqual(len(self.client.get(f'/api/inmuebles/?barrio={self.raval.id}').json()['inmuebles']), 1)
+        self.assertEqual(len(self.client.get(f'/api/inmuebles/?barrio={self.raval.id + 1}').json()['inmuebles']), 0)
+        self.assertEqual(self.client.get(f'/api/distritos/{self.cv.id}/barrios').json()[0]['codigo'], '01')
         self.assertEqual(self.client.get('/api/inmuebles/?barrio=x').status_code, 400)
 
 
 class DetailApiTests(TestCase):
     def setUp(self):
         from base.models import (
-            Entorno, Estancias, Seguridad, Transporte,
+            Entorno, Estancias, Seguridad, TransporteInmueble,
         )
         self.temporal = Modalidad.objects.create(codigo='temporal', nombre='Temporal', orden=0)
         self.default = Condiciones.objects.create(
@@ -182,30 +188,30 @@ class DetailApiTests(TestCase):
         DeclaracionZonaTensionada.objects.create(municipio=self.inm.municipio, desde=date(2021, 9, 20))
         self.precio = InmuebleModalidad.objects.create(
             inmueble=self.inm, modalidad=self.temporal, precio='1750')
-        Estancias.objects.create(inmueble=self.inm, terraza=2, balcones=1, descripcion='Vistas')
+        Estancias.objects.create(inmueble=self.inm, n_terrazas=2, n_balcones=1, descripcion='Vistas')
         Seguridad.objects.create(inmueble=self.inm, puerta_blindada=True)
         Entorno.objects.create(inmueble=self.inm, cerca_colegios=True)
-        Transporte.objects.create(inmueble=self.inm, cerca_metro=True, descripcion_metro='L2')
+        TransporteInmueble.objects.create(inmueble=self.inm, tipo='metro', descripcion='L2')
 
     def test_detail_exposes_new_sections(self):
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
-        self.assertEqual(data['terraza']['balcones'], 1)
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
+        self.assertEqual(data['terraza']['n_balcones'], 1)
         self.assertTrue(data['seguridad']['puerta_blindada'])
         self.assertEqual(data['entorno']['cerca_colegios'], True)
         self.assertEqual(data['transporte']['descripcion_metro'], 'L2')
-        self.assertEqual(data['salon'], {'id': data['terraza']['id'], 'salon_m2': None, 'descripcion': 'Vistas', 'inmueble': self.inm._id})
+        self.assertEqual(data['salon'], {'id': data['terraza']['id'], 'salon_m2': None, 'descripcion': 'Vistas', 'inmueble': self.inm.id})
         self.assertEqual(data['terraza']['descripcion'], 'Vistas')
         self.assertFalse(data['carpinteria']['carpinteria_interior'])
         self.assertTrue(data['zona_tensionada'])
 
     def test_conditions_fall_back_to_default(self):
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual(data['modalidades'][0]['condiciones']['fianza'], '2 mensualidades')
         self.assertNotIn('condiciones', data)
         own = Condiciones.objects.create(nombre='Larga', modalidad=self.temporal, fianza='1 mes')
         self.precio.condiciones = own
         self.precio.save()
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual(data['modalidades'][0]['condiciones']['fianza'], '1 mes')
 
     def test_only_one_default_conditions_per_modalidad(self):
@@ -216,12 +222,12 @@ class DetailApiTests(TestCase):
 
     def test_reservation_request(self):
         from base.models import SolicitudReserva
-        url = f'/api/inmuebles/{self.inm._id}/reservas/'
+        url = f'/api/inmuebles/{self.inm.id}/reservas/'
         body = {'nombre': 'Ana', 'email': 'ana@example.com', 'telefono': '600000000',
                 'fecha_desde': '2026-11-23', 'acepta_aviso_legal': True}
         self.assertEqual(self.client.post(url, body).status_code, 201)
         req = SolicitudReserva.objects.get()
-        self.assertEqual((req.referencia, req.inmueble_id), ('G767', self.inm._id))
+        self.assertEqual((req.referencia, req.inmueble_id), ('G767', self.inm.id))
         self.assertEqual(self.client.post(url, {**body, 'acepta_aviso_legal': False}).status_code, 400)
         self.assertEqual(self.client.post(url, {**body, 'email': 'x'}).status_code, 400)
         self.assertEqual(self.client.post('/api/inmuebles/999/reservas/', body).status_code, 404)
@@ -254,8 +260,10 @@ class PublicFieldsTests(TestCase):
         PlazaAparcamiento.objects.create(inmueble=inm, valor='12345.67', renta='89.01')
         InmueblePropietario.objects.create(
             inmueble=inm, propietario=Propietario.objects.create(nombre='SECRETO', nif='SECRETO-NIF'))
-        DatosInternos.objects.create(inmueble=inm, notas_internas='n', cat_nrc='c')
-        response = self.client.get(f'/api/inmuebles/{inm._id}/')
+        DatosInternos.objects.create(inmueble=inm, notas_internas='n')
+        Inmueble.objects.filter(pk=inm.pk).update(referencia_catastral='REF-CATASTRAL-SECRETA')
+        self.assertNotIn('REF-CATASTRAL-SECRETA', self.client.get(f'/api/inmuebles/{inm.id}/').content.decode())
+        response = self.client.get(f'/api/inmuebles/{inm.id}/')
         data = response.json()
         self.assertEqual([k for k in INMUEBLE_PRIVATE_FIELDS if k in data], [])
         self.assertNotIn('datos_internos', data)
@@ -267,7 +275,7 @@ class PublicFieldsTests(TestCase):
 
 class ListQueryTests(TestCase):
     def make(self, n):
-        from base.models import Banios, Dormitorios, Estancias, ImageInmueble, Otros
+        from base.models import Caracteristicas, Distribucion, Estancias, ImageInmueble
         prov = Provincia.objects.get_or_create(codigo_ine='08', nombre='Barcelona')[0]
         mun = Municipio.objects.get_or_create(provincia=prov, codigo_ine='08019', nombre='Barcelona')[0]
         dis = Distrito.objects.get_or_create(municipio=mun, codigo='01', nombre='Ciutat Vella')[0]
@@ -277,7 +285,7 @@ class ListQueryTests(TestCase):
                 municipio=mun, distrito=dis)
             inm.modalidades.add(Modalidad.objects.get_or_create(codigo='temporal', defaults={'nombre': 'Vivienda temporal'})[0],
                                 through_defaults={'precio': 800})
-            for model in (Banios, Dormitorios, Estancias, Otros):
+            for model in (Distribucion, Estancias, Caracteristicas):
                 model.objects.create(inmueble=inm)
             ImageInmueble.objects.create(inmueble=inm, image='x.jpg')
 
@@ -295,7 +303,10 @@ class ListQueryTests(TestCase):
         self.make(4)
         five = self.count_queries(url)
         self.assertEqual(one, five)
-        self.assertLessEqual(five, 5)
+        self.assertLessEqual(five, 7)
+
+
+HOY = timezone.localdate().isoformat()
 
 
 class SingleSourceTests(TestCase):
@@ -306,12 +317,16 @@ class SingleSourceTests(TestCase):
                         'gtos_com_incluido'):
             self.assertNotIn(dropped, columns)
 
-    def test_n_banios_comes_from_banios(self):
-        from base.models import Banios
+    def test_n_banios_comes_from_distribucion(self):
+        from base.models import Distribucion
         inm = inmueble(referencia='S1', publicar_web=True)
-        self.assertEqual(self.client.get(f'/api/inmuebles/{inm._id}/').json()['n_banios'], 0)
-        Banios.objects.create(inmueble=inm, banios=2)
-        self.assertEqual(self.client.get(f'/api/inmuebles/{inm._id}/').json()['n_banios'], 2)
+        self.assertIsNone(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_banios'])
+        Distribucion.objects.create(inmueble=inm, dobles=2)  # layout known, bathrooms not
+        self.assertIsNone(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_banios'])
+        Distribucion.objects.filter(inmueble=inm).update(banios=0)
+        self.assertEqual(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_banios'], 0)
+        Distribucion.objects.filter(inmueble=inm).update(banios=2)
+        self.assertEqual(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_banios'], 2)
         listed = self.client.get('/api/inmuebles/').json()['inmuebles'][0]
         self.assertEqual(listed['n_banios'], 2)
 
@@ -342,6 +357,28 @@ class ModalidadFixture(TestCase):
         return sorted(i['referencia'] for i in self.client.get(url).json()['inmuebles'])
 
 
+class ComprobarCondicionesTests(ModalidadFixture):
+
+    def test_conditions_of_another_modalidad_are_detected_only_when_bypassing_save(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from base.comprobaciones import inconsistencias_condiciones
+        venta = Condiciones.objects.create(nombre='Venta estándar', modalidad=self.mod['venta'])
+        oferta = self.both.precios.get(modalidad=self.mod['temporal'])
+        oferta.condiciones = venta
+        with self.assertRaises(ValidationError):
+            oferta.save()
+        out = StringIO()
+        call_command('comprobar_condiciones', stdout=out)
+        self.assertIn('consistent', out.getvalue())
+        InmuebleModalidad.objects.filter(pk=oferta.pk).update(condiciones=venta)
+        self.assertEqual([t for t, _ in inconsistencias_condiciones()], ['condiciones_de_otra_modalidad'])
+        with self.assertRaises(CommandError):
+            call_command('comprobar_condiciones', stdout=out)
+        self.assertIn('M1', out.getvalue())
+
+
 class ModalidadTests(ModalidadFixture):
 
     def test_unique_code(self):
@@ -358,13 +395,13 @@ class ModalidadTests(ModalidadFixture):
         self.assertEqual(self.refs('/api/inmuebles/'), ['M1', 'M2'])
 
     def test_counts(self):
-        url = f'/api/inmuebles/modalidad/%s/distrito/{self.dis._id}/count/'
+        url = f'/api/inmuebles/modalidad/%s/distrito/{self.dis.id}/count/'
         self.assertEqual(self.client.get(url % 'temporales').json()['count'], 1)
         self.assertEqual(self.client.get(url % 'ventas').json()['count'], 1)
         self.assertEqual(self.client.get(url % 'otros').status_code, 400)
 
     def test_api_shape(self):
-        data = self.client.get(f'/api/inmuebles/{self.both._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.both.id}/').json()
         self.assertEqual([m['codigo'] for m in data['modalidades']], ['temporal', 'venta'])
         self.assertTrue(data['es_venta'])
         self.assertNotIn('es_temporal', data)
@@ -396,14 +433,14 @@ class ImageInmuebleTests(TestCase):
     def test_position_orders_photos_and_api_exposes_alt_text(self):
         self.Image.objects.create(inmueble=self.inm, image='b.jpg', posicion=2, alt_text='Salón')
         self.Image.objects.create(inmueble=self.inm, image='a.jpg', posicion=1, alt_text='Cocina')
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual([i['alt_text'] for i in data['images']], ['Cocina', 'Salón'])
         self.assertEqual([i['posicion'] for i in data['images']], [1, 2])
 
     def test_upload_path_uses_listing_id(self):
         from base.models.image_inmueble import content_file_name
         image = self.Image(inmueble=self.inm)
-        self.assertEqual(content_file_name(image, 'x.jpg'), f'{self.inm._id}/x.jpg')
+        self.assertEqual(content_file_name(image, 'x.jpg'), f'{self.inm.id}/x.jpg')
 
 
 class AuditTests(TestCase):
@@ -426,7 +463,7 @@ class AuditTests(TestCase):
 
     def test_audit_columns_never_in_detail_response(self):
         inm = inmueble(referencia='A2', publicar_web=True)
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
         self.assertNotIn('created_by', data)
         self.assertNotIn('updated_by', data)
 
@@ -466,9 +503,9 @@ class HistorialPrecioAutomaticoTests(ModalidadFixture):
     def test_saving_without_changing_the_price_adds_nothing(self):
         oferta = self.oferta('1000')
         oferta.precio = '1000.00'
-        oferta.mas_iva, oferta.tipo_iva = True, 21
+        oferta.tipo_iva = 21
         oferta.save()
-        oferta.save(update_fields=['mas_iva'])
+        oferta.save(update_fields=['tipo_iva'])
         self.assertEqual(len(self.filas()), 1)
 
     def test_latest_row_always_equals_the_current_price(self):
@@ -500,7 +537,7 @@ class RegulacionAlquilerTests(ModalidadFixture):
             inmueble=self.inm, modalidad=self.mod['venta'], precio='250000')
 
     def regulacion(self, codigo='habitual'):
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         return {m['codigo']: m['regulacion'] for m in data['modalidades']}[codigo]
 
     def test_rental_without_a_record_is_unknown_and_sale_has_none(self):
@@ -592,7 +629,7 @@ class RegulacionAlquilerTests(ModalidadFixture):
     def test_update_clause_is_a_condition_of_the_offer(self):
         Condiciones.objects.create(
             nombre='Habitual', modalidad=self.mod['habitual'], por_defecto=True, actualizacion_renta='IRAV')
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         habitual = [m for m in data['modalidades'] if m['codigo'] == 'habitual'][0]
         self.assertEqual(habitual['condiciones']['actualizacion_renta'], 'IRAV')
         self.assertNotIn('actualizacion_renta', data)
@@ -602,12 +639,12 @@ class RegulacionAlquilerTests(ModalidadFixture):
         from django.db import connection
         self.Regulacion.objects.create(oferta=self.alquiler, renta_previa='sin_renta')
         with CaptureQueriesContext(connection) as pocas:
-            self.client.get(f'/api/inmuebles/{self.inm._id}/')
+            self.client.get(f'/api/inmuebles/{self.inm.id}/')
         extra = InmuebleModalidad.objects.create(
             inmueble=self.inm, modalidad=self.mod['temporal'], precio='500')
         self.Regulacion.objects.create(oferta=extra, renta_previa='sin_renta')
         with CaptureQueriesContext(connection) as muchas:
-            self.client.get(f'/api/inmuebles/{self.inm._id}/')
+            self.client.get(f'/api/inmuebles/{self.inm.id}/')
         self.assertEqual(len(pocas), len(muchas))
 
 
@@ -716,7 +753,7 @@ class HistorialPrecioTests(ModalidadFixture):
         self.assertEqual(
             [str(r.importe) for r in self.both.historial_precios.filter(modalidad=temporal)],
             ['1200.00', '950.00', '900.00'])
-        data = self.client.get(f'/api/inmuebles/{self.both._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.both.id}/').json()
         self.assertNotIn('historial_precios', data)
         # The log is our own asking prices: none of it reaches the API.
         self.assertNotIn('950', str(data['modalidades']))
@@ -798,7 +835,7 @@ class PropietarioTests(TestCase):
 
     def test_large_holder_is_set_on_the_owner_and_shows_in_the_listing(self):
         inm = inmueble(referencia='PR7', publicar_web=True)
-        url = f'/api/inmuebles/{inm._id}/'
+        url = f'/api/inmuebles/{inm.id}/'
         self.assertIs(self.client.get(url).json()['gran_tenedor'], False)
         ana = self.Propietario.objects.create(nombre='Ana')
         self.Link.objects.create(inmueble=inm, propietario=ana)
@@ -808,7 +845,7 @@ class PropietarioTests(TestCase):
         self.assertIs(self.client.get(url).json()['gran_tenedor'], True)
         otro = inmueble(referencia='PR8', publicar_web=True)
         self.Link.objects.create(inmueble=otro, propietario=ana)
-        self.assertIs(self.client.get(f'/api/inmuebles/{otro._id}/').json()['gran_tenedor'], False)
+        self.assertIs(self.client.get(f'/api/inmuebles/{otro.id}/').json()['gran_tenedor'], False)
 
     def test_detail_reads_owners_in_one_query(self):
         inm = inmueble(referencia='PR9', publicar_web=True)
@@ -816,12 +853,12 @@ class PropietarioTests(TestCase):
             self.Link.objects.create(
                 inmueble=inm, propietario=self.Propietario.objects.create(nombre=f'P{n}'))
         with CaptureQueriesContext(connection) as sin:
-            self.client.get(f'/api/inmuebles/{inm._id}/')
+            self.client.get(f'/api/inmuebles/{inm.id}/')
         for n in range(3, 6):
             self.Link.objects.create(
                 inmueble=inm, propietario=self.Propietario.objects.create(nombre=f'P{n}'))
         with CaptureQueriesContext(connection) as con:
-            self.client.get(f'/api/inmuebles/{inm._id}/')
+            self.client.get(f'/api/inmuebles/{inm.id}/')
         self.assertEqual(len(sin), len(con))
 
 
@@ -851,7 +888,7 @@ class ZonaTensionadaTests(TestCase):
     def test_listing_follows_its_municipality_and_today(self):
         inm = inmueble(referencia='Z1', publicar_web=True)
         otro = inmueble(referencia='Z2', municipio=self.otro, publicar_web=True)
-        url = lambda i: f'/api/inmuebles/{i._id}/'
+        url = lambda i: f'/api/inmuebles/{i.id}/'
         self.assertIs(self.client.get(url(inm)).json()['zona_tensionada'], False)
         self.Declaracion.objects.create(municipio=self.mun, desde=date(2000, 1, 1))
         self.assertIs(self.client.get(url(inm)).json()['zona_tensionada'], True)
@@ -861,7 +898,7 @@ class ZonaTensionadaTests(TestCase):
         self.Declaracion.objects.create(
             municipio=self.mun, desde=date(2000, 1, 1), hasta=date(2001, 1, 1))
         inm = inmueble(referencia='Z3', publicar_web=True)
-        self.assertIs(self.client.get(f'/api/inmuebles/{inm._id}/').json()['zona_tensionada'], False)
+        self.assertIs(self.client.get(f'/api/inmuebles/{inm.id}/').json()['zona_tensionada'], False)
 
     def test_end_before_start_is_rejected_and_start_is_unique_per_municipality(self):
         mala = self.Declaracion(municipio=self.mun, desde=date(2024, 1, 2), hasta=date(2024, 1, 1))
@@ -882,12 +919,12 @@ class ZonaTensionadaTests(TestCase):
         inm = inmueble(referencia='Z4', publicar_web=True)
         self.Declaracion.objects.create(municipio=self.mun, desde=date(2000, 1, 1), hasta=date(2001, 1, 1))
         with CaptureQueriesContext(connection) as pocas:
-            self.client.get(f'/api/inmuebles/{inm._id}/')
+            self.client.get(f'/api/inmuebles/{inm.id}/')
         for year in range(2002, 2008):
             self.Declaracion.objects.create(
                 municipio=self.mun, desde=date(year, 1, 1), hasta=date(year, 6, 1))
         with CaptureQueriesContext(connection) as muchas:
-            self.client.get(f'/api/inmuebles/{inm._id}/')
+            self.client.get(f'/api/inmuebles/{inm.id}/')
         self.assertEqual(len(pocas), len(muchas))
 
 
@@ -906,7 +943,7 @@ class EstadoPorOfertaTests(TestCase):
         return inm
 
     def estado(self, inm):
-        return self.client.get(f'/api/inmuebles/{inm._id}/').json()['estado']
+        return self.client.get(f'/api/inmuebles/{inm.id}/').json()['estado']
 
     def test_offer_defaults_to_available(self):
         inm = self.listing('E0', temporal='disponible')
@@ -982,16 +1019,14 @@ class DatosInternosServicioTests(TestCase):
         self.Datos = DatosInternos
         self.inm = inmueble(referencia='DS1', publicar_web=True)
 
-    def test_service_flags_are_independent_and_default_to_no(self):
-        datos = self.Datos.objects.create(inmueble=self.inm)
-        self.assertEqual(
-            (datos.exclusiva, datos.gestion_comercial, datos.administracion, datos.tasacion_propietario),
-            (False, False, False, None))
-        datos = self.Datos.objects.get()
-        datos.gestion_comercial = True
+    def test_valuation_date_needs_an_amount(self):
+        datos = self.Datos(inmueble=self.inm, fecha_tasacion=date(2026, 1, 1))
+        with self.assertRaises(ValidationError):
+            datos.full_clean()
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            datos.save()
+        datos.tasacion_propietario = '1200'
         datos.save()
-        datos.refresh_from_db()
-        self.assertEqual((datos.gestion_comercial, datos.administracion, datos.exclusiva), (True, False, False))
 
     def test_owner_valuation_cannot_be_negative(self):
         datos = self.Datos(inmueble=self.inm, tasacion_propietario='-1')
@@ -1002,12 +1037,14 @@ class DatosInternosServicioTests(TestCase):
         self.Datos.objects.create(inmueble=self.inm, tasacion_propietario='1200')
 
     def test_none_of_it_reaches_the_public_api(self):
-        self.Datos.objects.create(
-            inmueble=self.inm, exclusiva=True, gestion_comercial=True, administracion=True,
-            tasacion_propietario='123456.78')
-        for url in (f'/api/inmuebles/{self.inm._id}/', '/api/inmuebles/'):
+        from base.models import AcuerdoAdministracion
+        self.Datos.objects.create(inmueble=self.inm, tasacion_propietario='123456.78', fecha_tasacion=date(2026, 1, 1))
+        AcuerdoAdministracion.objects.create(
+            inmueble=self.inm, exclusiva=True, gestion_comercial=True, administracion=True)
+        for url in (f'/api/inmuebles/{self.inm.id}/', '/api/inmuebles/'):
             body = self.client.get(url).content.decode()
-            for secret in ('123456.78', 'tasacion', 'exclusiva', 'gestion_comercial', 'administracion'):
+            for secret in ('123456.78', 'tasacion', 'exclusiva', 'gestion_comercial', 'administracion',
+                           'acuerdo'):
                 self.assertNotIn(secret, body, (url, secret))
 
 
@@ -1051,21 +1088,23 @@ class PrecioModalidadTests(ModalidadFixture):
         HistorialPrecio.objects.filter(modalidad=self.mod['habitual']).delete()
         self.mod['habitual'].delete()
         self.both.delete()
-        self.assertFalse(InmuebleModalidad.objects.filter(inmueble_id=self.both._id).exists())
+        self.assertFalse(InmuebleModalidad.objects.filter(inmueble_id=self.both.id).exists())
 
     def test_unit_is_set_per_modalidad(self):
         data = {m['codigo']: m['unidad_precio'] for m in self.client.get('/api/modalidades/').json()}
         self.assertEqual(data, {'temporal': 'mensual', 'habitual': 'mensual', 'venta': 'total'})
 
     def test_api_returns_price_and_unit_per_modalidad(self):
-        data = self.client.get(f'/api/inmuebles/{self.both._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.both.id}/').json()
         self.assertEqual(data['modalidades'], [
             {'codigo': 'temporal', 'nombre': 'Vivienda temporal', 'unidad_precio': 'mensual',
-             'precio': '1200.00', 'mas_iva': False, 'tipo_iva': None, 'regulacion': SIN_REGULACION,
-             'condiciones': None},
+             'precio': '1200.00', 'mas_iva': False, 'tipo_iva': None, 'fecha_disponibilidad': HOY,
+             'regulacion': SIN_REGULACION,
+             'terminos': None, 'condiciones': None},
             {'codigo': 'venta', 'nombre': 'Venta', 'unidad_precio': 'total',
-             'precio': '300000.00', 'mas_iva': False, 'tipo_iva': None, 'regulacion': None,
-             'condiciones': None},
+             'precio': '300000.00', 'mas_iva': False, 'tipo_iva': None, 'fecha_disponibilidad': HOY,
+             'regulacion': None,
+             'terminos': None, 'condiciones': None},
         ])
         self.assertEqual((data['importe_alquiler'], data['importe_venta']), ('1200.00', '300000.00'))
         listed = {i['referencia']: i for i in self.client.get('/api/inmuebles/').json()['inmuebles']}
@@ -1098,7 +1137,7 @@ class PlazaAparcamientoTests(TestCase):
             self.assertNotIn(dropped, columns)
 
     def test_count_is_computed_from_the_plazas(self):
-        url = f'/api/inmuebles/{self.inm._id}/'
+        url = f'/api/inmuebles/{self.inm.id}/'
         self.assertEqual(self.client.get(url).json()['n_plz_garaje'], 0)
         self.Plaza.objects.create(inmueble=self.inm, numero='12')
         self.Plaza.objects.create(inmueble=self.inm, numero='13', tipo='moto')
@@ -1108,7 +1147,7 @@ class PlazaAparcamientoTests(TestCase):
 
     def test_public_plaza_fields_exclude_value_and_rent(self):
         self.Plaza.objects.create(inmueble=self.inm, numero='1', superficie='11.5', valor='9000', renta='50')
-        plaza = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()['plazas'][0]
+        plaza = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()['plazas'][0]
         self.assertEqual(set(plaza), {
             'id', 'numero', 'tipo', 'superficie', 'notas', 'opcional', 'precio_opcional',
             'precio_opcional_unidad', 'precio_opcional_mas_iva', 'precio_opcional_tipo_iva'})
@@ -1130,17 +1169,17 @@ class PlazaAparcamientoTests(TestCase):
         self.assertEqual(self.Plaza.objects.count(), 0)
 
     def test_parking_listing_may_have_plazas_too(self):
-        parking = inmueble(referencia='PK3', tipo='Parking', publicar_web=True)
+        parking = inmueble(referencia='PK3', tipo='parking', publicar_web=True)
         self.Plaza.objects.create(inmueble=parking)
-        self.assertEqual(self.client.get(f'/api/inmuebles/{parking._id}/').json()['n_plz_garaje'], 1)
+        self.assertEqual(self.client.get(f'/api/inmuebles/{parking.id}/').json()['n_plz_garaje'], 1)
 
 
 class HabitacionesTests(TestCase):
     def make(self, ref, dobles=None, individuales=0, suites=0, exteriores=0):
-        from base.models import Dormitorios
+        from base.models import Distribucion
         inm = inmueble(referencia=ref, publicar_web=True)
         if dobles is not None:
-            Dormitorios.objects.create(
+            Distribucion.objects.create(
                 inmueble=inm, dobles=dobles, individuales=individuales,
                 suites=suites, exteriores=exteriores)
         return inm
@@ -1151,27 +1190,41 @@ class HabitacionesTests(TestCase):
         self.assertEqual(Inmueble.objects.get(pk=inm.pk).n_habitaciones, 3)
 
     def test_suites_are_a_subset_of_the_bedrooms(self):
-        from base.models import Dormitorios
+        from base.models import Distribucion
         inm = self.make('H9', dobles=2, individuales=1, suites=3)
-        Dormitorios.objects.filter(inmueble=inm).update(suites=3)
+        Distribucion.objects.filter(inmueble=inm).update(suites=3)
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Dormitorios.objects.filter(inmueble=inm).update(suites=4)
+            Distribucion.objects.filter(inmueble=inm).update(suites=4)
 
-    def test_listing_without_dormitorios_has_zero(self):
+    def test_listing_without_dormitorios_is_unknown_not_zero(self):
         inm = self.make('H2')
-        self.assertEqual(Inmueble.objects.get(pk=inm.pk).n_habitaciones, 0)
+        self.assertIsNone(Inmueble.objects.get(pk=inm.pk).n_habitaciones)
+        self.assertIsNone(Inmueble.objects.con_habitaciones().get(pk=inm.pk).n_habitaciones)
+        self.assertIsNone(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_habitaciones'])
+
+    def test_empty_counts_are_unknown_and_zeros_are_confirmed(self):
+        from base.models import Distribucion
+        inm = self.make('H8')
+        detail = lambda: self.client.get(f'/api/inmuebles/{inm.id}/').json()
+        Distribucion.objects.create(inmueble=inm)  # row without data
+        self.assertIsNone(detail()['n_habitaciones'])
+        self.assertIsNone(Inmueble.objects.con_habitaciones().get(pk=inm.pk).n_habitaciones)
+        Distribucion.objects.filter(inmueble=inm).update(dobles=0, individuales=0)
+        self.assertEqual(detail()['n_habitaciones'], 0)
         self.assertEqual(Inmueble.objects.con_habitaciones().get(pk=inm.pk).n_habitaciones, 0)
-        self.assertEqual(self.client.get(f'/api/inmuebles/{inm._id}/').json()['n_habitaciones'], 0)
+        Distribucion.objects.filter(inmueble=inm).update(dobles=2, individuales=None)  # one side unknown
+        self.assertEqual(detail()['n_habitaciones'], 2)
+        self.assertEqual(Inmueble.objects.con_habitaciones().get(pk=inm.pk).n_habitaciones, 2)
 
     def test_api_returns_the_computed_number_in_list_and_detail(self):
         inm = self.make('H3', dobles=1, individuales=2)
-        self.assertEqual(self.client.get(f'/api/inmuebles/{inm._id}/').json()['n_habitaciones'], 3)
+        self.assertEqual(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_habitaciones'], 3)
         listed = self.client.get('/api/inmuebles/').json()['inmuebles'][0]
         self.assertEqual(listed['n_habitaciones'], 3)
 
     def test_filter_matches_the_computed_number_only(self):
         self.make('H4', dobles=2, individuales=1)
-        self.make('H5', dobles=2, individuales=1, suites=1, exteriores=5)
+        self.make('H5', dobles=2, individuales=1, suites=1, exteriores=3)
         self.make('H6', dobles=1)
         self.make('H7')
         refs = lambda n: sorted(i['referencia'] for i in self.client.get(f'/api/inmuebles/?habitaciones={n}').json()['inmuebles'])
@@ -1181,22 +1234,21 @@ class HabitacionesTests(TestCase):
 
     def test_changing_dormitorios_changes_the_number(self):
         inm = self.make('H8', dobles=1)
-        inm.dormitorios.dobles = 3
-        inm.dormitorios.save()
-        self.assertEqual(self.client.get(f'/api/inmuebles/{inm._id}/').json()['n_habitaciones'], 3)
+        inm.distribucion.dobles = 3
+        inm.distribucion.save()
+        self.assertEqual(self.client.get(f'/api/inmuebles/{inm.id}/').json()['n_habitaciones'], 3)
 
 
 class TextToNumbersTests(TestCase):
     def test_api_returns_numbers_with_units_in_the_name(self):
-        from base.models import Entorno, Otros
+        from base.models import Caracteristicas, Entorno
         inm = inmueble(referencia='N1', publicar_web=True)
-        Otros.objects.create(inmueble=inm, estancia_minima=2, altura_real_m='2.70')
+        Caracteristicas.objects.create(inmueble=inm, altura_real_m='2.70')
         Entorno.objects.create(inmueble=inm, distancia_playa_m=800)
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
-        self.assertEqual((data['otros']['estancia_minima'], data['otros']['altura_real_m']), (2, '2.70'))
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
+        self.assertEqual(data['caracteristicas']['altura_real_m'], '2.70')
         self.assertEqual(data['entorno']['distancia_playa_m'], 800)
-        for old in ('estancia_minima_meses', 'altura_real'):
-            self.assertNotIn(old, data['otros'])
+        self.assertNotIn('altura_real', data['caracteristicas'])
         self.assertNotIn('distancia_playa', data['entorno'])
 
 
@@ -1214,7 +1266,7 @@ class LocationFromLinksTests(TestCase):
         only_district = inmueble(
             referencia='Z2', publicar_web=True, municipio=mun, distrito=dis)
         nowhere = inmueble(referencia='Z3', publicar_web=True)
-        zones = lambda i: tuple(self.client.get(f'/api/inmuebles/{i._id}/').json()[k] for k in ('zona', 'zona_ref'))
+        zones = lambda i: tuple(self.client.get(f'/api/inmuebles/{i.id}/').json()[k] for k in ('zona', 'zona_ref'))
         self.assertEqual(zones(with_barrio), ('El Raval', 'Ciutat Vella'))
         self.assertEqual(zones(only_district), ('Ciutat Vella', 'Ciutat Vella'))
         self.assertEqual(zones(nowhere), (None, None))
@@ -1224,36 +1276,56 @@ class LocationFromLinksTests(TestCase):
 
 class DatabaseRulesTests(TestCase):
     def test_negative_amounts_are_rejected_by_validators_and_the_database(self):
-        for field in ('sup_util', 'sup_construida', 'gtos_comunidad', 'ibi', 'consumo_energetico'):
+        for field in ('sup_util', 'sup_construida', 'gtos_comunidad', 'ibi'):
             with self.assertRaises(ValidationError, msg=field):
                 Inmueble(referencia='R', **{field: -1}).full_clean(exclude=['municipio'])
             with self.assertRaises(IntegrityError, msg=field), transaction.atomic():
                 inmueble(referencia='R', **{field: -1})
 
     def test_counts_cannot_be_negative(self):
-        from base.models import Dormitorios, Otros
+        from base.models import Distribucion
         inm = inmueble(referencia='R4')
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Dormitorios.objects.create(inmueble=inm, dobles=-1)
+            Distribucion.objects.create(inmueble=inm, dobles=-1)
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Otros.objects.create(inmueble=inm, capacidad_personas=-2)
+            Distribucion.objects.create(inmueble=inm, capacidad_personas=-2)
 
 
 class DateAndSurfaceTypesTests(TestCase):
-    def test_availability_is_a_date_and_filters_by_date(self):
-        from datetime import date
-        inmueble(referencia='T1', publicar_web=True, fecha_disponibilidad=date(2025, 3, 1))
-        inmueble(referencia='T2', publicar_web=True, fecha_disponibilidad=date(2025, 6, 1))
-        data = self.client.get('/api/inmuebles/?fecha_entrada=2025-04-01').json()
-        self.assertEqual([i['referencia'] for i in data['inmuebles']], ['T1'])
-        self.assertEqual(data['inmuebles'][0]['fecha_disponibilidad'], '2025-03-01')
-        for name in ('fecha_disponibilidad', 'fecha_alta', 'fecha_baja', 'fecha_entrega'):
+    def test_dates_are_dates(self):
+        for name in ('fecha_alta', 'fecha_baja', 'fecha_entrega'):
             self.assertEqual(Inmueble._meta.get_field(name).get_internal_type(), 'DateField')
+        self.assertEqual(InmuebleModalidad._meta.get_field('fecha_disponibilidad').get_internal_type(), 'DateField')
 
     def test_surfaces_allow_large_premises(self):
-        inm = inmueble(referencia='T3', sup_construida='12345.67', sup_util='999999.99')
+        inm = inmueble(referencia='T3', sup_construida='999999.99', sup_util='12345.67')
         inm.refresh_from_db()
-        self.assertEqual(str(inm.sup_construida), '12345.67')
+        self.assertEqual((str(inm.sup_construida), str(inm.sup_util)), ('999999.99', '12345.67'))
+
+
+class CoherenceChecksTests(TestCase):
+    def test_usable_area_cannot_exceed_built_area(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            inmueble(referencia='C1', sup_construida='50', sup_util='60')
+        with self.assertRaises(ValidationError) as ctx:
+            Inmueble(referencia='C1', sup_construida='50', sup_util='60').full_clean(exclude=['municipio'])
+        self.assertIn('superficie útil', str(ctx.exception))
+        inmueble(referencia='C2', sup_construida='50', sup_util='50')
+        inmueble(referencia='C3', sup_util='60')  # one of the two unknown: nothing to compare
+        inmueble(referencia='C4', sup_construida='50')
+
+    def test_removal_date_cannot_precede_the_creation_date(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            inmueble(referencia='C5', fecha_alta=date(2025, 5, 1), fecha_baja=date(2025, 4, 30))
+        inmueble(referencia='C6', fecha_alta=date(2025, 5, 1), fecha_baja=date(2025, 5, 1))
+        inmueble(referencia='C7', fecha_baja=date(2025, 4, 30))
+
+    def test_exterior_bedrooms_are_a_subset_of_the_bedrooms(self):
+        from base.models import Distribucion
+        inm = inmueble(referencia='C8')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Distribucion.objects.create(inmueble=inm, dobles=1, individuales=1, exteriores=3)
+        Distribucion.objects.create(inmueble=inm, dobles=1, individuales=1, exteriores=2)
 
 
 class NullableColumnsTests(TestCase):
@@ -1278,8 +1350,8 @@ class NullableColumnsTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             inmueble(referencia='NN1', titulo=None)
         inm = inmueble(referencia='NN2', publicar_web=True)
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
-        self.assertEqual((data['titulo'], data['descripcion_es']), ('', ''))
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
+        self.assertEqual((data['titulo'], data['descripciones']), ('', {}))
 
     def test_boolean_columns_are_never_null(self):
         from django.apps import apps
@@ -1298,14 +1370,14 @@ class SolicitudEstadoTests(TestCase):
 
     def post(self):
         return self.client.post(
-            f'/api/inmuebles/{self.inm._id}/reservas/',
+            f'/api/inmuebles/{self.inm.id}/reservas/',
             {'nombre': 'Ana', 'email': 'ana@example.com', 'telefono': '600', 'acepta_aviso_legal': True},
             content_type='application/json')
 
     def test_new_request_is_pending_and_estado_cannot_be_set_by_the_client(self):
         from base.models import SolicitudReserva
         response = self.client.post(
-            f'/api/inmuebles/{self.inm._id}/reservas/',
+            f'/api/inmuebles/{self.inm.id}/reservas/',
             {'nombre': 'Ana', 'email': 'ana@example.com', 'telefono': '600',
              'acepta_aviso_legal': True, 'estado': 'cerrada'},
             content_type='application/json')
@@ -1382,7 +1454,7 @@ class AdminLocationChoicesTests(TestCase):
 
     def form(self, **data):
         from base.admin import InmuebleAdminForm
-        return InmuebleAdminForm(data={k: v._id for k, v in data.items()})
+        return InmuebleAdminForm(data={k: v.id for k, v in data.items()})
 
     def test_choices_follow_the_selected_municipio_and_distrito(self):
         f = self.form(municipio=self.mun)
@@ -1400,12 +1472,12 @@ class AdminLocationChoicesTests(TestCase):
     def test_options_endpoint(self):
         get = lambda **q: self.client.get('/admin/base/inmueble/ubicacion/', q)
         names = lambda r: [i['nombre'] for i in r.json()['items']]
-        self.assertEqual(names(get(tipo='distritos', municipio=self.mun._id)), ['Ciutat Vella', 'Eixample'])
-        self.assertEqual(names(get(tipo='barrios', municipio=self.mun._id, distrito=self.dis2._id)), ['Dreta'])
-        self.assertEqual(names(get(tipo='barrios', municipio=self.mun._id)), ['El Raval', 'Dreta'])
+        self.assertEqual(names(get(tipo='distritos', municipio=self.mun.id)), ['Ciutat Vella', 'Eixample'])
+        self.assertEqual(names(get(tipo='barrios', municipio=self.mun.id, distrito=self.dis2.id)), ['Dreta'])
+        self.assertEqual(names(get(tipo='barrios', municipio=self.mun.id)), ['El Raval', 'Dreta'])
         self.assertEqual(get(tipo='x').status_code, 404)
         self.client.logout()
-        self.assertEqual(get(tipo='distritos', municipio=self.mun._id).status_code, 302)
+        self.assertEqual(get(tipo='distritos', municipio=self.mun.id).status_code, 302)
 
     def test_add_page_loads_the_script(self):
         response = self.client.get('/admin/base/inmueble/add/')
@@ -1427,7 +1499,7 @@ class RegistroLegalTests(TestCase):
         RegistroLegal.objects.create(
             inmueble=self.inm, tipo='cedula_habitabilidad', numero='CHB0333*******',
             organismo='Generalitat de Catalunya')
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual(
             [(r['tipo'], r['numero']) for r in data['registros_legales']],
             [('aicat', '5205'), ('cedula_habitabilidad', 'CHB0333*******')],
@@ -1448,18 +1520,107 @@ class RegistroLegalTests(TestCase):
         self.inm.delete()
         self.assertEqual(RegistroLegal.objects.count(), 0)
 
-    def test_emissions_cannot_be_negative(self):
-        self.inm.emisiones_co2 = '-1'
-        with self.assertRaises(ValidationError):
-            self.inm.full_clean()
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            Inmueble.objects.filter(pk=self.inm.pk).update(emisiones_co2='-1')
+    def test_energy_certificate_is_not_a_registry_type(self):
+        self.assertNotIn('certificado_energetico', dict(RegistroLegal.TIPOS))
 
-    def test_emissions_are_public(self):
-        self.inm.emisiones_co2 = '36.00'
-        self.inm.save()
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
-        self.assertEqual(data['emisiones_co2'], '36.00')
+
+class CertificadoEnergeticoTests(TestCase):
+    def setUp(self):
+        self.inm = inmueble(referencia='CE1', publicar_web=True)
+
+    def detalle(self):
+        return self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
+
+    def test_listing_without_certificate_returns_null(self):
+        self.assertIsNone(self.detalle()['certificado_energetico'])
+
+    def test_certificate_is_public_and_nested(self):
+        CertificadoEnergetico.objects.create(
+            inmueble=self.inm, numero='QWVL2082D', eficiencia='D', consumo_energetico='71', emisiones_co2='36',
+            fecha_emision=date(2024, 1, 1), fecha_vencimiento=date(2034, 1, 1))
+        data = self.detalle()
+        self.assertEqual(data['certificado_energetico'], {
+            'numero': 'QWVL2082D', 'eficiencia': 'D', 'consumo_energetico': '71.00', 'emisiones_co2': '36.00',
+            'fecha_emision': '2024-01-01', 'fecha_vencimiento': '2034-01-01'})
+        for old in ('eficiencia', 'nombre_eficiencia', 'consumo_energetico', 'emisiones_co2'):
+            self.assertNotIn(old, data)
+
+    def test_only_letters_a_to_g_and_one_certificate_per_listing(self):
+        with self.assertRaises(ValidationError):
+            CertificadoEnergetico(inmueble=self.inm, eficiencia='H').full_clean()
+        CertificadoEnergetico.objects.create(inmueble=self.inm, eficiencia='G')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            CertificadoEnergetico.objects.create(inmueble=self.inm)
+
+    def test_amounts_cannot_be_negative_and_it_cannot_expire_before_issue(self):
+        for campo in ('consumo_energetico', 'emisiones_co2'):
+            with self.assertRaises(ValidationError, msg=campo):
+                CertificadoEnergetico(inmueble=self.inm, **{campo: -1}).full_clean()
+            with self.assertRaises(IntegrityError, msg=campo), transaction.atomic():
+                CertificadoEnergetico.objects.create(inmueble=self.inm, **{campo: -1})
+        malo = CertificadoEnergetico(
+            inmueble=self.inm, fecha_emision=date(2024, 1, 1), fecha_vencimiento=date(2023, 1, 1))
+        with self.assertRaises(ValidationError):
+            malo.full_clean()
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            malo.save()
+
+
+class AcuerdoAdministracionTests(TestCase):
+    def setUp(self):
+        self.inm = inmueble(referencia='AA1', publicar_web=True)
+
+    def test_flags_default_to_no_and_a_listing_keeps_its_history(self):
+        a = AcuerdoAdministracion.objects.create(
+            inmueble=self.inm, fecha_firma=date(2023, 1, 1), fecha_fin=date(2024, 1, 1), exclusiva=True)
+        self.assertEqual((a.gestion_comercial, a.administracion), (False, False))
+        AcuerdoAdministracion.objects.create(inmueble=self.inm, fecha_firma=date(2024, 1, 2), administracion=True)
+        self.assertEqual(
+            [x.fecha_firma for x in self.inm.acuerdos_administracion.all()], [date(2024, 1, 2), date(2023, 1, 1)])
+
+    def test_it_cannot_end_before_it_is_signed(self):
+        malo = AcuerdoAdministracion(inmueble=self.inm, fecha_firma=date(2024, 1, 1), fecha_fin=date(2023, 1, 1))
+        with self.assertRaises(ValidationError):
+            malo.full_clean()
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            malo.save()
+
+
+class PropietarioNifTests(TestCase):
+    def test_nif_is_unique_when_set_and_blank_may_repeat(self):
+        Propietario.objects.create(nombre='A', nif='X123')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Propietario.objects.create(nombre='B', nif='X123')
+        with self.assertRaises(ValidationError):
+            Propietario(nombre='C', nif='X123').validate_constraints()
+        Propietario.objects.create(nombre='D')
+        Propietario.objects.create(nombre='E')
+
+
+class AuditoriaDeOfertasTests(ModalidadFixture):
+    def test_admin_fills_who_changed_offers_and_conditions(self):
+        from django.contrib.auth import get_user_model
+        usuario = get_user_model().objects.create_superuser('staff', 's@example.com', 'pw')
+        self.client.force_login(usuario)
+        condiciones = Condiciones.objects.create(nombre='Alquiler', modalidad=self.mod['habitual'])
+        self.assertIsNone(condiciones.created_by)
+        respuesta = self.client.post(
+            f'/admin/base/condiciones/{condiciones.pk}/change/',
+            {'nombre': 'Alquiler 2', 'modalidad': self.mod['habitual'].pk, 'honorarios': '', 'itp': '',
+             'incluido': '', 'no_incluido': '', 'fianza': '', 'pago_adelantado': '', 'suministros': '',
+             'actualizacion_renta': '', 'limpieza_final': '', 'requisitos': '', 'notaria': '', 'registro': '',
+             'gestoria': '', 'honorarios_comprador': ''})
+        self.assertEqual(respuesta.status_code, 302)
+        condiciones.refresh_from_db()
+        self.assertEqual((condiciones.nombre, condiciones.updated_by), ('Alquiler 2', usuario))
+        self.assertIsNone(condiciones.created_by)
+
+    def test_offers_have_audit_columns_that_the_api_hides(self):
+        oferta = self.rent.precios.get()
+        self.assertIsNotNone(oferta.created_at)
+        body = self.client.get(f'/api/inmuebles/{self.rent.id}/').content.decode()
+        self.assertNotIn('created_at', body)
+        self.assertNotIn('updated_by', body)
 
 
 class OcultarDireccionTests(TestCase):
@@ -1469,14 +1630,14 @@ class OcultarDireccionTests(TestCase):
             direccion_short='Cera 12', dir_descripcion='Piso 3', codigo_postal='08001')
 
     def test_address_is_returned_by_default(self):
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual((data['direccion'], data['dir_descripcion']), ('Carrer de la Cera 12', 'Piso 3'))
         self.assertFalse(data['ocultar_direccion'])
 
     def test_hidden_address_is_blank_in_detail_and_list_but_zone_stays(self):
         self.inm.ocultar_direccion = True
         self.inm.save()
-        detail = self.client.get(f'/api/inmuebles/{self.inm._id}/')
+        detail = self.client.get(f'/api/inmuebles/{self.inm.id}/')
         data = detail.json()
         for name in ('direccion', 'direccion_short', 'dir_descripcion'):
             self.assertEqual(data[name], '', name)
@@ -1487,40 +1648,67 @@ class OcultarDireccionTests(TestCase):
         self.assertEqual(listing.json()['inmuebles'][0]['dir_descripcion'], '')
 
 
-class EstanciaLimitesTests(TestCase):
-    def setUp(self):
-        self.inm = inmueble(referencia='E1', publicar_web=True)
+class TerminosAlquilerTests(ModalidadFixture):
+    """Stay limits and pets are terms of a rental offer."""
 
-    def otros(self, **fields):
-        from base.models import Otros
-        return Otros(inmueble=self.inm, **fields)
+    def setUp(self):
+        super().setUp()
+        self.oferta = InmuebleModalidad.objects.get(inmueble=self.both, modalidad=self.mod['temporal'])
+        self.venta = InmuebleModalidad.objects.get(inmueble=self.both, modalidad=self.mod['venta'])
+
+    def terminos(self, **fields):
+        from base.models import TerminosAlquiler
+        return TerminosAlquiler(oferta=self.oferta, **fields)
 
     def test_limits_keep_their_unit_and_default_to_months(self):
-        from base.models import Otros
-        Otros.objects.create(
-            inmueble=self.inm, estancia_minima=32, estancia_minima_unidad='dias',
-            estancia_maxima=5)
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()['otros']
-        self.assertEqual(
-            (data['estancia_minima'], data['estancia_minima_unidad'],
-             data['estancia_maxima'], data['estancia_maxima_unidad']),
-            (32, 'dias', 5, 'meses'))
+        from base.models import TerminosAlquiler
+        TerminosAlquiler.objects.create(
+            oferta=self.oferta, estancia_minima=32, estancia_minima_unidad='dias',
+            estancia_maxima=5, acepta_animales=True)
+        modalidades = self.client.get(f'/api/inmuebles/{self.both.id}/').json()['modalidades']
+        self.assertEqual(modalidades[0]['terminos'], {
+            'acepta_animales': True, 'estancia_minima': 32, 'estancia_minima_unidad': 'dias',
+            'estancia_maxima': 5, 'estancia_maxima_unidad': 'meses'})
+        self.assertIsNone(modalidades[1]['terminos'])  # the sale
+
+    def test_each_offer_of_a_listing_has_its_own_terms(self):
+        from base.models import TerminosAlquiler
+        habitual = InmuebleModalidad.objects.create(inmueble=self.both, modalidad=self.mod['habitual'], precio=1000)
+        TerminosAlquiler.objects.create(oferta=self.oferta, estancia_maxima=11)
+        TerminosAlquiler.objects.create(oferta=habitual, estancia_minima=5, estancia_minima_unidad='anios')
+        por_codigo = {m['codigo']: m['terminos'] for m in
+                      self.client.get(f'/api/inmuebles/{self.both.id}/').json()['modalidades']}
+        self.assertEqual((por_codigo['temporal']['estancia_maxima'], por_codigo['habitual']['estancia_minima']), (11, 5))
+        self.assertIsNone(por_codigo['temporal']['estancia_minima'])
 
     def test_minimum_cannot_exceed_maximum_whatever_the_units(self):
         with self.assertRaises(ValidationError):
-            self.otros(estancia_minima=2, estancia_minima_unidad='anios',
-                       estancia_maxima=18, estancia_maxima_unidad='meses').full_clean(exclude=['inmueble'])
+            self.terminos(estancia_minima=2, estancia_minima_unidad='anios',
+                          estancia_maxima=18, estancia_maxima_unidad='meses').full_clean()
         with self.assertRaises(IntegrityError), transaction.atomic():
-            self.otros(estancia_minima=2, estancia_minima_unidad='anios',
-                       estancia_maxima=18, estancia_maxima_unidad='meses').save()
+            self.terminos(estancia_minima=2, estancia_minima_unidad='anios',
+                          estancia_maxima=18, estancia_maxima_unidad='meses').save()
         # 32 days is below 5 months, and a year equals 12 months.
-        self.otros(estancia_minima=32, estancia_minima_unidad='dias', estancia_maxima=5).full_clean(exclude=['inmueble'])
-        self.otros(estancia_minima=1, estancia_minima_unidad='anios', estancia_maxima=5, estancia_maxima_unidad='anios').save()
+        self.terminos(estancia_minima=32, estancia_minima_unidad='dias', estancia_maxima=5).full_clean()
+        self.terminos(estancia_minima=1, estancia_minima_unidad='anios', estancia_maxima=5, estancia_maxima_unidad='anios').save()
 
     def test_one_limit_alone_is_fine_and_unit_must_be_known(self):
-        self.otros(estancia_minima=6).full_clean(exclude=['inmueble'])
+        self.terminos(estancia_minima=6).full_clean()
         with self.assertRaises(ValidationError):
-            self.otros(estancia_minima=6, estancia_minima_unidad='semanas').full_clean(exclude=['inmueble'])
+            self.terminos(estancia_minima=6, estancia_minima_unidad='semanas').full_clean()
+
+    def test_a_sale_offer_cannot_have_rental_terms(self):
+        from base.models import TerminosAlquiler
+        with self.assertRaises(ValidationError):
+            TerminosAlquiler(oferta=self.venta, estancia_minima=1).full_clean()
+        with self.assertRaises(ValidationError):
+            TerminosAlquiler(oferta=self.venta, estancia_minima=1).save()
+
+    def test_terms_are_deleted_with_the_offer(self):
+        from base.models import TerminosAlquiler
+        self.terminos(acepta_animales=True).save()
+        self.oferta.delete()
+        self.assertEqual(TerminosAlquiler.objects.count(), 0)
 
 
 class EstanciasUnidadesTests(TestCase):
@@ -1528,15 +1716,15 @@ class EstanciasUnidadesTests(TestCase):
         from base.models import Estancias
         inm = inmueble(referencia='U1', publicar_web=True)
         Estancias.objects.create(
-            inmueble=inm, salon_m2='22', terraza=2, terraza_m2='11.5', balcones=1, balcones_m2='4',
-            carpinteria_interior='Madera', carpinteria_exterior='Aluminio')
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
+            inmueble=inm, salon_m2='22', n_terrazas=2, terraza_m2='11.5', n_balcones=1, balcones_m2='4',
+            carpinteria_interior='madera', carpinteria_exterior='aluminio')
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
         self.assertEqual(data['salon']['salon_m2'], '22.00')
-        self.assertEqual((data['terraza']['terraza'], data['terraza']['terraza_m2']), (2, '11.50'))
-        self.assertEqual((data['terraza']['balcones'], data['terraza']['balcones_m2']), (1, '4.00'))
+        self.assertEqual((data['terraza']['n_terrazas'], data['terraza']['terraza_m2']), (2, '11.50'))
+        self.assertEqual((data['terraza']['n_balcones'], data['terraza']['balcones_m2']), (1, '4.00'))
         self.assertEqual(
             (data['carpinteria']['carpinteria_interior'], data['carpinteria']['carpinteria_exterior']),
-            ('Madera', 'Aluminio'))
+            ('madera', 'aluminio'))
         for field in ('salon_m2', 'terraza_m2', 'balcones_m2'):
             with self.assertRaises(IntegrityError, msg=field), transaction.atomic():
                 Estancias.objects.filter(inmueble=inm).update(**{field: -1})
@@ -1544,55 +1732,57 @@ class EstanciasUnidadesTests(TestCase):
 
 class DotacionYOtrosTests(TestCase):
     def test_tableware_and_linen_flags_and_exterior_boolean(self):
-        from base.models import Dotacion, Otros
+        from base.models import Caracteristicas, Dotacion
         inm = inmueble(referencia='D1', publicar_web=True)
         Dotacion.objects.create(
             inmueble=inm, vajilla=True, cuberteria=True, cristaleria=True, ropa_cama=True, toallas=True)
-        Otros.objects.create(inmueble=inm, exterior=True)
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
+        Caracteristicas.objects.create(inmueble=inm, exterior=True)
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
         self.assertTrue(all(data['dotacion'][k] for k in ('vajilla', 'cuberteria', 'cristaleria', 'ropa_cama', 'toallas')))
-        self.assertIs(data['otros']['exterior'], True)
+        self.assertIs(data['caracteristicas']['exterior'], True)
 
 
-class IncluidoEnOtrosTests(TestCase):
-    def test_included_flags_live_together_in_otros(self):
-        from base.models import Otros
-        columns = {f.name for f in Inmueble._meta.get_fields() if f.concrete}
-        self.assertNotIn('ibi_incluido', columns)
-        inm = inmueble(referencia='I1', publicar_web=True, ibi='210', gtos_comunidad='50')
-        Otros.objects.create(inmueble=inm, ibi_incluido=True, gastos_comunidad_incluidos=True)
-        data = self.client.get(f'/api/inmuebles/{inm._id}/').json()
+class IncluidoJuntoAlImporteTests(TestCase):
+    def test_included_flags_live_next_to_the_amounts_on_the_listing(self):
+        from base.models import Caracteristicas
+        inm = inmueble(
+            referencia='I1', publicar_web=True, ibi='210', gtos_comunidad='50',
+            ibi_incluido=True, gastos_comunidad_incluidos=True)
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
         self.assertEqual((data['ibi'], data['gtos_comunidad']), ('210.00', '50.00'))
-        self.assertTrue(data['otros']['ibi_incluido'] and data['otros']['gastos_comunidad_incluidos'])
+        self.assertTrue(data['ibi_incluido'] and data['gastos_comunidad_incluidos'])
+        self.assertIsNone(data['caracteristicas'])
+        self.assertNotIn('ibi_incluido', {f.name for f in Caracteristicas._meta.get_fields()})
+
+    def test_reform_year_is_next_to_the_construction_year(self):
+        inm = inmueble(referencia='I2', publicar_web=True, anio_construccion=1960, anio_ultima_reforma=2015)
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
+        self.assertEqual((data['anio_construccion'], data['anio_ultima_reforma']), (1960, 2015))
+        with self.assertRaises(ValidationError):
+            Inmueble(referencia='I3', anio_ultima_reforma=3000).full_clean(exclude=['municipio'])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            inmueble(referencia='I4', anio_ultima_reforma=999)
 
 
 class IvaTests(ModalidadFixture):
-    def test_price_without_vat_flag_has_no_rate(self):
+    def test_vat_rate_must_be_between_0_and_100(self):
         precio = InmuebleModalidad(inmueble=self.rent, modalidad=self.mod['temporal'], precio=450)
         precio.full_clean(exclude=['inmueble'])
-        precio.tipo_iva = 21
-        with self.assertRaises(ValidationError):
-            precio.full_clean(exclude=['inmueble'])
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            precio.save()
-
-    def test_price_with_vat_needs_a_rate_between_0_and_100(self):
-        precio = InmuebleModalidad(inmueble=self.rent, modalidad=self.mod['temporal'], precio=450, mas_iva=True)
-        with self.assertRaises(ValidationError):
-            precio.full_clean(exclude=['inmueble'])
+        self.assertFalse(precio.mas_iva)
         for bad in (-1, 101):
             precio.tipo_iva = bad
             with self.assertRaises(ValidationError):
                 precio.full_clean(exclude=['inmueble'])
         with self.assertRaises(IntegrityError), transaction.atomic():
-            InmuebleModalidad.objects.filter(pk=self.both.precios.first().pk).update(mas_iva=True)
+            InmuebleModalidad.objects.filter(pk=self.both.precios.first().pk).update(tipo_iva=101)
         precio.tipo_iva = 21
         precio.save()
+        self.assertTrue(precio.mas_iva)
 
     def test_api_returns_vat_per_modalidad(self):
         InmuebleModalidad.objects.create(
-            inmueble=self.rent, modalidad=self.mod['temporal'], precio=450, mas_iva=True, tipo_iva='21')
-        data = self.client.get(f'/api/inmuebles/{self.rent._id}/').json()
+            inmueble=self.rent, modalidad=self.mod['temporal'], precio=450, tipo_iva='21')
+        data = self.client.get(f'/api/inmuebles/{self.rent.id}/').json()
         by_code = {m['codigo']: m for m in data['modalidades']}
         self.assertEqual((by_code['temporal']['mas_iva'], by_code['temporal']['tipo_iva']), (True, '21.00'))
         self.assertEqual((by_code['habitual']['mas_iva'], by_code['habitual']['tipo_iva']), (False, None))
@@ -1612,7 +1802,7 @@ class CondicionesPorModalidadTests(ModalidadFixture):
             honorarios_comprador='Ninguno')
 
     def conditions(self):
-        data = self.client.get(f'/api/inmuebles/{self.both._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.both.id}/').json()
         return {m['codigo']: m['condiciones'] for m in data['modalidades']}
 
     def test_each_modalidad_gets_its_own_default(self):
@@ -1655,7 +1845,7 @@ class CondicionesPorModalidadTests(ModalidadFixture):
 
         def queries(inm):
             with CaptureQueriesContext(connection) as ctx:
-                self.client.get(f'/api/inmuebles/{inm._id}/')
+                self.client.get(f'/api/inmuebles/{inm.id}/')
             return len(ctx)
 
         self.assertEqual(queries(self.both), queries(self.rent))  # two modalidades vs one
@@ -1668,9 +1858,9 @@ class PlazaOpcionalTests(TestCase):
     def test_optional_space_price_is_public_but_value_and_rent_stay_private(self):
         from base.models import PlazaAparcamiento
         PlazaAparcamiento.objects.create(
-            inmueble=self.inm, opcional=True, precio_opcional='60', precio_opcional_mas_iva=True,
+            inmueble=self.inm, opcional=True, precio_opcional='60',
             precio_opcional_tipo_iva='21', valor='9999.99', renta='88.77')
-        response = self.client.get(f'/api/inmuebles/{self.inm._id}/')
+        response = self.client.get(f'/api/inmuebles/{self.inm.id}/')
         plaza = response.json()['plazas'][0]
         self.assertEqual(
             (plaza['opcional'], plaza['precio_opcional'], plaza['precio_opcional_unidad'],
@@ -1688,11 +1878,15 @@ class PlazaOpcionalTests(TestCase):
             plaza.save()
         plaza.opcional = True
         plaza.full_clean(exclude=['inmueble'])
-        plaza.precio_opcional_mas_iva = True
+        self.assertFalse(plaza.precio_opcional_mas_iva)
+        plaza.precio_opcional_tipo_iva = 101
         with self.assertRaises(ValidationError):
             plaza.full_clean(exclude=['inmueble'])
         plaza.precio_opcional_tipo_iva = 21
         plaza.save()
+        self.assertTrue(plaza.precio_opcional_mas_iva)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            PlazaAparcamiento.objects.filter(pk=plaza.pk).update(precio_opcional_tipo_iva=101)
         with self.assertRaises(IntegrityError), transaction.atomic():
             PlazaAparcamiento.objects.filter(pk=plaza.pk).update(precio_opcional='-1')
 
@@ -1704,21 +1898,21 @@ class CamposVentaTests(ModalidadFixture):
         super().setUp()
         from base.models import Entorno
         self.chalet = inmueble(
-            referencia='V1', publicar_web=True, tipo='Vivienda', subtipo='chalet_adosado',
+            referencia='V1', publicar_web=True, tipo='vivienda', subtipo='chalet_adosado',
             conservacion='buen_estado', anio_construccion=1955, n_plantas=2,
             sup_construida='154', sup_parcela='142', distrito=self.dis)
         self.price(self.chalet, venta=279000)
         Entorno.objects.create(inmueble=self.chalet, jardin=True, jardin_m2='79')
 
     def test_detail_returns_the_sale_fields(self):
-        data = self.client.get(f'/api/inmuebles/{self.chalet._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.chalet.id}/').json()
         self.assertEqual(
             (data['subtipo'], data['conservacion'], data['anio_construccion'], data['n_plantas'],
              data['planta'], data['sup_parcela'], data['entorno']['jardin_m2']),
             ('chalet_adosado', 'buen_estado', 1955, 2, None, '142.00', '79.00'))
 
     def test_floor_level_of_a_flat_allows_ground_and_basement(self):
-        piso = inmueble(referencia='V2', tipo='Vivienda', subtipo='piso', planta=0)
+        piso = inmueble(referencia='V2', tipo='vivienda', subtipo='piso', planta=0)
         piso.planta = -1
         piso.save()
         for bad in (-6, 101):
@@ -1737,16 +1931,16 @@ class CamposVentaTests(ModalidadFixture):
                 Inmueble.objects.filter(pk=self.chalet.pk).update(**{field: bad})
 
     def test_subtipo_only_for_viviendas_and_must_be_a_known_kind(self):
-        oficina = Inmueble(referencia='V3', municipio=self.chalet.municipio, tipo='Oficina', subtipo='piso')
+        oficina = Inmueble(referencia='V3', municipio=self.chalet.municipio, tipo='oficina', subtipo='piso')
         with self.assertRaises(ValidationError):
             oficina.clean()
         with self.assertRaises(ValidationError):
             oficina.save()
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Inmueble.objects.filter(pk=self.chalet.pk).update(tipo='Oficina')
+            Inmueble.objects.filter(pk=self.chalet.pk).update(tipo='oficina')
         with self.assertRaises(ValidationError):
-            Inmueble(referencia='V4', tipo='Vivienda', subtipo='castillo').full_clean(exclude=['municipio'])
-        inmueble(referencia='V5', tipo='Oficina')
+            Inmueble(referencia='V4', tipo='vivienda', subtipo='castillo').full_clean(exclude=['municipio'])
+        inmueble(referencia='V5', tipo='oficina')
 
     def test_conservacion_is_separate_from_availability(self):
         with self.assertRaises(ValidationError):
@@ -1768,14 +1962,14 @@ class CamposVentaTests(ModalidadFixture):
             Entorno.objects.filter(pk=entorno.pk).update(jardin_m2=-1)
 
     def test_list_and_filters_by_tipo_subtipo_and_surface(self):
-        piso = inmueble(referencia='V7', publicar_web=True, tipo='Vivienda', subtipo='piso',
+        piso = inmueble(referencia='V7', publicar_web=True, tipo='vivienda', subtipo='piso',
                         sup_construida='55', distrito=self.dis)
         self.price(piso, venta=295000)
         ventas = '/api/inmuebles/modalidad/ventas/'
         self.assertEqual(self.refs(f'{ventas}?subtipo=piso'), ['V7'])
         self.assertEqual(self.refs(f'{ventas}?subtipo=chalet_adosado'), ['V1'])
-        self.assertEqual(self.refs(f'{ventas}?tipo=Vivienda'), ['V1', 'V7'])
-        self.assertEqual(self.refs(f'{ventas}?tipo=Oficina'), [])
+        self.assertEqual(self.refs(f'{ventas}?tipo=vivienda'), ['V1', 'V7'])
+        self.assertEqual(self.refs(f'{ventas}?tipo=oficina'), [])
         self.assertEqual(self.refs(f'{ventas}?sup_min=100'), ['V1'])
         self.assertEqual(self.refs(f'{ventas}?sup_max=100'), ['V7'])
         self.assertEqual(self.refs(f'{ventas}?sup_min=50&sup_max=60&max_precio=300000'), ['V7'])
@@ -1784,8 +1978,105 @@ class CamposVentaTests(ModalidadFixture):
         self.assertEqual((listed['V1']['subtipo'], listed['V1']['sup_construida']), ('chalet_adosado', '154.00'))
 
     def test_invalid_filter_values_are_rejected(self):
-        for query in ('tipo=Castillo', 'subtipo=castillo', 'sup_min=abc', 'sup_max=x'):
+        for query in ('tipo=Castillo', 'tipo=Vivienda', 'subtipo=castillo', 'sup_min=abc', 'sup_max=x'):
             self.assertEqual(self.client.get(f'/api/inmuebles/?{query}').status_code, 400, query)
+
+
+class DisponibilidadPorOfertaTests(ModalidadFixture):
+    """`fecha_disponibilidad` belongs to each offer; the listing shows the earliest open one."""
+
+    def setUp(self):
+        super().setUp()
+        self.inm = inmueble(referencia='D1', publicar_web=True, distrito=self.dis)
+        self.alquiler = InmuebleModalidad.objects.create(
+            inmueble=self.inm, modalidad=self.mod['habitual'], precio=900, fecha_disponibilidad=date(2026, 4, 1))
+        self.venta = InmuebleModalidad.objects.create(
+            inmueble=self.inm, modalidad=self.mod['venta'], precio=200000, fecha_disponibilidad=date(2026, 1, 15))
+
+    def detail(self):
+        return self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
+
+    def refs(self, url):
+        """References of this test's listings (`D...`) only; the fixture's own listings are ignored."""
+        return [r for r in super().refs(url) if r.startswith('D')]
+
+    def orden(self):
+        return [i['referencia'] for i in self.client.get('/api/inmuebles/').json()['inmuebles']
+                if i['referencia'].startswith('D')]
+
+    def test_an_offer_must_have_a_date_and_defaults_to_today(self):
+        self.assertEqual(InmuebleModalidad(inmueble=self.inm, modalidad=self.mod['temporal'], precio=1).fecha_disponibilidad,
+                         timezone.localdate())
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            InmuebleModalidad.objects.filter(pk=self.venta.pk).update(fecha_disponibilidad=None)
+
+    def test_listing_date_is_the_earliest_open_offer_and_each_offer_shows_its_own(self):
+        data = self.detail()
+        self.assertEqual(data['fecha_disponibilidad'], '2026-01-15')
+        self.assertEqual({m['codigo']: m['fecha_disponibilidad'] for m in data['modalidades']},
+                         {'habitual': '2026-04-01', 'venta': '2026-01-15'})
+
+    def test_a_closed_offer_does_not_affect_the_listing(self):
+        self.venta.estado = 'cerrado'
+        self.venta.save()
+        self.assertEqual(self.detail()['fecha_disponibilidad'], '2026-04-01')
+        listed = {i['referencia']: i for i in self.client.get('/api/inmuebles/').json()['inmuebles']}
+        self.assertEqual(listed['D1']['fecha_disponibilidad'], '2026-04-01')
+        self.alquiler.estado = 'cerrado'
+        self.alquiler.save()
+        self.assertIsNone(self.detail()['fecha_disponibilidad'])
+
+    def test_date_search_looks_at_one_open_offer(self):
+        base = '/api/inmuebles/'
+        self.assertEqual(self.refs(f'{base}?fecha_entrada=2026-02-01'), ['D1'])
+        self.assertEqual(self.refs(f'{base}?fecha_entrada=2025-12-31'), [])
+        # With a modalidad it is that offer's date: the rent starts in April, the sale was open in January.
+        self.assertEqual(self.refs(f'{base}modalidad/habituales/?fecha_entrada=2026-02-01'), [])
+        self.assertEqual(self.refs(f'{base}modalidad/habituales/?fecha_entrada=2026-04-01'), ['D1'])
+        self.assertEqual(self.refs(f'{base}modalidad/ventas/?fecha_entrada=2026-02-01'), ['D1'])
+
+    def test_closed_offers_never_match_a_date_search_and_listings_do_not_repeat(self):
+        base = '/api/inmuebles/'
+        self.assertEqual(self.refs(f'{base}?fecha_entrada=2026-12-01'), ['D1'])
+        self.assertEqual(len(self.client.get(f'{base}?fecha_entrada=2026-12-01').json()['inmuebles']),
+                         len({i['referencia'] for i in self.client.get(f'{base}?fecha_entrada=2026-12-01').json()['inmuebles']}))
+        self.venta.estado = 'cerrado'
+        self.venta.save()
+        self.assertEqual(self.refs(f'{base}modalidad/ventas/?fecha_entrada=2026-12-01'), [])
+        self.assertEqual(self.refs(f'{base}?fecha_entrada=2026-02-01'), [])
+        self.assertEqual(self.refs(f'{base}?fecha_entrada=2026-04-01'), ['D1'])
+
+    def test_invalid_date_is_rejected(self):
+        for valor in ('2026-13-01', 'ayer'):
+            self.assertEqual(self.client.get(f'/api/inmuebles/?fecha_entrada={valor}').status_code, 400, valor)
+
+    def test_list_is_ordered_by_the_earliest_open_offer_ignoring_closed_ones(self):
+        tarde = inmueble(referencia='D2', publicar_web=True, distrito=self.dis)
+        InmuebleModalidad.objects.create(
+            inmueble=tarde, modalidad=self.mod['habitual'], precio=1, fecha_disponibilidad=date(2026, 3, 1))
+        cerrada = inmueble(referencia='D3', publicar_web=True, distrito=self.dis)
+        InmuebleModalidad.objects.create(
+            inmueble=cerrada, modalidad=self.mod['habitual'], precio=1, estado='cerrado',
+            fecha_disponibilidad=date(2020, 1, 1))
+        self.assertEqual(self.orden(), ['D1', 'D2', 'D3'])
+        # An old date on a closed offer must not put its listing ahead of an open one.
+        InmuebleModalidad.objects.create(
+            inmueble=tarde, modalidad=self.mod['venta'], precio=1, estado='cerrado',
+            fecha_disponibilidad=date(2000, 1, 1))
+        self.assertEqual(self.orden(), ['D1', 'D2', 'D3'])
+
+    def test_listing_date_costs_no_extra_queries(self):
+        for n in range(3):
+            otro = inmueble(referencia=f'Q{n}', publicar_web=True, distrito=self.dis)
+            self.price(otro, habitual=100)
+        with CaptureQueriesContext(connection) as uno:
+            self.client.get('/api/inmuebles/')
+        for n in range(3, 8):
+            otro = inmueble(referencia=f'Q{n}', publicar_web=True, distrito=self.dis)
+            self.price(otro, habitual=100)
+        with CaptureQueriesContext(connection) as varios:
+            self.client.get('/api/inmuebles/')
+        self.assertEqual(len(uno), len(varios))
 
 
 class MediaYPlanosTests(TestCase):
@@ -1797,7 +2088,7 @@ class MediaYPlanosTests(TestCase):
     def test_every_photo_has_a_type_and_the_api_returns_it(self):
         self.Image.objects.create(inmueble=self.inm, image='a.jpg', tipo='fachada', posicion=1)
         self.Image.objects.create(inmueble=self.inm, image='b.jpg', posicion=2)
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual([i['tipo'] for i in data['images']], ['fachada', 'otro'])
         with self.assertRaises(ValidationError):
             self.Image(inmueble=self.inm, image='c.jpg', tipo='sotano').full_clean()
@@ -1806,7 +2097,7 @@ class MediaYPlanosTests(TestCase):
         self.Image.objects.create(inmueble=self.inm, image='a.jpg', tipo='salon', posicion=1)
         self.Image.objects.create(inmueble=self.inm, image='p.jpg', tipo='plano', posicion=2, alt_text='Planta 1')
         self.Image.objects.create(inmueble=self.inm, image='q.jpg', tipo='plano', posicion=3)
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual([i['tipo'] for i in data['images']], ['salon'])
         self.assertEqual([i['tipo'] for i in data['planos']], ['plano', 'plano'])
         self.assertEqual(data['planos'][0]['alt_text'], 'Planta 1')
@@ -1828,7 +2119,7 @@ class MediaYPlanosTests(TestCase):
             inmueble=self.inm, tipo='video', url='https://example.com/v2', titulo='Recorrido', posicion=2)
         MediaInmueble.objects.create(
             inmueble=self.inm, tipo='tour', url='https://my.matterport.com/show/?m=abc', posicion=1)
-        data = self.client.get(f'/api/inmuebles/{self.inm._id}/').json()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
         self.assertEqual(
             data['medios'],
             [{'tipo': 'tour', 'url': 'https://my.matterport.com/show/?m=abc', 'titulo': ''},
@@ -1855,7 +2146,7 @@ class MediaYPlanosTests(TestCase):
 
         def queries():
             with CaptureQueriesContext(connection) as ctx:
-                self.client.get(f'/api/inmuebles/{self.inm._id}/')
+                self.client.get(f'/api/inmuebles/{self.inm.id}/')
             return len(ctx)
 
         before = queries()
@@ -1873,7 +2164,7 @@ class SolicitudTipoTests(TestCase):
         self.addCleanup(cache.clear)
         self.Solicitud = SolicitudReserva
         self.inm = inmueble(referencia='ST1', publicar_web=True)
-        self.url = f'/api/inmuebles/{self.inm._id}/reservas/'
+        self.url = f'/api/inmuebles/{self.inm.id}/reservas/'
         self.body = {'nombre': 'Ana', 'email': 'ana@example.com', 'telefono': '600',
                      'acepta_aviso_legal': True}
 
@@ -1918,14 +2209,10 @@ class DetailTablesAllowListTests(TestCase):
     """
 
     PUBLIC = {
-        'OtrosSerializer': 'id capacidad_personas suelo_piso exterior altura_real_m anio_ultima_reforma '
-            'gastos_comunidad_incluidos ibi_incluido orientacion chimenea vistas_al_mar vistas_montania '
-            'tipo_fachada office acepta_animales estancia_minima estancia_minima_unidad estancia_maxima '
-            'estancia_maxima_unidad inmueble',
-        'BaniosSerializer': 'id banios suelo inmueble',
-        'DormitoriosSerializer': 'id dobles individuales exteriores suites inmueble',
-        'InstalacionesSerializer': 'id contador_agua compania_agua contador_electricidad compania_electricidad '
-            'gas tipo_gas contador_gas compania_gas calefaccion tipo_calefaccion subtipo_calefaccion tvs '
+        'CaracteristicasSerializer': 'id suelo_piso exterior altura_real_m orientacion_norte orientacion_sur '
+            'orientacion_este orientacion_oeste chimenea vistas_al_mar vistas_montania tipo_fachada inmueble',
+        'DistribucionSerializer': 'id dobles individuales exteriores suites banios capacidad_personas suelo_banio inmueble',
+        'InstalacionesSerializer': 'id calefaccion tipo_calefaccion subtipo_calefaccion tvs '
             'tv_internacional antena_parabolica aire_acondicionado ascensor internet telefono '
             'instalacion_telefono dvd hilo_musical acceso_silla_ruedas inmueble',
         'AreaRecreoSerializer': 'id zona_deportiva gimnasio piscina solarium jardin_infantil local_social inmueble',
@@ -1939,23 +2226,26 @@ class DetailTablesAllowListTests(TestCase):
             'cerca_farmacia cerca_guarderias cerca_medico cerca_centro_comercial distancia_playa_m '
             'distancia_poblacion_m distancia_ciudad_m cerca_supermercado cerca_restaurantes cerca_discotecas '
             'inmueble',
-        'TransporteSerializer': 'id cerca_bus descripcion_bus cerca_metro descripcion_metro cerca_tranvia '
-            'descripcion_tranvia cerca_tren descripcion_tren cerca_ferrocarril descripcion_ferrocarril inmueble',
         'OtrosEspaciosSerializer': 'id despachos vestidores altillo galeria trastero buhardilla bodega '
             'lavadero estudios bibliotecas inmueble',
         'CondicionesSerializer': 'id nombre honorarios itp incluido no_incluido fianza pago_adelantado '
             'suministros actualizacion_renta limpieza_final requisitos notaria registro gestoria honorarios_comprador',
         'RegistroLegalSerializer': 'tipo numero organismo',
+        'CertificadoEnergeticoSerializer': 'numero eficiencia consumo_energetico emisiones_co2 fecha_emision '
+            'fecha_vencimiento',
         'MediaInmuebleSerializer': 'tipo url titulo',
-        'SingleImageSerializer': '_id image default alt_text posicion tipo',
+        'SingleImageSerializer': 'id image default alt_text posicion tipo',
         'PlazaAparcamientoSerializer': 'id numero tipo superficie notas opcional precio_opcional '
             'precio_opcional_unidad precio_opcional_mas_iva precio_opcional_tipo_iva',
         'CocinaSerializer': 'id cocina cocina_amueblada tipo_cocina suelo_cocina inmueble',
-        'TerrazaSerializer': 'id terraza terraza_m2 balcones balcones_m2 descripcion inmueble',
+        'TerrazaSerializer': 'id n_terrazas terraza_m2 n_balcones balcones_m2 descripcion inmueble',
         'SalonSerializer': 'id salon_m2 descripcion inmueble',
         'CarpinteriaSerializer': 'id carpinteria_interior carpinteria_exterior inmueble',
-        'PrecioModalidadSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva',
-        'PrecioModalidadDetalleSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva regulacion condiciones',
+        'PrecioModalidadSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva fecha_disponibilidad',
+        'PrecioModalidadDetalleSerializer': 'codigo nombre unidad_precio precio mas_iva tipo_iva fecha_disponibilidad '
+            'regulacion terminos condiciones',
+        'TerminosAlquilerSerializer': 'acepta_animales estancia_minima estancia_minima_unidad estancia_maxima '
+            'estancia_maxima_unidad',
         'RegulacionAlquilerSerializer': 'indice_referencia_min indice_referencia_max indice_referencia_fecha '
             'renta_previa ultima_renta ultima_renta_fin',
     }
@@ -1970,9 +2260,11 @@ class DetailTablesAllowListTests(TestCase):
         from rest_framework import serializers as drf
         from base import serializers
         from base.models import (
-            DatosInternos, DeclaracionZonaTensionada, HistorialPrecio, InmueblePropietario, Propietario,
+            AcuerdoAdministracion, DatosInternos, DeclaracionZonaTensionada, HistorialPrecio, InmueblePropietario,
+            Propietario,
         )
-        private = {DatosInternos, DeclaracionZonaTensionada, HistorialPrecio, InmueblePropietario, Propietario}
+        private = {AcuerdoAdministracion, DatosInternos, DeclaracionZonaTensionada, HistorialPrecio,
+                   InmueblePropietario, Propietario}
         used = {
             getattr(obj.Meta, 'model', None)
             for obj in vars(serializers).values()
@@ -1997,3 +2289,209 @@ class DetailTablesAllowListTests(TestCase):
             and obj is not drf.ModelSerializer and obj.__module__ == serializers.__name__
         }
         self.assertEqual(found - pinned - elsewhere, set())
+
+
+class DescripcionesTests(TestCase):
+    def test_api_returns_the_descriptions_by_language_and_skips_missing_ones(self):
+        inm = inmueble(referencia='D1', publicar_web=True, descripcion_es='Hola', descripcion_ca='Hola!')
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
+        self.assertEqual(data['descripciones'], {'es': 'Hola', 'ca': 'Hola!'})
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            DescripcionInmueble.objects.create(inmueble=inm, idioma='es', texto='Otra')
+
+    def test_unknown_language_is_rejected(self):
+        inm = inmueble(referencia='D2')
+        with self.assertRaises(ValidationError):
+            DescripcionInmueble(inmueble=inm, idioma='fr', texto='Bonjour').full_clean()
+
+    def test_list_shows_the_descriptions_without_extra_queries(self):
+        inmueble(referencia='D3', publicar_web=True, descripcion_es='Uno', descripcion_en='One')
+        inmueble(referencia='D4', publicar_web=True, descripcion_es='Dos')
+        data = self.client.get('/api/inmuebles/').json()['inmuebles']
+        self.assertEqual({d['descripciones']['es'] for d in data}, {'Uno', 'Dos'})
+
+
+class TransportePorModoTests(TestCase):
+    def setUp(self):
+        self.inm = inmueble(referencia='T1', publicar_web=True)
+
+    def detail(self):
+        return self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
+
+    def test_no_rows_means_no_transport_section(self):
+        self.assertIsNone(self.detail()['transporte'])
+
+    def test_rows_are_flattened_to_a_flag_and_a_description_per_mode(self):
+        TransporteInmueble.objects.create(inmueble=self.inm, tipo='metro', descripcion='L2')
+        TransporteInmueble.objects.create(inmueble=self.inm, tipo='bus')
+        self.assertEqual(self.detail()['transporte'], {
+            'cerca_bus': True, 'descripcion_bus': '', 'cerca_metro': True, 'descripcion_metro': 'L2',
+            'cerca_tranvia': False, 'descripcion_tranvia': '', 'cerca_tren': False, 'descripcion_tren': '',
+            'cerca_ferrocarril': False, 'descripcion_ferrocarril': ''})
+
+    def test_one_row_per_mode_and_only_known_modes(self):
+        TransporteInmueble.objects.create(inmueble=self.inm, tipo='bus')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            TransporteInmueble.objects.create(inmueble=self.inm, tipo='bus')
+        with self.assertRaises(ValidationError):
+            TransporteInmueble(inmueble=self.inm, tipo='funicular').full_clean()
+
+
+class SuministrosTests(TestCase):
+    def setUp(self):
+        self.inm = inmueble(referencia='S1', publicar_web=True)
+
+    def detail(self):
+        return self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
+
+    def test_no_installations_and_no_supplies_means_no_section(self):
+        self.assertIsNone(self.detail()['instalaciones'])
+
+    def test_supplies_are_flattened_next_to_the_installation_columns(self):
+        Instalaciones.objects.create(inmueble=self.inm, calefaccion=True, tipo_calefaccion='central')
+        Suministro.objects.create(inmueble=self.inm, tipo='agua', contador=True, compania='Aigües')
+        Suministro.objects.create(inmueble=self.inm, tipo='gas', compania='Nedgia', tipo_suministro='natural')
+        data = self.detail()['instalaciones']
+        self.assertEqual(
+            (data['contador_agua'], data['compania_agua'], data['contador_electricidad'], data['compania_electricidad']),
+            (True, 'Aigües', False, ''))
+        self.assertEqual(
+            (data['gas'], data['tipo_gas'], data['contador_gas'], data['compania_gas']), (True, 'natural', False, 'Nedgia'))
+        self.assertEqual(data['tipo_calefaccion'], 'central')
+
+    def test_a_supply_without_an_installation_row_is_still_shown(self):
+        Suministro.objects.create(inmueble=self.inm, tipo='electricidad', contador=True)
+        data = self.detail()['instalaciones']
+        self.assertTrue(data['contador_electricidad'])
+        self.assertFalse(data['gas'])
+
+    def test_gas_flag_is_derived_from_the_gas_row(self):
+        Instalaciones.objects.create(inmueble=self.inm)
+        self.assertFalse(self.detail()['instalaciones']['gas'])
+        Suministro.objects.create(inmueble=self.inm, tipo='gas')
+        self.assertTrue(self.detail()['instalaciones']['gas'])
+
+    def test_one_row_per_supply_and_gas_type_only_for_gas(self):
+        Suministro.objects.create(inmueble=self.inm, tipo='agua')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Suministro.objects.create(inmueble=self.inm, tipo='agua')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Suministro.objects.create(inmueble=self.inm, tipo='electricidad', tipo_suministro='natural')
+
+    def test_heating_uses_choices(self):
+        with self.assertRaises(ValidationError):
+            Instalaciones(inmueble=self.inm, tipo_calefaccion='Mixta').full_clean()
+
+
+class PresenciaOCantidadTests(TestCase):
+    """Presence-only equipment is a flag; only items where the number matters are counts."""
+
+    FLAGS = {
+        'Dotacion': ['jacuzzi_hidromasaje', 'secadora', 'lavadora', 'lavavajillas', 'microondas', 'nevera', 'radio',
+                     'toldo', 'horno', 'tendedero'],
+        'OtrosEspacios': ['altillo', 'galeria', 'buhardilla', 'bodega', 'lavadero'],
+    }
+    COUNTS = {
+        'Dotacion': ['armarios_empotrados', 'ropero', 'estufa', 'ventilador', 'camas', 'sofas'],
+        'OtrosEspacios': ['despachos', 'vestidores', 'trastero', 'estudios', 'bibliotecas'],
+    }
+
+    def test_each_item_has_the_type_the_rule_gives_it(self):
+        from django.apps import apps
+        for modelo, nombres in self.FLAGS.items():
+            for n in nombres:
+                self.assertEqual(apps.get_model('base', modelo)._meta.get_field(n).get_internal_type(), 'BooleanField', n)
+        for modelo, nombres in self.COUNTS.items():
+            for n in nombres:
+                self.assertEqual(
+                    apps.get_model('base', modelo)._meta.get_field(n).get_internal_type(), 'PositiveIntegerField', n)
+
+    def test_every_equipment_column_is_classified(self):
+        from django.apps import apps
+        for modelo in ('Dotacion', 'OtrosEspacios'):
+            columnas = {
+                f.name for f in apps.get_model('base', modelo)._meta.concrete_fields
+                if f.get_internal_type() in ('BooleanField', 'PositiveIntegerField')
+            }
+            clasificadas = set(self.FLAGS[modelo]) | set(self.COUNTS[modelo])
+            self.assertEqual(columnas - clasificadas - {'amueblado', 'utensilios_cocina', 'vajilla', 'cuberteria',
+                                                       'cristaleria', 'ropa_cama', 'toallas'}, set(), modelo)
+
+    def test_api_returns_flags_and_counts(self):
+        from base.models import Dotacion, OtrosEspacios
+        inm = inmueble(referencia='P1', publicar_web=True)
+        Dotacion.objects.create(inmueble=inm, lavadora=True, camas=3)
+        OtrosEspacios.objects.create(inmueble=inm, bodega=True, trastero=2)
+        data = self.client.get(f'/api/inmuebles/{inm.id}/').json()
+        self.assertEqual((data['dotacion']['lavadora'], data['dotacion']['camas']), (True, 3))
+        self.assertEqual((data['otros_espacios']['bodega'], data['otros_espacios']['trastero']), (True, 2))
+
+
+class OpcionesCerradasTests(TestCase):
+    """Columns that used to be free text now take a value from a closed list."""
+
+    def setUp(self):
+        self.inm = inmueble(referencia='O1', publicar_web=True)
+
+    def test_widened_lists_accept_their_new_values(self):
+        from base.models import Caracteristicas, Instalaciones
+        from base.models.opciones import MATERIALES_SUELO
+        for tipo in ('terreno', 'trastero', 'edificio', 'nave'):
+            Inmueble(referencia='N', tipo=tipo, municipio=self.inm.municipio).full_clean(exclude=['referencia'])
+        for subtipo in ('loft', 'planta_baja', 'chalet_pareado', 'casa_pueblo', 'masia'):
+            Inmueble(referencia='N', tipo='vivienda', subtipo=subtipo, municipio=self.inm.municipio).full_clean(
+                exclude=['referencia'])
+        Inmueble(referencia='N', conservacion='reformado', municipio=self.inm.municipio).full_clean(
+            exclude=['referencia'])
+        self.assertTrue({'laminado', 'vinilico', 'ceramica', 'moqueta', 'cemento_pulido'}
+                        <= {valor for valor, _ in MATERIALES_SUELO})
+        Caracteristicas(inmueble=self.inm, tipo_fachada='metalica').full_clean()
+        Instalaciones(inmueble=self.inm, calefaccion=True, subtipo_calefaccion='solar').full_clean()
+        with self.assertRaises(ValidationError):
+            Inmueble(referencia='N', tipo='terreno', subtipo='loft', municipio=self.inm.municipio).full_clean(
+                exclude=['referencia'])
+        self.assertEqual(self.client.get('/api/inmuebles/?tipo=terreno').status_code, 200)
+
+    def test_each_closed_column_rejects_text_outside_its_list(self):
+        from base.models import Caracteristicas, Distribucion, Estancias
+        casos = [
+            (Caracteristicas, 'suelo_piso'), (Caracteristicas, 'tipo_fachada'), (Distribucion, 'suelo_banio'),
+            (Estancias, 'tipo_cocina'), (Estancias, 'suelo_cocina'),
+            (Estancias, 'carpinteria_interior'), (Estancias, 'carpinteria_exterior'),
+        ]
+        for modelo, campo in casos:
+            with self.subTest(f'{modelo.__name__}.{campo}'):
+                fila = modelo(inmueble=self.inm, **{campo: 'Cualquier cosa'})
+                with self.assertRaises(ValidationError) as ctx:
+                    fila.full_clean()
+                self.assertIn(campo, ctx.exception.message_dict)
+                modelo(inmueble=self.inm, **{campo: ''}).full_clean()
+
+    def test_valid_values_are_accepted_and_returned_by_the_api(self):
+        from base.models import Caracteristicas, Distribucion, Estancias
+        Caracteristicas.objects.create(inmueble=self.inm, suelo_piso='parquet', tipo_fachada='piedra')
+        Distribucion.objects.create(inmueble=self.inm, banios=1, suelo_banio='gres')
+        Estancias.objects.create(inmueble=self.inm, tipo_cocina='abierta', carpinteria_exterior='pvc')
+        self.inm.situacion_actual = 'libre'
+        self.inm.full_clean()
+        self.inm.save()
+        data = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()
+        self.assertEqual((data['caracteristicas']['suelo_piso'], data['caracteristicas']['tipo_fachada']), ('parquet', 'piedra'))
+        self.assertEqual(data['distribucion']['suelo_banio'], 'gres')
+        self.assertEqual((data['cocina']['tipo_cocina'], data['carpinteria']['carpinteria_exterior']), ('abierta', 'pvc'))
+        self.assertEqual(data['situacion_actual'], 'libre')
+
+    def test_situacion_actual_rejects_text_outside_its_list(self):
+        self.inm.situacion_actual = 'Alquiler vacacional'
+        with self.assertRaises(ValidationError) as ctx:
+            self.inm.full_clean()
+        self.assertIn('situacion_actual', ctx.exception.message_dict)
+
+    def test_orientation_is_one_flag_per_direction(self):
+        from base.models import Caracteristicas
+        Caracteristicas.objects.create(inmueble=self.inm, orientacion_norte=True, orientacion_oeste=True)
+        otros = self.client.get(f'/api/inmuebles/{self.inm.id}/').json()['caracteristicas']
+        self.assertEqual(
+            [otros[f'orientacion_{lado}'] for lado in ('norte', 'sur', 'este', 'oeste')],
+            [True, False, False, True])
+        self.assertNotIn('orientacion', otros)

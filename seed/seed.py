@@ -6,6 +6,7 @@
     python seed.py locations --dry-run
     python seed.py modalidades        load the three Modalidad rows (also supports --dry-run)
     python seed.py condiciones        create the default Condiciones of each modalidad (also supports --dry-run)
+    python seed.py zonas-tensionadas  load the stressed-zone declarations of the municipios already loaded (also supports --dry-run)
     python seed.py check-locations    check that listings' locations nest (read only)
     python seed.py status             row counts
     python seed.py fetch-locations    refresh data/*.json from the official sources
@@ -53,6 +54,8 @@ def main():
     mod.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
     con = sub.add_parser('condiciones')
     con.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
+    zon = sub.add_parser('zonas-tensionadas')
+    zon.add_argument('--dry-run', action='store_true', help='report what would change, write nothing')
     sub.add_parser('check-locations')
     sub.add_parser('status')
     sub.add_parser('fetch-locations')
@@ -90,9 +93,21 @@ def main():
             print(f'{model:12} created {created:4}  kept {kept:4}')
         if args.dry_run:
             print('dry run: nothing was written')
+    elif args.command == 'zonas-tensionadas':
+        from seedlib.zonas_tensionadas import seed_zonas_tensionadas
+        stats, sin_cargar = seed_zonas_tensionadas(args.dry_run)
+        for referencia, (created, kept) in stats.items():
+            print(f'{referencia}: created {created:4}  kept {kept:4}  not loaded {len(sin_cargar[referencia]):4}')
+            if sin_cargar[referencia]:
+                print('  municipios not in the database: ' + ', '.join(sin_cargar[referencia]))
+        if args.dry_run:
+            print('dry run: nothing was written')
     elif args.command == 'status':
-        from base.models import Barrio, Comarca, Condiciones, Distrito, Inmueble, Modalidad, Municipio, Provincia
-        for model in (Provincia, Comarca, Municipio, Distrito, Barrio, Modalidad, Condiciones, Inmueble):
+        from base.models import (
+            Barrio, Comarca, Condiciones, DeclaracionZonaTensionada, Distrito, Inmueble, Modalidad, Municipio, Provincia,
+        )
+        for model in (Provincia, Comarca, Municipio, Distrito, Barrio, Modalidad, Condiciones,
+                      DeclaracionZonaTensionada, Inmueble):
             print(f'{model.__name__:10} {model.objects.count()}')
 
 

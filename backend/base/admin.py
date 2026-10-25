@@ -7,8 +7,7 @@ from django.http import Http404, JsonResponse
 from django.urls import path, reverse
 from base.models import (
     AreaRecreo,
-    Banios,
-    Dormitorios,
+    Distribucion,
     Dotacion,
     Entorno,
     Estancias,
@@ -21,11 +20,14 @@ from base.models import (
     Instalaciones,
     OtrosEspacios,
     PlazaAparcamiento,
-    Otros,
+    Caracteristicas,
+    TerminosAlquiler,
     RegistroLegal,
     RegulacionAlquiler,
     Seguridad,
-    Transporte,
+    TransporteInmueble,
+    Suministro,
+    DescripcionInmueble,
     Provincia,
     Barrio,
     Modalidad,
@@ -33,6 +35,8 @@ from base.models import (
     Municipio,
     Distrito,
     Condiciones,
+    AcuerdoAdministracion,
+    CertificadoEnergetico,
     DatosInternos,
     DeclaracionZonaTensionada,
     Propietario,
@@ -44,9 +48,6 @@ from base.models import (
 
 class AreaRecreoInline(admin.StackedInline):
     model = AreaRecreo
-
-class BaniosInline(admin.StackedInline):
-    model = Banios
 
 
 class DotacionInline(admin.StackedInline):
@@ -69,21 +70,65 @@ class InstalacionesInline(admin.StackedInline):
 class OtrosEspaciosInline(admin.StackedInline):
     model = OtrosEspacios
 
-class OtrosInline(admin.StackedInline):
-    model = Otros
+class CaracteristicasInline(admin.StackedInline):
+    model = Caracteristicas
 
-class DormitoriosInline(admin.StackedInline):
-    model = Dormitorios
+class DistribucionInline(admin.StackedInline):
+    model = Distribucion
 
 class SeguridadInline(admin.StackedInline):
     model = Seguridad
 
-class TransporteInline(admin.StackedInline):
-    model = Transporte
+class TransporteInline(admin.TabularInline):
+    model = TransporteInmueble
+    extra = 0
+
+
+class SuministroInline(admin.TabularInline):
+    model = Suministro
+    extra = 0
+
+
+class DescripcionInline(admin.TabularInline):
+    model = DescripcionInmueble
+    extra = 0
 
 
 class DatosInternosInline(admin.StackedInline):
     model = DatosInternos
+
+
+class AcuerdoAdministracionInline(admin.TabularInline):
+    model = AcuerdoAdministracion
+    extra = 0
+
+
+class CertificadoEnergeticoInline(admin.StackedInline):
+    model = CertificadoEnergetico
+
+
+class AuditoriaAdminMixin:
+    """Fills `created_by` / `updated_by` of the audited rows saved here, also those of inline formsets."""
+
+    def save_model(self, request, obj, form, change):
+        self._auditar(request, obj)
+        super().save_model(request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        for obj in instances:
+            self._auditar(request, obj)
+            obj.save()
+        formset.save_m2m()
+
+    @staticmethod
+    def _auditar(request, obj):
+        if hasattr(obj, 'updated_by'):
+            if obj.pk is None:
+                obj.created_by = request.user
+            obj.updated_by = request.user
 
 
 class InmueblePropietarioInline(admin.TabularInline):
@@ -165,7 +210,7 @@ class InmuebleAdminForm(forms.ModelForm):
             return None
 
 
-class InmuebleAdmin(admin.ModelAdmin):
+class InmuebleAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     form = InmuebleAdminForm
     inlines = [
         InmuebleModalidadInline,
@@ -176,17 +221,20 @@ class InmuebleAdmin(admin.ModelAdmin):
         HistorialPrecioInline,
         InmueblePropietarioInline,
         DatosInternosInline,
-        DormitoriosInline,
-        BaniosInline,
+        AcuerdoAdministracionInline,
+        CertificadoEnergeticoInline,
+        DistribucionInline,
         EstanciasInline,
         SeguridadInline,
         DotacionInline,
+        DescripcionInline,
         InstalacionesInline,
+        SuministroInline,
         OtrosEspaciosInline,
         EntornoInline,
         # AreaRecreoInline,
         TransporteInline,
-        OtrosInline,
+        CaracteristicasInline,
     ]
     list_display = (
         'referencia',
@@ -194,7 +242,7 @@ class InmuebleAdmin(admin.ModelAdmin):
         'direccion',
         'tipo',
         'precios_lista',
-        'fecha_disponibilidad',
+        'disponible_desde',
         'propietario',
         'estado',
         'publicar_web',
@@ -205,6 +253,10 @@ class InmuebleAdmin(admin.ModelAdmin):
     @admin.display(description='Propietario')
     def propietario(self, obj):
         return ', '.join(p.nombre for p in obj.propietarios.all())
+
+    @admin.display(description='Disponible desde')
+    def disponible_desde(self, obj):
+        return obj.fecha_disponibilidad
 
     @admin.display(description='Precios')
     def precios_lista(self, obj):
@@ -249,18 +301,10 @@ class InmuebleAdmin(admin.ModelAdmin):
                 items = items.filter(distrito_id=pk('distrito'))
         else:
             raise Http404
-        return JsonResponse({'items': [{'id': i._id, 'nombre': i.nombre} for i in items]})
-
-    def save_model(self, request, obj, form, change):
-        if not change:
-            obj.created_by = request.user
-        obj.updated_by = request.user
-        super().save_model(request, obj, form, change)
-
+        return JsonResponse({'items': [{'id': i.id, 'nombre': i.nombre} for i in items]})
 
 admin.site.register(ImageInmueble)
-admin.site.register(Dormitorios)
-admin.site.register(Banios)
+admin.site.register(Distribucion)
 admin.site.register(Inmueble, InmuebleAdmin)
 admin.site.register(Provincia)
 admin.site.register(Comarca)
@@ -280,7 +324,7 @@ class PropietarioAdmin(admin.ModelAdmin):
 
 
 @admin.register(Condiciones)
-class CondicionesAdmin(admin.ModelAdmin):
+class CondicionesAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
     list_display = ('nombre', 'modalidad', 'por_defecto')
     list_filter = ('modalidad', 'por_defecto')
 
@@ -313,12 +357,16 @@ class RegulacionAlquilerInline(admin.StackedInline):
     model = RegulacionAlquiler
 
 
-@admin.register(InmuebleModalidad)
-class InmuebleModalidadAdmin(admin.ModelAdmin):
-    """One offer (price of a listing under a modalidad) with its rent regulation."""
+class TerminosAlquilerInline(admin.StackedInline):
+    model = TerminosAlquiler
 
-    list_display = ('inmueble', 'modalidad', 'precio', 'estado')
+
+@admin.register(InmuebleModalidad)
+class InmuebleModalidadAdmin(AuditoriaAdminMixin, admin.ModelAdmin):
+    """One offer (price of a listing under a modalidad) with its rent regulation and terms."""
+
+    list_display = ('inmueble', 'modalidad', 'precio', 'fecha_disponibilidad', 'estado')
     list_filter = ('modalidad', 'estado')
     search_fields = ('inmueble__referencia',)
     list_select_related = ('inmueble', 'modalidad')
-    inlines = [RegulacionAlquilerInline]
+    inlines = [RegulacionAlquilerInline, TerminosAlquilerInline]

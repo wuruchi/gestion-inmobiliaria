@@ -20,79 +20,93 @@ suite is red or has a skip.
       `HistorialPrecio` automatically; `ultima_renta` is derived from the history per modalidad (ADR 0005). (1.4)
 - [x] Location: keep the three keys and detect violations instead of enforcing them in the database (ADR 0006). (1.1)
 - [x] `estado` per modalidad: stored on `InmuebleModalidad`, derived for the listing (ADR 0004). (4)
-- [ ] `fecha_disponibilidad` is per listing but "available from" depends on the offer; move it to
-      `InmuebleModalidad` too? (4)
-- [ ] Equipment catalogue (2.4): do it, or keep the wide typed tables? Default: keep, and only unify the
-      count-vs-boolean convention.
+- [x] `fecha_disponibilidad` moved to each offer; the listing shows the earliest date among its open offers
+      (ADR 0017). (4)
+- [x] Equipment catalogue (2.4): the wide typed tables stay; the count-vs-boolean convention was unified (ADR 0010,
+      ADR 0018).
 
 ## 1. Correctness: facts in the wrong place
 
 - [x] `Propietario` is independent; a listing has many owners (`InmueblePropietario`) and `gran_tenedor` lives on
       `Propietario`. The detail still returns `gran_tenedor`, derived from the owners (ADR 0002). (1.2, 5)
 - [x] `zona_tensionada` is derived from dated declarations per municipality (`DeclaracionZonaTensionada`, ADR 0003). (1.2)
-- [ ] Load the real declarations (list, dates and resolutions) once verified with the Generalitat / DOGC. (1.2)
+- [x] Declarations TER/800/2024 (140) and TER/2408/2024 (131) are seeded for the municipios loaded, 159 of 271
+      (`python seed.py zonas-tensionadas`, ADR 0015). (1.2)
+- [ ] Confirm the start date of TER/800/2024 (16 Mar 2024 assumed) against the BOE text of 15 Mar 2024. (1.2)
+- [ ] Seed the other 112 municipios (Girona, Lleida, Tarragona) by loading those provinces, then re-run the command. (1.2)
+- [ ] Load the 2026 changes once the BOE publishes them and the dates are known: TER/3739/2026 extends 118 of the
+      140, so the other 22 need an end date; TER/3740/2026 adds 53. (1.2)
+- [ ] Review the placeholder declarations that migration `0020` created in an existing database (start date = the
+      migration date) and delete or correct them. (1.2)
 - [x] The history can no longer fall behind the current price (ADR 0005). (1.4)
 - [x] Rent regulation data (index range, last-rent status/amount/end date) lives in `RegulacionAlquiler`, one per
       rental offer; `actualizacion_renta` moved to `Condiciones`; `situacion_5_anios` replaced by `renta_previa`
       (ADR 0007). (1.3)
 - [x] `comprobar_regulacion_alquiler` lists habitual rentals in stressed zones with missing regulation data (ADR 0007).
-- [ ] Decide whether to run the location and rent-regulation scans on a schedule or before publishing.
-- [ ] Verify the exact legal scope (habitual vs temporary leases, contract dates) against the texts of Decret llei
-      1/2025 and Llei 12/2023 before relying on `comprobar_regulacion_alquiler`.
-- [ ] Move `Otros.estancia_*` and `acepta_animales` to the rental conditions. (3)
-- [ ] `CertificadoEnergetico` table: `eficiencia`, `nombre_eficiencia`, `consumo_energetico`, `emisiones_co2`
-      and the certificate number from `RegistroLegal`; check whether `eficiencia` and `nombre_eficiencia` are the
-      same fact. (1.8)
-- [ ] Group community fees and IBI (amount, included flag, text in `Condiciones.incluido`) under one owner. (1.9)
+- [ ] Deferred (ADR 0016): the scans and `purgar_solicitudes` are run by hand for now. Revisit before the first
+      real deployment.
+- [ ] Deferred (ADR 0007, last section): the legal scope of `comprobar_regulacion_alquiler` (habitual vs temporary
+      leases, contract dates) is unverified and needs a lawyer. The scan stays as it is and is not extended; its
+      alerts are a work aid, not proof of compliance.
+- [x] Stay limits and `acepta_animales` moved to `TerminosAlquiler`, one per rental offer (ADR 0011). (3)
+- [x] `CertificadoEnergetico` (one per listing): rating, consumption, emissions, number and dates; `eficiencia` and
+      `nombre_eficiencia` were the same fact and became one letter A-G (ADR 0013). (1.8)
+- [x] Community fees and IBI: amount and included flag now sit together on `Inmueble` (ADR 0011). The free-text
+      `Condiciones.incluido` stays as the description. (1.9)
 
 ## 2. Remove derivable data
 
-- [ ] Drop `InmuebleModalidad.mas_iva`; keep `tipo_iva` and expose `mas_iva` as a property. Update the
-      constraint and the API. (1.5)
-- [ ] Same for `PlazaAparcamiento.precio_opcional_*`; drop `precio_opcional_unidad` and tie the optional price
-      to a modalidad. (1.5, 1.6)
+- [x] `InmuebleModalidad.mas_iva` dropped; `tipo_iva` is the source and `mas_iva` a property (ADR 0012). (1.5)
+- [x] Same for `PlazaAparcamiento.precio_opcional_mas_iva` (ADR 0012). (1.5)
+- [ ] Tie the optional parking price (and `precio_opcional_unidad`) to the price model; decide together with the
+      `valor` / `renta` question in section 5. (1.6)
 - [x] Location columns stay as three keys; consistency is checked in the models and by `comprobar_ubicaciones`
       (ADR 0006). (1.1)
 - [x] `Comarca.provincia` dropped: a comarca can span provinces (ADR 0006). (1.1)
-- [ ] Revisit a unified sub-municipal table (`Zona`) when a second city's districts / barrios are loaded. (1.1)
-- [ ] Decide whether `direccion_short` is computed or a documented display override. (1.10)
-- [ ] DB-level check that `Condiciones.modalidad` equals `InmuebleModalidad.modalidad` (composite FK via
-      `RunSQL`, or document `clean()` as the only guard). (1.7)
+- [ ] Deferred (ADR 0006, addendum): a unified sub-municipal table (`Zona`). Revisit when a second city's districts /
+      barrios are loaded and their real structure is known. (1.1)
+- [x] `direccion_short` is a display override written by staff, documented on the field (ADR 0012). (1.10)
+- [x] `Condiciones.modalidad` must equal the offer's modalidad: guarded by the model and scanned by
+      `comprobar_condiciones` (ADR 0012). (1.7)
 
 ## 3. Repeating groups
 
-- [ ] `Transporte` to one row per mode: `TransporteInmueble(inmueble, tipo, descripcion)`. (2.1)
-- [ ] `Instalaciones`: `Suministro(inmueble, tipo, contador, compania, tipo_suministro)` for water, electricity
-      and gas; heating type/subtype as choices. (2.2)
-- [ ] `descripcion_es/en/cat` to `DescripcionInmueble(inmueble, idioma, texto)`; the API keeps flattening. (2.3)
-- [ ] Free text with a closed domain to choices or lookups: `orientacion`, `tipo_fachada`, `office`, the three
-      floor fields, `tipo_cocina`, `tipo_gas`, `situacion_actual`, `situacion_5_anios`, `usos`. (2.5)
-- [ ] One convention for count vs boolean in `Dotacion`, `Estancias`, `OtrosEspacios`. (2.4)
+- [x] `Transporte` to one row per mode: `TransporteInmueble(inmueble, tipo, descripcion)` (ADR 0008). (2.1)
+- [x] `Suministro(inmueble, tipo, contador, compania, tipo_suministro)` for water, electricity and gas; heating
+      type/subtype and gas type as choices (ADR 0008). (2.2)
+- [x] `descripcion_es/en/cat` to `DescripcionInmueble(inmueble, idioma, texto)`; the API keeps flattening (ADR 0008). (2.3)
+- [x] Free text with a closed domain to choices (ADR 0009): floor materials, carpentry, `tipo_fachada`,
+      `tipo_cocina`, `situacion_actual`; `orientacion` is four flags and `Otros.office` was dropped (ADR 0009); `usos` stays
+      free text. (2.5)
+- [ ] Review the value lists with the agency's real vocabulary. For now ADR 0009 was widened with common market values
+      (migration `0042`); the agency's own terms are still to be confirmed.
+- [x] One convention for count vs boolean in `Dotacion`, `OtrosEspacios` (ADR 0010); `Instalaciones` and `Estancias`
+      already follow it. (2.4)
 
 ## 4. Detail tables
 
-- [ ] Merge `Banios` into `Dormitorios` (or one "distribution" table). (3)
-- [ ] Split what is left of `Otros` by concern; move `anio_ultima_reforma` next to `anio_construccion`. (3)
-- [ ] Define the meaning of a missing row versus a row of zeros; consider null for "unknown". (3)
-- [ ] Add checks: `exteriores <= dobles + individuales`, `sup_util <= sup_construida`,
-      `fecha_baja >= fecha_alta`. (3)
+- [x] `Banios` merged into `Dormitorios`, which became `Distribucion` (bedrooms, bathrooms, capacity) (ADR 0011). (3)
+- [x] `Otros` split by concern (ADR 0011): `anio_ultima_reforma` and the included-in-the-rent flags to `Inmueble`,
+      `capacidad_personas` to `Distribucion`, stay limits and pets to `TerminosAlquiler` (per rental offer), and
+      the rest renamed `Caracteristicas`. (3)
+- [x] A missing row is unknown and 0 is confirmed none; in `Distribucion` an empty count is unknown (ADR 0011). (3)
+- [x] Checks: `exteriores <= dobles + individuales`, `sup_util <= sup_construida`, `fecha_baja >= fecha_alta`. (3)
 
 ## 5. Missing entities
 
 - [x] Co-ownership: `InmueblePropietario(inmueble, propietario, porcentaje)` (ADR 0002).
-- [ ] Make `Propietario.nif` unique when set. (4)
-- [ ] `DatosInternos`: move `cat_nrc` to `RegistroLegal`; extract the management agreement (`fecha_firma`,
-      `exclusiva`, `gestion_comercial`, `administracion`) into its own model with dates. (4)
-- [ ] Date the owner valuation (`tasacion_propietario`) or keep a history. (4)
-- [ ] Audit columns (`created_by/at`, `updated_by/at`) on `InmuebleModalidad` and `Condiciones`. (4)
-- [ ] Parking: decide whether `PlazaAparcamiento.valor` / `renta` fit the price model. (4)
+- [x] `Propietario.nif` is unique when set (ADR 0013). (4)
+- [x] The management agreement is `AcuerdoAdministracion`, with dates; `cat_nrc` became the private
+      `Inmueble.referencia_catastral` instead of a `RegistroLegal` row, which is public (ADR 0013). (4)
+- [x] `fecha_tasacion` dates the owner valuation; no history (ADR 0013). (4)
+- [x] Audit columns on `InmuebleModalidad` and `Condiciones` (ADR 0013). (4)
+- [x] Parking `valor` / `renta` stay internal notes outside the price model (ADR 0013). (4)
 
 ## 6. Naming consistency
 
-- [ ] Replace the `_id` primary key on `Inmueble`, `ImageInmueble` and the location models with `id`; check
-      every `inmueble_id`, serializer and test that relies on it. (5)
-- [ ] `Inmueble.TIPOS` values to lowercase snake_case like the other choice lists. (5)
-- [ ] Rename `Banios.banios` and unify count-vs-area naming (`terraza` vs `terraza_m2`). (5)
+- [x] The `_id` primary key of `Inmueble`, `ImageInmueble` and the location models is now `id` (ADR 0014). (5)
+- [x] `Inmueble.TIPOS` codes are lowercase: `vivienda`, `oficina`, `local`, `parking`, `otro` (ADR 0014). (5)
+- [x] Counts are `n_terrazas` / `n_balcones`; areas keep `_m2`; flags stay bare (ADR 0014). (5)
 
 ## 7. Cross-cutting (after each group lands)
 

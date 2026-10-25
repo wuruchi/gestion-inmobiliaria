@@ -7,7 +7,8 @@ class Command(BaseCommand):
     help = (
         'List the published habitual-rent offers in a stressed zone that lack the reference index or the '
         'last-rent information (unconfirmed, no end date, or older than 5 years), and fail if there are any. '
-        'Read only; safe to run from cron or before publishing.'
+        'Read only; safe to run from cron or before publishing. Its legal scope is unverified (ADR 0007): a '
+        'work aid, not proof of compliance.'
     )
 
     def handle(self, *args, **options):
