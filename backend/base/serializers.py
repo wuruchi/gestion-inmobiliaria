@@ -1,8 +1,9 @@
+from django.utils.translation.trans_real import parse_accept_lang_header
 from rest_framework import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from .models import Inmueble, ImageInmueble, Barrio, Modalidad, Distrito, Municipio, Provincia, Caracteristicas, PlazaAparcamiento, Distribucion, Instalaciones, Dotacion, AreaRecreo, Estancias
-from .models import Seguridad, Entorno, TransporteInmueble, OtrosEspacios
+from .models import Seguridad, Entorno, TransporteInmueble, OtrosEspacios, DescripcionInmueble
 from .models import Agencia, CertificadoEnergetico, Condiciones, InclusionesAlquiler, InmuebleModalidad, MediaInmueble, RegistroLegal, RegulacionAlquiler, SolicitudReserva, TerminosAlquiler
 
 class ProvinciasSerializer(serializers.ModelSerializer):
@@ -36,15 +37,6 @@ class ModalidadSerializer(serializers.ModelSerializer):
    class Meta:
       model = Modalidad
       fields = ['codigo', 'nombre', 'unidad_precio']
-
-class PrecioModalidadSerializer(serializers.ModelSerializer):
-   codigo = serializers.CharField(source='modalidad.codigo', read_only=True)
-   nombre = serializers.CharField(source='modalidad.nombre', read_only=True)
-   unidad_precio = serializers.CharField(source='modalidad.unidad_precio', read_only=True)
-
-   class Meta:
-      model = InmuebleModalidad
-      fields = ['codigo', 'nombre', 'unidad_precio', 'precio', 'mas_iva', 'tipo_iva', 'fecha_disponibilidad']
 
 class BarriosSerializer(serializers.ModelSerializer):
    class Meta:
@@ -191,59 +183,6 @@ class InclusionesAlquilerSerializer(serializers.ModelSerializer):
       model = InclusionesAlquiler
       fields = ['gastos_comunidad', 'ibi', 'seguro', 'wifi', 'suministros']
 
-class PrecioModalidadDetalleSerializer(PrecioModalidadSerializer):
-   # Rent regulation of a rental offer: null for a sale; a rental without a record is "desconocida".
-   regulacion = serializers.SerializerMethodField()
-   # Stay limits and pets of a rental offer: null for a sale or when nothing was recorded.
-   terminos = serializers.SerializerMethodField()
-   # What the rent includes: null for a sale or when nothing was recorded.
-   inclusiones = serializers.SerializerMethodField()
-   # Deposit of a rental: months of rent and the amount (price x months); null for a sale or when not set.
-   fianza_total = serializers.SerializerMethodField()
-   # The listing's own conditions for this modalidad, else the modalidad's default.
-   condiciones = serializers.SerializerMethodField()
-
-   class Meta(PrecioModalidadSerializer.Meta):
-      fields = PrecioModalidadSerializer.Meta.fields + [
-         'fianza_meses', 'fianza_total', 'regulacion', 'terminos', 'inclusiones', 'condiciones']
-
-   def get_regulacion(self, obj):
-      if obj.modalidad.unidad_precio != 'mensual':
-         return None
-      try:
-         return RegulacionAlquilerSerializer(obj.regulacion).data
-      except ObjectDoesNotExist:
-         return RegulacionAlquilerSerializer(RegulacionAlquiler()).data
-
-   def get_terminos(self, obj):
-      try:
-         return TerminosAlquilerSerializer(obj.terminos).data
-      except ObjectDoesNotExist:
-         return None
-
-   def get_inclusiones(self, obj):
-      try:
-         return InclusionesAlquilerSerializer(obj.inclusiones).data
-      except ObjectDoesNotExist:
-         return None
-
-   def get_fianza_total(self, obj):
-      importe = obj.fianza_total
-      return None if importe is None else str(importe)
-
-   def get_condiciones(self, obj):
-      if obj.condiciones_id:
-         condiciones = obj.condiciones
-      else:
-         # One query per request, shared by every modalidad of the listing.
-         if 'condiciones_por_defecto' not in self.context:
-            self.context['condiciones_por_defecto'] = {
-               c.modalidad_id: c for c in Condiciones.objects.filter(por_defecto=True)
-            }
-         defaults = self.context['condiciones_por_defecto']
-         condiciones = defaults.get(obj.modalidad_id)
-      return CondicionesSerializer(condiciones).data if condiciones else None
-
 class CertificadoEnergeticoSerializer(serializers.ModelSerializer):
    class Meta:
       model = CertificadoEnergetico
@@ -262,7 +201,8 @@ class AgenciaSerializer(serializers.ModelSerializer):
 class SolicitudReservaSerializer(serializers.ModelSerializer):
    class Meta:
       model = SolicitudReserva
-      fields = ['nombre', 'email', 'telefono', 'tipo', 'fecha_desde', 'mensaje', 'acepta_aviso_legal']
+      fields = ['id', 'nombre', 'email', 'telefono', 'tipo', 'fecha_desde', 'mensaje', 'acepta_aviso_legal']
+      read_only_fields = ['id']
       extra_kwargs = {'mensaje': {'max_length': 2000}}
 
    def validate_acepta_aviso_legal(self, value):
@@ -294,19 +234,32 @@ class OcultarDireccionMixin(serializers.Serializer):
           data[name] = difuminar(data[name])
     return data
 
+IDIOMA_POR_DEFECTO = 'es'
+
+def idioma_preferido(request, disponibles):
+  """The best of `disponibles` for the request's `Accept-Language` (region ignored, q-values respected).
+
+  Without a match: Spanish if there is a Spanish text, else the first available in the order of `IDIOMAS`.
+  """
+  cabecera = request.META.get('HTTP_ACCEPT_LANGUAGE', '') if request is not None else ''
+  try:
+    pedidos = parse_accept_lang_header(cabecera)
+  except ValueError:  # a malformed header is ignored, not an error
+    pedidos = ()
+  for idioma, calidad in pedidos:
+    base = idioma.split('-')[0].lower()
+    if calidad > 0 and base in disponibles:
+      return base
+  if IDIOMA_POR_DEFECTO in disponibles:
+    return IDIOMA_POR_DEFECTO
+  return next((i for i, _ in DescripcionInmueble.IDIOMAS if i in disponibles), None)
+
 class DerivedFieldsMixin(serializers.Serializer):
-  # One entry per modalidad offered, with its price and the unit of that price.
-  modalidades = PrecioModalidadSerializer(source='precios', many=True, read_only=True)
-  es_venta = serializers.SerializerMethodField()
-  # Availability of the listing, derived from the state of each of its offers.
-  estado = serializers.CharField(read_only=True)
-  # Earliest availability among the open offers; each offer's own date is in `modalidades`.
-  fecha_disponibilidad = serializers.DateField(read_only=True)
-  importe_alquiler = serializers.SerializerMethodField()
-  importe_venta = serializers.SerializerMethodField()
   instalaciones = serializers.SerializerMethodField()
   # {language code: text}, only for the languages that have a description.
   descripciones = serializers.SerializerMethodField()
+  # The description in the language of `Accept-Language` ({idioma, texto}); null without descriptions.
+  descripcion = serializers.SerializerMethodField()
 
   def get_instalaciones(self, obj):
     return instalaciones_planas(obj)
@@ -314,18 +267,10 @@ class DerivedFieldsMixin(serializers.Serializer):
   def get_descripciones(self, obj):
     return {d.idioma: d.texto for d in obj.descripciones.all()}
 
-  def get_es_venta(self, obj):
-    # Uses the prefetched precios; kept because the frontend reads it.
-    return any(p.modalidad.codigo == 'venta' for p in obj.precios.all())
-
-  # Kept for the frontend: derived from the modalidad prices, not stored.
-  def get_importe_venta(self, obj):
-    prices = [p.precio for p in obj.precios.all() if p.modalidad.codigo == 'venta']
-    return str(prices[0]) if prices else None
-
-  def get_importe_alquiler(self, obj):
-    prices = [p.precio for p in obj.precios.all() if p.modalidad.unidad_precio == 'mensual']
-    return str(min(prices)) if prices else None
+  def get_descripcion(self, obj):
+    textos = {d.idioma: d.texto for d in obj.descripciones.all()}
+    idioma = idioma_preferido(self.context.get('request'), textos)
+    return None if idioma is None else {'idioma': idioma, 'texto': textos[idioma]}
 
   # Zone names come from the location links, not from stored text.
   zona = serializers.SerializerMethodField()
@@ -347,31 +292,6 @@ class DerivedFieldsMixin(serializers.Serializer):
     except ObjectDoesNotExist:
       return None
 
-class InmuebleSerializer(OcultarDireccionMixin, ImagenesMixin, DerivedFieldsMixin, serializers.ModelSerializer):
-  provincia = ProvinciasSerializer(source='municipio.provincia', read_only=True)
-  municipio = MunicipiosSerializer(read_only=True)
-  distrito = DistritosSerializer(read_only=True)
-  barrio = BarriosSerializer(read_only=True)
-  caracteristicas = CaracteristicasSerializer(read_only=True)
-  distribucion = DistribucionSerializer(read_only=True)
-  arearecreo = AreaRecreoSerializer(read_only=True)
-  dotacion = DotacionSerializer(read_only=True)
-  cocina = CocinaSerializer(source='estancias', read_only=True)
-  terraza = TerrazaSerializer(source='estancias', read_only=True)
-
-  class Meta:
-    model = Inmueble
-    fields = ['id', 'es_venta', 'modalidades', 'referencia', 'tipo', 'subtipo', 'estado', 'sup_util', 'sup_construida',
-              'importe_alquiler', 'importe_venta', 'n_habitaciones', 
-              'n_banios', 'zona', 'zona_ref', 
-              'descripciones',
-              'dir_descripcion', 'situacion_actual', 'fecha_disponibilidad',
-              'images', 'barrio', 'distrito', 'municipio', 'provincia',
-              'caracteristicas', 'distribucion', 'instalaciones', 'dotacion', 'arearecreo', 
-              'cocina', 'terraza']
-
-
-
 # Inmueble columns shown on the public detail page.
 INMUEBLE_PUBLIC_FIELDS = [
   'id', 'referencia', 'titulo', 'tipo', 'subtipo',
@@ -391,10 +311,10 @@ INMUEBLE_PRIVATE_FIELDS = [
 ]
 # Nested objects and computed values (declared on the serializer, not columns).
 INMUEBLE_NESTED_FIELDS = [
-  'n_banios', 'n_habitaciones', 'zona', 'zona_ref', 'modalidades', 'es_venta', 'importe_alquiler', 'importe_venta', 'n_plz_garaje', 'plazas', 'images', 'planos', 'medios', 'provincia', 'municipio', 'distrito', 'barrio', 'agencia', 'registros_legales', 'certificado_energetico',
+  'n_banios', 'n_habitaciones', 'zona', 'zona_ref', 'n_plz_garaje', 'plazas', 'images', 'planos', 'medios', 'provincia', 'municipio', 'distrito', 'barrio', 'registros_legales', 'certificado_energetico',
   'caracteristicas', 'distribucion', 'instalaciones', 'arearecreo', 'dotacion',
   'cocina', 'terraza', 'salon', 'carpinteria', 'otros_espacios', 'seguridad',
-  'entorno', 'transporte', 'descripciones', 'gran_tenedor', 'zona_tensionada', 'estado', 'fecha_disponibilidad',
+  'entorno', 'transporte', 'descripciones', 'descripcion', 'gran_tenedor', 'zona_tensionada',
 ]
 
 class SingleInmuebleSerializer(OcultarDireccionMixin, ImagenesMixin, DerivedFieldsMixin, serializers.ModelSerializer):
@@ -415,9 +335,7 @@ class SingleInmuebleSerializer(OcultarDireccionMixin, ImagenesMixin, DerivedFiel
   otros_espacios = OtrosEspaciosSerializer(source='otrosespacios', read_only=True)
   seguridad = SeguridadSerializer(read_only=True)
   entorno = EntornoSerializer(read_only=True)
-  modalidades = PrecioModalidadDetalleSerializer(source='precios', many=True, read_only=True)
   plazas = PlazaAparcamientoSerializer(many=True, read_only=True)
-  agencia = AgenciaSerializer(read_only=True)
   registros_legales = RegistroLegalSerializer(many=True, read_only=True)
   certificado_energetico = CertificadoEnergeticoSerializer(read_only=True)
   n_plz_garaje = serializers.SerializerMethodField()

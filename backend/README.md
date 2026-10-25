@@ -13,7 +13,7 @@ pip install -r requirements.txt
 export DJANGO_DEBUG=1
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver        # API on http://localhost:8000/api/, admin on /admin/
+python manage.py runserver        # API on http://localhost:8000/api/v0/, admin on /admin/
 ```
 A new database is empty. Load the locations and modalidades with the [seed](../seed/README.md) tool
 (it can also run `migrate` for you), then add listings in the admin.
@@ -75,23 +75,25 @@ The database settings live in `backend/database.py`, shared with the seed tool.
   Personal data is kept 12 months: schedule `python manage.py purgar_solicitudes` (options `--meses N`, `--dry-run`),
   which blanks name, email and phone on older requests and keeps the rest of the row.
 
-## API (`/api/`)
+## API (`/api/v0/`)
+A version zero: the contract may change until the backend is declared done (ADR 0023). The offer is the resource.
+
 | Endpoint | Description |
 |---|---|
-| `GET inmuebles/` | Published listings, paginated (5 per page). |
-| `GET inmuebles/modalidad/{temporales,habituales,ventas}/` | Same, filtered by modalidad. |
-| `GET inmuebles/<id>/` | Listing detail, including the detail tables and rental conditions. |
-| `POST inmuebles/<id>/reservas/` | Reservation, visit or information request (`tipo`, optional `mensaje`; limited to 10 per hour per client). |
-| `GET inmuebles/modalidad/<modalidad>/distrito/<id>/count/` | Number of published listings. |
-| `GET provincias/`, `municipios/`, `distritos/`, `modalidades/` | Reference lists. |
-| `GET provincias/<id>/municipios`, `municipios/<id>/distritos`, `distritos/<id>/barrios` | Children of a location. |
+| `GET ofertas/` | One card per offer of a published listing, paginated (`page_size` up to 50, `Link` header). |
+| `GET ofertas/<uuid>/` | Offer detail: price, deposit, conditions, regulation, terms, inclusions, the full listing and its other offers. |
+| `GET ofertas/mapa/` | GeoJSON points for the same filters, plus `bbox=minLon,minLat,maxLon,maxLat` (max 1000). |
+| `POST ofertas/<uuid>/solicitudes/` | Reservation, visit or information request (`tipo`, optional `mensaje`; limited to 10 per hour per client). |
+| `GET provincias/`, `municipios/?provincia=&q=`, `distritos/?municipio=`, `barrios/?distrito=` | Reference lists (parent by id or slug; paginated except provinces). Cacheable for an hour. |
+| `GET catalogos/`, `GET agencia/` | Closed lists (types, subtypes, conservation, states, modalidades) and the public agency data. |
 
-List filters (query string): `page`, `provincia`, `municipio`, `distrito`, `barrio`, `referencia`,
-`habitaciones`, `max_precio`, `fecha_entrada` (an open offer available by that date). A non-numeric value or an invalid date returns 400.
-`max_precio` compares the price of the modalidad in the URL (`ventas`: the sale price); on `inmuebles/`
-it compares the monthly (rent) prices.
+Filters of `ofertas/`: `modalidad`, `estado` (default `disponible,reservado`), `municipio`, `distrito`, `barrio` (id or
+slug), `tipo`, `subtipo`, `precio_min`, `precio_max`, `sup_min`, `sup_max`, `habitaciones_min`, `banios_min`,
+`disponible_antes`, `amueblado`, `animales`, `piscina`, `parking`, `ascensor`, `terraza` (only `true`), `sort`
+(`precio`, `-precio`, `-fecha_alta`, `sup`). Errors are `application/problem+json`; a bad parameter is a 400 with
+`errors` per field. Every GET has an `ETag`. The anonymous throttle is `DJANGO_THROTTLE_ANON` (default `120/min`).
 
-Only listings with `publicar_web` are returned. The detail serializer is an allow-list
+Only listings with `publicar_web` are returned. The listing serializer is an allow-list
 (`INMUEBLE_PUBLIC_FIELDS` in `base/serializers.py`); a test fails if a new `Inmueble` column is not
 classified as public or private, so owner and internal data cannot leak by default.
 
@@ -101,5 +103,6 @@ DJANGO_DEBUG=1 DJANGO_ALLOWED_HOSTS=testserver python manage.py test
 ```
 
 ## Migrations
-Migrations `0022` and `0028` refuse to run when the tables they restructure already contain rows
-(locations and listings respectively). On a database with data, map the old values by hand first.
+The history is a single migration, `0001_initial_uuid` (ADR 0022). It cannot be applied over a database created by the
+old migrations: it fails with "table already exists". Recreate the development database (delete the SQLite file, or
+drop and recreate the Postgres schema), then run `python seed.py migrate` and the seed commands.

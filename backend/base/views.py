@@ -1,220 +1,168 @@
-from datetime import date
-from typing import Tuple, Union
+from django.shortcuts import get_object_or_404
+from django.db.models import Prefetch
+from rest_framework import status
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import ParseError
 from rest_framework.throttling import AnonRateThrottle
-from rest_framework import status
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import F, Prefetch, Q
-from .models import Inmueble, InmuebleModalidad, Barrio, Modalidad, Distrito, Municipio, Provincia
-from .serializers import InmuebleSerializer, SingleInmuebleSerializer, SolicitudReservaSerializer, DistritosSerializer, MunicipiosSerializer, ProvinciasSerializer, MunicipiosListItemSerializer, DistritosListItemSerializer, BarriosSerializer, ModalidadSerializer
-
-
-INMUEBLES_PER_PAGE = 5
-
-# Everything InmuebleSerializer reads, fetched in 2 queries instead of ~15 per listing.
-def inmuebles_publicados(**filters):
-  return Inmueble.objects.con_habitaciones().con_orden_estado().con_disponibilidad().filter(publicar_web=True, **filters).select_related(
-    'municipio__provincia', 'distrito__municipio__provincia', 'barrio',
-    'caracteristicas', 'distribucion', 'instalaciones', 'arearecreo', 'dotacion',
-    'estancias',
-  ).prefetch_related(
-    'images', 'descripciones', 'suministros',
-    Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
-  ).order_by('orden_estado', F('proxima_disponibilidad').asc(nulls_last=True), 'id')
-
-def parse_request(request, modalidad=None):
-  fecha_entradata = request.query_params.get('fecha_entrada')
-  provincia = request.query_params.get('provincia')
-  municipio = request.query_params.get('municipio')
-  distrito = request.query_params.get('distrito')
-  barrio = request.query_params.get('barrio')
-  referencia = request.query_params.get('referencia')
-  tipo = request.query_params.get('tipo')
-  subtipo = request.query_params.get('subtipo')
-  if tipo and tipo not in dict(Inmueble.TIPOS):
-    raise ParseError('Invalid tipo')
-  if subtipo and subtipo not in dict(Inmueble.SUBTIPOS):
-    raise ParseError('Invalid subtipo')
-  try:
-    sup_min = float(request.query_params.get('sup_min', 0.0))
-    sup_max = float(request.query_params.get('sup_max', 0.0))
-    habitaciones = int(request.query_params.get('habitaciones', 0))
-    max_precio = float(request.query_params.get('max_precio', 0.0))
-    provincia = int(provincia) if provincia else 0
-    municipio = int(municipio) if municipio else 0
-    distrito = int(distrito) if distrito else 0
-    barrio = int(barrio) if barrio else 0
-  except ValueError:
-    raise ParseError('Invalid numeric query parameter')
-  kwargs = {}
-  if fecha_entradata:
-    try:
-      fecha_entrada = date.fromisoformat(fecha_entradata)
-    except ValueError:
-      raise ParseError('Invalid fecha_entrada')
-    # One offer must be open and available by then; with a modalidad or a price it is that same offer.
-    kwargs['precios__fecha_disponibilidad__lte'] = fecha_entrada
-    kwargs['precios__estado__in'] = [InmuebleModalidad.DISPONIBLE, InmuebleModalidad.RESERVADO]
-  if provincia > 0:
-    kwargs['municipio__provincia'] = provincia
-  if municipio > 0:
-    kwargs['municipio'] = municipio
-  if distrito > 0:
-    kwargs['distrito'] = distrito
-  if barrio > 0:
-    kwargs['barrio'] = barrio
-  if tipo:
-    kwargs['tipo'] = tipo
-  if subtipo:
-    kwargs['subtipo'] = subtipo
-  # Built surface in m².
-  if sup_min > 0:
-    kwargs['sup_construida__gte'] = sup_min
-  if sup_max > 0:
-    kwargs['sup_construida__lte'] = sup_max
-  if referencia is not None and len(referencia) > 0:
-    kwargs['referencia__icontains'] = referencia
-  if habitaciones > 0:
-    kwargs['habitaciones_total'] = habitaciones
-  if modalidad:
-    kwargs['precios__modalidad__codigo'] = modalidad
-  if max_precio > 0:
-    # Same join as the modalidad above, so the price is that modalidad's price.
-    # Without a modalidad, compare the monthly prices (rent).
-    if not modalidad:
-      kwargs['precios__modalidad__unidad_precio'] = 'mensual'
-    kwargs['precios__precio__lte'] = max_precio
-  return kwargs
-
-def paginator_handler(inmuebles, page):
-  paginator = Paginator(inmuebles, INMUEBLES_PER_PAGE)
-  try:
-    inmuebles = paginator.page(page)
-  except PageNotAnInteger:
-    inmuebles = paginator.page(1)
-  except EmptyPage:
-    inmuebles = paginator.page(paginator.num_pages)
-  return inmuebles, paginator
-
-# Create your views here.
-@api_view(['GET'])
-def getRoutes(request):
-  return Response('Hello')
-
-@api_view(['GET'])
-def getInmuebles(request):
-  page = request.query_params.get('page', 1)
-  inmuebles = inmuebles_publicados(**parse_request(request)).distinct()
-  inmuebles, paginator = paginator_handler(inmuebles, page)
-  serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
-  return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
-
-@api_view(['GET'])
-def getInmueblesHabituales(request):
-  page = request.query_params.get('page', 1)
-  inmuebles = inmuebles_publicados(**parse_request(request, 'habitual'))
-  inmuebles, paginator = paginator_handler(inmuebles, page)
-  serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
-  return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
+from .filtros_ofertas import filtrar_ofertas, ofertas_publicadas, parsear_bbox
+from django.http import Http404
+from django.utils.cache import patch_vary_headers
+from django.views.decorators.cache import cache_control
+from .models import Agencia, Barrio, Distrito, Inmueble, InmuebleModalidad, Modalidad, Municipio, Provincia
+from .paginacion import PaginacionOfertas, PaginacionReferencias
+from .serializers import AgenciaSerializer, BarriosSerializer, DistritosListItemSerializer, ModalidadSerializer, MunicipiosListItemSerializer, ProvinciasSerializer, SolicitudReservaSerializer
+from .serializers import PASO_COORDENADAS_OCULTAS, difuminar
+from .serializers_ofertas import OfertaDetalleSerializer, OfertaTarjetaSerializer
 
 
 @api_view(['GET'])
-def getInmueblesTemporales(request):
-  page = request.query_params.get('page', 1)
-  inmuebles = inmuebles_publicados(**parse_request(request, 'temporal'))
-  inmuebles, paginator = paginator_handler(inmuebles, page)
-  serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
-  return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
+def listarOfertas(request):
+  ofertas = filtrar_ofertas(ofertas_publicadas(), request.query_params)
+  paginador = PaginacionOfertas()
+  pagina = paginador.paginate_queryset(ofertas, request)
+  serializer = OfertaTarjetaSerializer(pagina, many=True, context={'request': request})
+  return paginador.get_paginated_response(serializer.data)
+
+MAPA_MAXIMO = 1000
 
 @api_view(['GET'])
-def getInmueblesVenta(request):
-  page = request.query_params.get('page', 1)  
-  inmuebles = inmuebles_publicados(**parse_request(request, 'venta'))
-  inmuebles, paginator = paginator_handler(inmuebles, page)
-  serializer = InmuebleSerializer(inmuebles, many=True, context={'request': request})
-  return Response({'inmuebles' : serializer.data, 'page': page, 'pages': paginator.num_pages })
+def mapaOfertas(request):
+  """The offers that pass the search filters as GeoJSON points (RFC 7946), at most `MAPA_MAXIMO`.
 
+  A hidden address is placed at the snapped point, and `bbox` is checked against the point the client would see:
+  filtering on the exact one would let a client narrow a box until it found the real position.
+  """
+  bbox = request.query_params.get('bbox')
+  limites = parsear_bbox(bbox) if bbox else None
+  ofertas = InmuebleModalidad.objects.filter(
+    inmueble__publicar_web=True, inmueble__geo_latitude__isnull=False, inmueble__geo_longitude__isnull=False,
+  ).select_related('modalidad', 'inmueble')
+  if limites:
+    margen = PASO_COORDENADAS_OCULTAS  # the snapped point can be this far from the real one
+    ofertas = ofertas.filter(
+      inmueble__geo_longitude__gte=limites[0] - margen, inmueble__geo_longitude__lte=limites[2] + margen,
+      inmueble__geo_latitude__gte=limites[1] - margen, inmueble__geo_latitude__lte=limites[3] + margen)
+  caracteristicas, truncado = [], False
+  for oferta in filtrar_ofertas(ofertas, request.query_params).iterator():
+    inmueble = oferta.inmueble
+    lon, lat = inmueble.geo_longitude, inmueble.geo_latitude
+    if inmueble.ocultar_direccion:
+      lon, lat = difuminar(lon), difuminar(lat)
+    if limites and not (limites[0] <= lon <= limites[2] and limites[1] <= lat <= limites[3]):
+      continue
+    if len(caracteristicas) == MAPA_MAXIMO:
+      truncado = True
+      break
+    caracteristicas.append({
+      'type': 'Feature',
+      'id': str(oferta.pk),
+      'geometry': {'type': 'Point', 'coordinates': [lon, lat]},
+      'properties': {
+        'modalidad': oferta.modalidad.codigo, 'tipo': inmueble.tipo, 'estado': oferta.estado,
+        'precio': str(oferta.precio), 'moneda': 'EUR', 'unidad': oferta.modalidad.unidad_precio,
+      },
+    })
+  return Response({'type': 'FeatureCollection', 'features': caracteristicas, 'truncated': truncado},
+                  content_type='application/geo+json')
 
 @api_view(['GET'])
-def getInmueble(request, pk):
-  inmueble = get_object_or_404(
-    Inmueble.objects.select_related(
-      'municipio__provincia', 'distrito', 'barrio', 'caracteristicas', 'distribucion',
-      'instalaciones', 'arearecreo', 'dotacion', 'estancias',
-      'otrosespacios', 'seguridad',
-      'entorno', 'certificado_energetico', 'agencia',
+def getOferta(request, pk):
+  # A closed offer (rented, sold) stays reachable; only an unpublished listing is hidden.
+  oferta = get_object_or_404(
+    InmuebleModalidad.objects.filter(inmueble__publicar_web=True).select_related(
+      'modalidad', 'condiciones', 'regulacion', 'terminos', 'inclusiones', 'inmueble__agencia',
+      'inmueble__municipio__provincia', 'inmueble__distrito', 'inmueble__barrio', 'inmueble__caracteristicas',
+      'inmueble__distribucion', 'inmueble__instalaciones', 'inmueble__arearecreo', 'inmueble__dotacion',
+      'inmueble__estancias', 'inmueble__otrosespacios', 'inmueble__seguridad', 'inmueble__entorno',
+      'inmueble__certificado_energetico',
     ).prefetch_related(
-      'images', 'descripciones', 'suministros', 'transportes', 'plazas', 'registros_legales', 'medios', 'propietarios',
-      'municipio__declaraciones_tensionada',
-      Prefetch('precios', queryset=InmuebleModalidad.objects.select_related('modalidad', 'condiciones', 'regulacion', 'terminos', 'inclusiones')),
+      'inmueble__images', 'inmueble__descripciones', 'inmueble__suministros', 'inmueble__transportes',
+      'inmueble__plazas', 'inmueble__registros_legales', 'inmueble__medios', 'inmueble__propietarios',
+      'inmueble__municipio__declaraciones_tensionada',
+      Prefetch('inmueble__precios', queryset=InmuebleModalidad.objects.select_related('modalidad')),
     ),
-    id=pk, publicar_web=True)
-  serializer = SingleInmuebleSerializer(inmueble, many=False, context={'request': request})
-  return Response(serializer.data)
+    pk=pk)
+  respuesta = Response(OfertaDetalleSerializer(oferta, context={'request': request}).data)
+  patch_vary_headers(respuesta, ['Accept-Language'])  # `inmueble.descripcion` depends on it
+  return respuesta
 
 class SolicitudReservaThrottle(AnonRateThrottle):
   rate = '10/hour'
 
 @api_view(['POST'])
 @throttle_classes([SolicitudReservaThrottle])
-def crearSolicitudReserva(request, pk):
-  inmueble = get_object_or_404(Inmueble, id=pk, publicar_web=True)
+def crearSolicitud(request, pk):
+  oferta = get_object_or_404(InmuebleModalidad.objects.select_related('inmueble'), pk=pk, inmueble__publicar_web=True)
   serializer = SolicitudReservaSerializer(data=request.data)
   serializer.is_valid(raise_exception=True)
-  serializer.save(inmueble=inmueble)
-  return Response(serializer.data, status=status.HTTP_201_CREATED)
+  solicitud = serializer.save(inmueble=oferta.inmueble)
+  # The request cannot be read back by the public (it holds personal data); the URL only identifies it.
+  ubicacion = request.build_absolute_uri(f'{request.path.rstrip("/")}/{solicitud.pk}')
+  return Response(serializer.data, status=status.HTTP_201_CREATED, headers={'Location': ubicacion})
+
+# Reference data changes rarely: browsers and proxies may keep it for an hour.
+referencia_cacheable = cache_control(public=True, max_age=3600)
+
+def _por_id_o_slug(queryset, campo, valor):
+  """Filter by the id (digits) or the slug of a parent place."""
+  return queryset.filter(**{f'{campo}__{"id" if valor.isdigit() else "slug"}': valor})
+
+def _lista_paginada(request, queryset, serializer):
+  paginador = PaginacionReferencias()
+  pagina = paginador.paginate_queryset(queryset, request)
+  return paginador.get_paginated_response(serializer(pagina, many=True).data)
 
 @api_view(['GET'])
-def getDistritos(request):
-  distritos = Distrito.objects
-  serializer = DistritosSerializer(distritos, many=True)
-  return Response(serializer.data)
+@referencia_cacheable
+def listarProvincias(request):
+  return Response(ProvinciasSerializer(Provincia.objects.all(), many=True).data)
 
 @api_view(['GET'])
-def getDistritosByMunicipio(request, municipio_id):
-  distritos = Distrito.objects.filter(municipio_id=municipio_id)
-  serializer = DistritosListItemSerializer(distritos, many=True)
-  return Response(serializer.data)
+@referencia_cacheable
+def listarMunicipios(request):
+  municipios = Municipio.objects.all()
+  if request.query_params.get('provincia'):
+    municipios = _por_id_o_slug(municipios, 'provincia', request.query_params['provincia'])
+  if request.query_params.get('q'):
+    municipios = municipios.filter(nombre__icontains=request.query_params['q'])
+  return _lista_paginada(request, municipios, MunicipiosListItemSerializer)
 
 @api_view(['GET'])
-def getBarriosByDistrito(request, distrito_id):
-  barrios = Barrio.objects.filter(distrito_id=distrito_id)
-  serializer = BarriosSerializer(barrios, many=True)
-  return Response(serializer.data)
+@referencia_cacheable
+def listarDistritos(request):
+  distritos = Distrito.objects.all()
+  if request.query_params.get('municipio'):
+    distritos = _por_id_o_slug(distritos, 'municipio', request.query_params['municipio'])
+  return _lista_paginada(request, distritos, DistritosListItemSerializer)
 
 @api_view(['GET'])
-def getMunicipios(request):
-  municipios = Municipio.objects
-  serializer = MunicipiosSerializer(municipios, many=True)
-  return Response(serializer.data)
+@referencia_cacheable
+def listarBarrios(request):
+  barrios = Barrio.objects.all()
+  if request.query_params.get('distrito'):
+    barrios = _por_id_o_slug(barrios, 'distrito', request.query_params['distrito'])
+  return _lista_paginada(request, barrios, BarriosSerializer)
+
+def _opciones(choices):
+  return [{'codigo': codigo, 'nombre': str(nombre)} for codigo, nombre in choices]
 
 @api_view(['GET'])
-def getMunicipiosByProvincia(request, provincia_id):
-  municipios = Municipio.objects.filter(provincia_id=provincia_id)
-  serializer = MunicipiosListItemSerializer(municipios, many=True)
-  return Response(serializer.data)
+@referencia_cacheable
+def getCatalogos(request):
+  """The closed lists a search form needs: types, subtypes, conservation, offer states and modalidades."""
+  return Response({
+    'tipos': _opciones(Inmueble.TIPOS),
+    'subtipos': _opciones(Inmueble.SUBTIPOS),
+    'conservaciones': _opciones(Inmueble.CONSERVACIONES),
+    'estados': _opciones(InmuebleModalidad.ESTADOS),
+    'modalidades': ModalidadSerializer(Modalidad.objects.all(), many=True).data,
+  })
 
 @api_view(['GET'])
-def getProvincias(request):
-  provincias = Provincia.objects
-  serializer = ProvinciasSerializer(provincias, many=True)
-  return Response(serializer.data)
-
-# URL segment -> Modalidad.codigo
-MODALIDAD_POR_URL = {'ventas': 'venta', 'habituales': 'habitual', 'temporales': 'temporal'}
-
-@api_view(['GET'])
-def getModalidades(request):
-  return Response(ModalidadSerializer(Modalidad.objects.all(), many=True).data)
-
-@api_view(['GET'])
-def getInmueblesCount(request, modalidad, distrito_id):
-  distrito = get_object_or_404(Distrito, id=distrito_id)
-  codigo = MODALIDAD_POR_URL.get(modalidad)
-  if codigo is None:
-    raise ParseError('Modalidad invalida')
-  count = Inmueble.objects.filter(distrito_id=distrito_id, modalidades__codigo=codigo, publicar_web=True).count()
-  return Response({'distrito_id': distrito.id, 'distrito': distrito.nombre, 'modalidad': modalidad, 'count': count})
+@referencia_cacheable
+def getAgencia(request):
+  """The agency that runs the site: the first one created (the seed loads it first)."""
+  agencia = Agencia.objects.order_by('pk').first()
+  if agencia is None:
+    raise Http404
+  return Response(AgenciaSerializer(agencia).data)

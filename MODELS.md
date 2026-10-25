@@ -21,12 +21,12 @@ erDiagram
     Municipio ||--o{ DeclaracionZonaTensionada : "declared stressed"
     Distrito ||--o{ Barrio : has
 
-    Agencia ||--o{ Inmueble : advertises
+    Agencia |o--o{ Inmueble : advertises
     Inmueble }o--|| Municipio : located
     Inmueble }o--o| Distrito : located
     Inmueble }o--o| Barrio : located
 
-    Inmueble ||--|{ InmuebleModalidad : "offered as (price)"
+    Inmueble ||--|{ InmuebleModalidad : "offered as (price; at least one, enforced by the admin)"
     Modalidad ||--o{ InmuebleModalidad : "used by"
     Modalidad ||--o{ Condiciones : "conditions of"
     InmuebleModalidad }o--o| Condiciones : "own conditions"
@@ -43,7 +43,7 @@ erDiagram
     Inmueble ||--o| CertificadoEnergetico : "energy certificate"
     Inmueble ||--o{ InmueblePropietario : "owned by"
     Propietario ||--o{ InmueblePropietario : owns
-    Inmueble ||--o{ SolicitudReserva : "requests (reservation, visit, information)"
+    Inmueble |o--o{ SolicitudReserva : "requests (reservation, visit, information)"
 
     Inmueble ||--o| Distribucion : "bedrooms, bathrooms, capacity"
     Inmueble ||--o| Estancias : detail
@@ -60,6 +60,11 @@ erDiagram
     InmuebleModalidad ||--o| TerminosAlquiler : "stay limits, pets (rentals)"
     InmuebleModalidad ||--o| InclusionesAlquiler : "what the rent includes (rentals)"
 ```
+
+How to read the diagram: `||` is exactly one, `|o` zero or one, `o{` zero or many, `|{` one or many; the foreign key is on
+the many side. The audit links to the user (`created_by`, `updated_by`) are left out, and `Inmueble` ↔ `Modalidad` and
+`Inmueble` ↔ `Propietario` are shown through `InmuebleModalidad` and `InmueblePropietario`. The diagram was checked
+against the models' foreign keys (optional or required, one-to-one or many) on 2026-10-25.
 
 The model groups:
 
@@ -78,7 +83,7 @@ The model groups:
 ### Identifiers
 
 `Inmueble`, `InmuebleModalidad` and `SolicitudReserva` have a UUIDv7 primary key (ADR 0022); the API returns it as a string
-and a listing is addressed by it (`/api/inmuebles/<uuid>/`). The key exists before the first save, so use
+and an offer is addressed by its UUID (`/api/v0/ofertas/<uuid>/`). The key exists before the first save, so use
 `_state.adding`, not `pk is None`, to tell a new row. Every other model keeps an integer key. The human reference of
 a listing is `referencia`.
 
@@ -342,22 +347,22 @@ One row per modalidad a listing is offered under. This is the only place prices 
 | A modalidad in use cannot be deleted | DB (`PROTECT`) |
 | `tipo_iva` (0–100 %), when set, means the price excludes VAT; empty means VAT is included. `mas_iva` is derived (`tipo_iva IS NOT NULL`), not stored | DB constraint + model validator |
 | `created_by` / `updated_by` of the offer are filled by the admin (also from the listing's inline) | admin (`AuditoriaAdminMixin`) |
-| `fecha_disponibilidad` ("disponible desde") is required and defaults to today in the admin; it is the date this offer can be taken. The listing's `fecha_disponibilidad` in the API is derived: the earliest date among its offers that are not `cerrado` (null when all are closed); a closed offer never affects the listing, the list order or a date search (ADR 0017) | DB (not null) + property |
+| `fecha_disponibilidad` ("disponible desde") is required and defaults to today in the admin; it is the date this offer can be taken. `Inmueble.fecha_disponibilidad` (a model property, no longer in the API) is the earliest date among its offers that are not `cerrado` (null when all are closed). The API shows each offer's own date and `disponible_antes` filters on it (ADR 0017, ADR 0023) | DB (not null) + property |
 | `condiciones` (optional) must be conditions of the same modalidad | model `clean()` and `save()`; `python manage.py comprobar_condiciones` lists offers that bypassed them (`update()`, `bulk_create()`, SQL) and fails if any (ADR 0012) |
 | `estado` of the offer: `disponible` (default), `reservado` or `cerrado` (rented or sold) | DB choices + model validator |
 | `fianza_meses` (optional, 1-12): months of rent of the deposit; rental offers only. The API derives `fianza_total` = `precio` x months (net of VAT). `Condiciones.fianza` stays as text (ADR 0020) | DB range check + model `clean()` and `save()` |
 
-The availability of a listing is not stored: `Inmueble.estado` is derived from its offers and returned in the list
-and the detail. `Disponible` if any offer is `disponible` (or there are no offers); else `Reservado` if any is
-`reservado`; when every offer is `cerrado`, `Alquilado` if one of them has a monthly price, else `Vendido`. So a
-flat that is let but still for sale stays `Disponible`. The list is ordered by this state (available, reserved,
-closed), then by the listing's derived availability date (see the `fecha_disponibilidad` rule above).
+The availability of a listing is not stored: the `Inmueble.estado` property derives it from its offers
+(`Disponible` if any offer is `disponible` or there are none; else `Reservado` if any is `reservado`; when every offer
+is `cerrado`, `Alquilado` if one has a monthly price, else `Vendido`). The API no longer returns it: each offer carries
+its own `estado`, the search hides `cerrado` offers unless `estado=` asks for them, and the default order is available,
+reserved, closed, then the soonest `fecha_disponibilidad` (ADR 0023).
 
 Because the price is required, a listing offered for sale always has a sale price, and a rental always has a
-rent price. `precio` is always the amount as advertised: with a `tipo_iva` it is the net price. The API returns
-`modalidades: [{codigo, nombre, unidad_precio, precio, mas_iva, tipo_iva, fecha_disponibilidad}]` (the detail adds `fianza_meses`, `fianza_total`, `regulacion`, `terminos`, `inclusiones` and `condiciones`)
-and keeps two derived fields for the frontend: `importe_venta` (the venta price) and `importe_alquiler` (the
-lowest monthly price), both as stored, without VAT added.
+rent price. `precio` is always the amount as advertised: with a `tipo_iva` it is the net price. The offer is the public resource (section 11): `precio` is an object (`importe` as a decimal string,
+`moneda`, `unidad`, `mas_iva`, `tipo_iva`, and `por_m2` derived from the built surface), `fianza` is
+`{meses, importe, moneda}` or null, and the detail returns `regulacion`, `terminos`, `inclusiones` and `condiciones` at
+the top level of the offer. `importe` is always as advertised, without VAT added.
 
 ### `RegulacionAlquiler` (rent regulation of a rental offer)
 One optional record per rental offer (an `InmuebleModalidad` with a monthly price); a sale offer cannot have one
@@ -441,10 +446,9 @@ Choices: `tipo` is `vivienda`, `oficina`, `local`, `parking`, `terreno`, `traste
 | `zona` (API) | Name of the barrio, else of the distrito |
 | `zona_ref` (API) | Name of the distrito |
 | `n_banios` (API) | `Distribucion.banios`; `null` (unknown) when empty or without a row |
-| `es_venta` (API) | The listing has the venta modalidad |
-| `importe_venta`, `importe_alquiler` (API) | See section 5 |
-| `estado` (API) | Availability of the listing, derived from its offers; see section 5 |
-| `fecha_disponibilidad` (API) | The earliest availability date among the offers that are not `cerrado`; `null` when all are closed (ADR 0017) |
+| `precio.por_m2` (API, per offer) | Price over `sup_construida`; `null` without a surface |
+| `estado` (model property) | Availability of the listing, derived from its offers; see section 5. Not in the API |
+| `fecha_disponibilidad` (model property) | The earliest availability date among the offers that are not `cerrado`; `null` when all are closed (ADR 0017). Not in the API |
 | `gran_tenedor`, `zona_tensionada` (API) | Derived from the owners and from the municipality's declarations; `null` when unknown; see the Catalan rental rules row above |
 | `provincia` (API) | `municipio.provincia`; not stored |
 
@@ -592,8 +596,8 @@ that private values never appear in a detail response.
 
 ## 10. Requests: `SolicitudReserva`
 
-A reservation, a visit or an information request about a listing. The name and the endpoint still say
-"reserva"; renaming them is a possible later step. Created from the public API (`POST /api/inmuebles/<id>/reservas/`). In the admin every field is read only
+A reservation, a visit or an information request about a listing. The model name (`SolicitudReserva`)
+and the `reserva` type still say "reserva"; renaming them is a possible later step. Created from the public API (`POST /api/v0/ofertas/<id>/solicitudes/`; the request is stored against the offer's listing). In the admin every field is read only
 except `estado`.
 
 | Field | Rule |
@@ -612,25 +616,32 @@ The API accepts `tipo`, `fecha_desde` and `mensaje` besides the name, email, pho
 
 | Rule | Where |
 |---|---|
-| Only published listings accept requests | API (404 otherwise) |
+| Only offers of published listings accept requests (a closed offer does), 404 otherwise; the answer is 201 with a `Location` | API |
 | At most 10 requests per hour per client | API (throttle) |
 | Personal data is kept 12 months: `python manage.py purgar_solicitudes` blanks `nombre`, `email`, `telefono` and `mensaje` on older requests and keeps the rest of the row. Options `--meses N`, `--dry-run`; safe to repeat | command (to be scheduled, e.g. cron) |
 
 ## 11. What the public API returns
 
-- `GET /api/inmuebles/` and `.../modalidad/<temporales|habituales|ventas>/`: published listings only,
-  5 per page, with a subset of the nested data.
-- `GET /api/inmuebles/<id>/`: one published listing with all the public columns and every public nested
-  block (locations, modalidades with prices, VAT, availability date, rent regulation, stay terms and conditions, detail tables,
-  supplies and transport, descriptions by language, plazas, photos, plans, videos and tours, agency, registrations, energy certificate).
-- Search filters: `provincia`, `municipio`, `distrito`, `barrio`, `referencia`, `habitaciones` (exact
-  computed count), `tipo`, `subtipo`, `sup_min` / `sup_max` (built surface in m²), `max_precio`,
-  `fecha_entrada` (an open offer available on or before that date; with a modalidad in the URL or a `max_precio`
-  it is that same offer, and closed offers never match). A non-numeric value, an invalid date, or a `tipo` or
-  `subtipo` that does not exist, returns 400.
-- `max_precio` compares the price of the modalidad in the URL (the sale price on `ventas`); on
-  `inmuebles/` without a modalidad it compares the monthly (rent) prices. A listing appears once.
-- Reference lists: provinces, municipios, distritos, barrios, modalidades (with `unidad_precio`).
+Everything lives under `/api/v0` (a version zero: the contract may change until the backend is done; ADR 0023).
+
+- `GET /api/v0/ofertas/`: one row (card) per offer of a published listing, paginated (`count`, `next`, `previous`,
+  `results`, and a `Link` header; `page_size` up to 50). Closed offers are hidden unless `estado=` asks for them.
+- `GET /api/v0/ofertas/<uuid>/`: one offer with its conditions, regulation, terms and inclusions, the full listing
+  (`inmueble`: all public columns and every public nested block, locations, detail tables, supplies and transport,
+  descriptions by language, parking, photos, plans, videos and tours, registrations, energy certificate), the other
+  offers of the listing (`otras_ofertas`) and the `agencia`. An offer of an unpublished listing is a 404; a closed one
+  is not.
+- `POST /api/v0/ofertas/<uuid>/solicitudes/`: a reservation, visit or information request (see section 10).
+- Search filters: `modalidad`, `estado`, `municipio`, `distrito`, `barrio` (id or slug), `tipo`, `subtipo`,
+  `precio_min`, `precio_max`, `sup_min`, `sup_max`, `habitaciones_min`, `banios_min`, `disponible_antes`, and the
+  features `amueblado`, `animales`, `piscina`, `parking`, `ascensor`, `terraza` (only `true`); `sort` is `precio`,
+  `-precio`, `-fecha_alta` or `sup`. A bad value is a 400 `application/problem+json` with `errors` per field.
+- The price filters compare the offer's own price as advertised, so pass `modalidad` to compare like with like.
+- `GET /api/v0/ofertas/mapa/`: the same filters plus `bbox=`, as GeoJSON points (at most 1000, then `truncated`); a hidden address is snapped and the box is tested against the snapped point.
+- The detail's `inmueble.descripcion` is the description in the language of `Accept-Language` (fallback Spanish); `descripciones` has them all.
+- Reference data, cacheable for an hour: `GET /api/v0/provincias/`, `municipios/?provincia=&q=`,
+  `distritos/?municipio=`, `barrios/?distrito=` (parent by id or slug, paginated), `catalogos/` (types, subtypes,
+  conservation, offer states, modalidades with `unidad_precio`) and `agencia/` (name, AICAT, API number).
 
 ### The admin panel
 
@@ -666,7 +677,8 @@ The reasons behind the model are in `docs/adr/`; where a later ADR revises an ea
 | [0016](docs/adr/0016-scans-run-by-hand.md) | Consistency scans run by hand for now |
 | [0017](docs/adr/0017-fecha-disponibilidad-per-offer.md) | `fecha_disponibilidad` belongs to each offer |
 | [0018](docs/adr/0018-keep-wide-equipment-tables.md) | Keep the wide equipment tables |
-| [0022](docs/adr/0022-uuid-primary-keys.md) | UUIDv7 primary keys for listings, offers and requests; migrations regenerated |
-| [0021](docs/adr/0021-additive-fields-from-locabarcelona.md) | Additive fields from the Locabarcelona pages, and what was left out |
-| [0020](docs/adr/0020-deposit-sale-costs-and-rent-inclusions.md) | Deposit months on the offer, sale costs, rent inclusions per offer |
 | [0019](docs/adr/0019-gaps-from-locabarcelona-and-examples.md) | Gaps found in the examples: `Agencia`, NRUA and registry status (done); unknown-vs-no, money fields and scans (planned) |
+| [0020](docs/adr/0020-deposit-sale-costs-and-rent-inclusions.md) | Deposit months on the offer, sale costs, rent inclusions per offer |
+| [0021](docs/adr/0021-additive-fields-from-locabarcelona.md) | Additive fields from the Locabarcelona pages, and what was left out |
+| [0022](docs/adr/0022-uuid-primary-keys.md) | UUIDv7 primary keys for listings, offers and requests; migrations regenerated |
+| [0023](docs/adr/0023-offer-centred-public-api.md) | The offer is the public resource under `/api/v0`: envelope, problem+json, filters, payloads |

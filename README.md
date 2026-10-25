@@ -43,7 +43,7 @@ Requires Python 3.13 and Node.js.
    python manage.py createsuperuser
    python manage.py runserver
    ```
-   Admin at http://localhost:8000/admin/, API at http://localhost:8000/api/. Add listings in the admin.
+   Admin at http://localhost:8000/admin/, API at http://localhost:8000/api/v0/. Add listings in the admin.
 3. **Run the frontend:**
    ```
    cd ../frontend

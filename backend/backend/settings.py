@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -65,6 +66,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # ETag on every GET and 304 when If-None-Match matches.
+    'django.middleware.http.ConditionalGetMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -200,3 +203,20 @@ CSS_ROOT = BASE_DIR / 'staticfiles/css'
 # STATIC_ROOT = BASE_DIR / 'staticfiles_collected'
 
 CORS_ALLOWED_ORIGINS = env_list('DJANGO_CORS_ORIGINS', 'http://localhost:3000')
+CORS_EXPOSE_HEADERS = ['Link', 'ETag', 'Location', 'Retry-After']
+
+# Public API (ADR 0023). JSON only in production; the browsable API only with DEBUG.
+RENDERERS = ['rest_framework.renderers.JSONRenderer']
+if DEBUG:
+    RENDERERS.append('rest_framework.renderers.BrowsableAPIRenderer')
+
+# The test suite shares one cache and one client address, so the per-client limit is lifted there;
+# the throttle tests set their own rate.
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
+
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': RENDERERS,
+    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.AnonRateThrottle'],
+    'DEFAULT_THROTTLE_RATES': {'anon': '1000000/min' if TESTING else os.environ.get('DJANGO_THROTTLE_ANON', '120/min')},
+    'EXCEPTION_HANDLER': 'base.problemas.problem_exception_handler',
+}

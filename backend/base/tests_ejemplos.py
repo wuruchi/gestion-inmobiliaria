@@ -11,6 +11,7 @@ from datetime import date
 from django.core.cache import cache
 from django.test import TestCase
 
+from base.tests import API, ficha, lista, referencias
 from base.models import (
     InclusionesAlquiler, Propietario, InmueblePropietario, Agencia, DeclaracionZonaTensionada, RegulacionAlquiler,
     AreaRecreo, CertificadoEnergetico, AcuerdoAdministracion, Comarca, Condiciones, DatosInternos, Distrito, Barrio, Distribucion, Dotacion,
@@ -50,7 +51,13 @@ class EjemploTestCase(TestCase):
             provincia=cls.barcelona_prov, codigo_ine='08019', nombre='Barcelona')
 
     def detalle(self, inmueble):
-        response = self.client.get(f'/api/inmuebles/{inmueble.id}/')
+        response = ficha(self.client, inmueble)
+        self.assertEqual(response.status_code, 200)
+        return response.json()['inmueble']
+
+    def oferta(self, inmueble, modalidad=None):
+        """The detail of one offer of the listing (the first, or the one of `modalidad`)."""
+        response = ficha(self.client, inmueble, modalidad)
         self.assertEqual(response.status_code, 200)
         return response.json()
 
@@ -59,9 +66,9 @@ class EjemploTestCase(TestCase):
         self.assertEqual({k: actual.get(k, '<falta>') for k in esperado}, esperado, mensaje)
 
     def en_el_listado(self, inmueble, **esperado):
-        item = {i['referencia']: i for i in self.client.get('/api/inmuebles/').json()['inmuebles']}[
-            inmueble.referencia]
-        self.assertContiene(item, esperado)
+        """The card of the listing's first offer; `esperado` may name card keys or keys of its `inmueble`."""
+        item = {o['inmueble']['referencia']: o for o in lista(self.client)}[inmueble.referencia]
+        self.assertContiene({**item['inmueble'], **item}, esperado)
 
     def solicitar(self, inmueble, **extra):
         cache.clear()
@@ -69,7 +76,7 @@ class EjemploTestCase(TestCase):
         cuerpo = {'nombre': 'Ana', 'email': 'ana@example.com', 'telefono': '600000000',
                   'acepta_aviso_legal': True, **extra}
         return self.client.post(
-            f'/api/inmuebles/{inmueble.id}/reservas/', cuerpo, content_type='application/json')
+            f'{API}/ofertas/{inmueble.precios.first().id}/solicitudes/', cuerpo, content_type='application/json')
 
 
 class Atb01Test(EjemploTestCase):
@@ -139,20 +146,21 @@ class Atb01Test(EjemploTestCase):
     def test_header_price_location_and_surface(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
-            'referencia': 'G767', 'direccion': 'Carrer de la Cera', 'fecha_disponibilidad': '2026-11-23',
+            'referencia': 'G767', 'direccion': 'Carrer de la Cera',
             'sup_construida': '70.00', 'tipo': 'vivienda', 'subtipo': 'piso', 'zona': 'Sant Antoni',
-            'zona_ref': 'Eixample', 'importe_alquiler': '1750.00', 'importe_venta': None, 'es_venta': False,
-            'n_habitaciones': 2, 'n_banios': 2})
+            'zona_ref': 'Eixample', 'n_habitaciones': 2, 'n_banios': 2})
         self.assertEqual(data['provincia']['nombre'], 'Barcelona')
-        self.assertEqual([(m['codigo'], m['precio'], m['mas_iva']) for m in data['modalidades']],
-                         [('temporal', '1750.00', False)])
+        oferta = self.oferta(self.inm)
+        self.assertContiene(oferta, {'fecha_disponibilidad': '2026-11-23'})
+        self.assertContiene(oferta['precio'], {'importe': '1750.00', 'mas_iva': False, 'por_m2': '25.00'})
+        self.assertEqual(oferta['modalidad']['codigo'], 'temporal')
 
     def test_regulatory_block(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
             'zona_tensionada': True, 'gran_tenedor': False})
         self.assertContiene(data['certificado_energetico'], {'eficiencia': 'D', 'consumo_energetico': '71.00'})
-        oferta = data['modalidades'][0]
+        oferta = self.oferta(self.inm)
         self.assertContiene(oferta['regulacion'], {
             'indice_referencia_min': '839.99', 'indice_referencia_max': '1153.53',
             'renta_previa': 'con_renta', 'ultima_renta': '1750.00', 'ultima_renta_fin': '2026-06-30'})
@@ -160,7 +168,7 @@ class Atb01Test(EjemploTestCase):
         self.assertEqual(
             [(r['tipo'], r['numero']) for r in data['registros_legales']],
             [('cedula_habitabilidad', 'CHB0333*******')])
-        self.assertEqual(data['agencia'], {'nombre': 'ATBarcelona', 'aicat': '5205', 'numero_api': ''})
+        self.assertEqual(oferta['agencia'], {'nombre': 'ATBarcelona', 'aicat': '5205', 'numero_api': ''})
 
     def test_characteristics_tables(self):
         data = self.detalle(self.inm)
@@ -187,12 +195,12 @@ class Atb01Test(EjemploTestCase):
         self.assertContiene(data['caracteristicas'], {'exterior': True})
         self.assertContiene(data['distribucion'], {'capacidad_personas': 4})
         self.assertContiene(data, {'anio_ultima_reforma': 2019})
-        self.assertContiene(data['modalidades'][0]['terminos'], {
+        self.assertContiene(self.oferta(self.inm)['terminos'], {
             'estancia_minima': 2, 'estancia_minima_unidad': 'meses',
             'estancia_maxima': 11, 'estancia_maxima_unidad': 'meses'})
 
     def test_conditions_and_requirements(self):
-        condiciones = self.detalle(self.inm)['modalidades'][0]['condiciones']
+        condiciones = self.oferta(self.inm)['condiciones']
         self.assertContiene(condiciones, {
             'fianza': 'Mínimo 2 mensualidades de alquiler.', 'honorarios': '1 mensualidad + IVA',
             'itp': '0,5 % del importe del alquiler de todo el periodo (pago único)',
@@ -206,7 +214,9 @@ class Atb01Test(EjemploTestCase):
         self.assertEqual((solicitud.tipo, solicitud.referencia), ('reserva', 'G767'))
 
     def test_listing_card(self):
-        self.en_el_listado(self.inm, importe_alquiler='1750.00', zona='Sant Antoni', n_habitaciones=2)
+        self.en_el_listado(self.inm, zona='Sant Antoni', n_habitaciones=2)
+        card = lista(self.client)[0]
+        self.assertEqual(card['precio']['importe'], '1750.00')
 
     # NO MODELADO: "Visita Virtual", "Street View" and the PDF sheet are links generated by the site;
     # the energy label image and the FAQs are site-wide content. The description says "32 días hasta
@@ -252,22 +262,23 @@ class Atb02Test(EjemploTestCase):
     def test_office_price_with_vat_and_own_fees(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {'tipo': 'oficina', 'subtipo': '', 'sup_construida': '40.00'})
-        precio = data['modalidades'][0]
-        self.assertContiene(precio, {'codigo': 'habitual', 'precio': '450.00', 'mas_iva': True, 'tipo_iva': '21.00'})
-        self.assertContiene(precio['condiciones'], {
+        oferta = self.oferta(self.inm)
+        self.assertEqual(oferta['modalidad']['codigo'], 'habitual')
+        self.assertContiene(oferta['precio'], {'importe': '450.00', 'mas_iva': True, 'tipo_iva': '21.00'})
+        self.assertContiene(oferta['condiciones'], {
             'honorarios': '700 € + IVA', 'incluido': 'Gastos de comunidad, seguro e IBI'})
 
     def test_included_costs_and_stay_in_years(self):
-        data = self.detalle(self.inm)
-        self.assertContiene(data['modalidades'][0]['inclusiones'], {
+        oferta = self.oferta(self.inm)
+        self.assertContiene(oferta['inclusiones'], {
             'gastos_comunidad': True, 'ibi': True, 'seguro': True, 'wifi': False})
-        self.assertContiene(data['modalidades'][0]['terminos'], {
+        self.assertContiene(oferta['terminos'], {
             'estancia_minima': 1, 'estancia_minima_unidad': 'anios',
             'estancia_maxima': 3, 'estancia_maxima_unidad': 'anios'})
 
     def test_optional_parking_has_a_public_price_and_hides_internal_amounts(self):
-        respuesta = self.client.get(f'/api/inmuebles/{self.inm.id}/')
-        plaza = respuesta.json()['plazas'][0]
+        respuesta = ficha(self.client, self.inm)
+        plaza = respuesta.json()['inmueble']['plazas'][0]
         self.assertContiene(plaza, {
             'opcional': True, 'precio_opcional': '60.00', 'precio_opcional_unidad': 'mensual',
             'precio_opcional_mas_iva': False})
@@ -276,7 +287,7 @@ class Atb02Test(EjemploTestCase):
     def test_energy_and_last_rent(self):
         data = self.detalle(self.inm)
         self.assertContiene(data['certificado_energetico'], {'eficiencia': 'E', 'consumo_energetico': '126.00'})
-        self.assertContiene(data['modalidades'][0]['regulacion'], {
+        self.assertContiene(self.oferta(self.inm)['regulacion'], {
             'renta_previa': 'con_renta', 'ultima_renta': '390.00', 'ultima_renta_fin': None})
 
     # NO MODELADO: a long office lease has to use the `habitual` modalidad, whose name says "Vivienda
@@ -335,8 +346,8 @@ class Atb03Test(EjemploTestCase):
 
     def test_card_and_rooms(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data, {
-            'importe_alquiler': '2200.00', 'sup_construida': '90.00', 'n_habitaciones': 4, 'n_banios': 2})
+        self.assertContiene(data, {'sup_construida': '90.00', 'n_habitaciones': 4, 'n_banios': 2})
+        self.assertEqual(self.oferta(self.inm)['precio']['importe'], '2200.00')
         self.assertContiene(data['distribucion'], {'dobles': 4, 'exteriores': 2})
 
     def test_living_areas_and_carpentry_material(self):
@@ -362,8 +373,9 @@ class Atb03Test(EjemploTestCase):
         self.assertContiene(data['caracteristicas'], {'suelo_piso': 'terrazo', 'altura_real_m': '3.00'})
         self.assertContiene(data['distribucion'], {'capacidad_personas': 4})
         self.assertContiene(data, {'anio_ultima_reforma': 2014})
-        self.assertContiene(data['modalidades'][0]['inclusiones'], {'gastos_comunidad': True, 'wifi': True})
-        self.assertContiene(data['modalidades'][0]['terminos'], {
+        oferta = self.oferta(self.inm)
+        self.assertContiene(oferta['inclusiones'], {'gastos_comunidad': True, 'wifi': True})
+        self.assertContiene(oferta['terminos'], {
             'estancia_minima': 32, 'estancia_minima_unidad': 'dias',
             'estancia_maxima': 6, 'estancia_maxima_unidad': 'meses'})
 
@@ -371,7 +383,7 @@ class Atb03Test(EjemploTestCase):
         datos = DatosInternos.objects.get(inmueble=self.inm)
         acuerdo = AcuerdoAdministracion.objects.get(inmueble=self.inm)
         self.assertEqual((acuerdo.exclusiva, str(datos.tasacion_propietario)), (True, '1200.00'))
-        cuerpo = self.client.get(f'/api/inmuebles/{self.inm.id}/').content.decode()
+        cuerpo = ficha(self.client, self.inm).content.decode()
         for secreto in ('1200.00', 'tasacion', 'exclusiva', 'gestion_comercial', 'administracion'):
             self.assertNotIn(secreto, cuerpo)
 
@@ -441,9 +453,10 @@ class Locb01Test(LocabarcelonaMixin, EjemploTestCase):
 
     def test_price_deposit_and_single_index_value(self):
         data = self.detalle(self.inm)
-        oferta = data['modalidades'][0]
-        self.assertContiene(oferta, {
-            'codigo': 'habitual', 'precio': '1900.00', 'fianza_meses': 3, 'fianza_total': '5700.00'})
+        oferta = self.oferta(self.inm)
+        self.assertEqual(oferta['modalidad']['codigo'], 'habitual')
+        self.assertEqual(oferta['precio']['importe'], '1900.00')
+        self.assertContiene(oferta['fianza'], {'meses': 3, 'importe': '5700.00'})
         self.assertContiene(oferta['regulacion'], {
             'indice_referencia_min': None, 'indice_referencia_max': '1900.00', 'renta_previa': 'sin_renta'})
         self.assertEqual(oferta['condiciones']['actualizacion_renta'], 'IPC')
@@ -454,7 +467,7 @@ class Locb01Test(LocabarcelonaMixin, EjemploTestCase):
 
     def test_agency_numbers_and_energy_certificate(self):
         data = self.detalle(self.inm)
-        self.assertEqual(data['agencia'], {'nombre': 'Loca Barcelona', 'aicat': '11525', 'numero_api': 'A13529'})
+        self.assertEqual(self.oferta(self.inm)['agencia'], {'nombre': 'Loca Barcelona', 'aicat': '11525', 'numero_api': 'A13529'})
         self.assertContiene(data['certificado_energetico'], {'eficiencia': 'A', 'numero': '1Z1R5Z8HN'})
 
     def test_rooms_amenities_and_extra_spaces(self):
@@ -467,7 +480,7 @@ class Locb01Test(LocabarcelonaMixin, EjemploTestCase):
         self.assertContiene(data['arearecreo'], {'piscina': True})
 
     def test_available_since_a_date_in_the_past(self):
-        self.assertEqual(self.detalle(self.inm)['fecha_disponibilidad'], '2026-10-01')
+        self.assertEqual(self.oferta(self.inm)['fecha_disponibilidad'], '2026-10-01')
 
     # NO MODELADO: "Available now" is shown from the date; the "cooktop" (placa de cocción), the "Room" feature,
     # "Similar properties" and the favourites are not stored. The flat is called new-build but "in perfect
@@ -508,11 +521,14 @@ class Locb02Test(LocabarcelonaMixin, EjemploTestCase):
 
     def test_price_deposit_ibi_and_far_availability(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data, {'ibi': '618.13', 'fecha_disponibilidad': '2027-06-21'})
-        self.assertContiene(data['modalidades'][0], {'fianza_total': '2327.00', 'precio': '1163.50'})
-        self.assertContiene(data['modalidades'][0]['regulacion'], {'indice_referencia_max': '1066.97'})
-        self.assertIn('0,5 %', data['modalidades'][0]['condiciones']['itp'])
-        self.assertContiene(data['modalidades'][0]['terminos'], {'estancia_maxima': 11, 'estancia_maxima_unidad': 'meses'})
+        self.assertContiene(data, {'ibi': '618.13'})
+        oferta = self.oferta(self.inm)
+        self.assertEqual(oferta['fecha_disponibilidad'], '2027-06-21')
+        self.assertContiene(oferta['fianza'], {'importe': '2327.00'})
+        self.assertEqual(oferta['precio']['importe'], '1163.50')
+        self.assertContiene(oferta['regulacion'], {'indice_referencia_max': '1066.97'})
+        self.assertIn('0,5 %', oferta['condiciones']['itp'])
+        self.assertContiene(oferta['terminos'], {'estancia_maxima': 11, 'estancia_maxima_unidad': 'meses'})
 
     def test_energy_certificate_and_bedrooms(self):
         data = self.detalle(self.inm)
@@ -539,17 +555,16 @@ class Locb03Test(LocabarcelonaMixin, EjemploTestCase):
 
     def test_sale_with_internet_speed_and_certificate_without_number(self):
         data = self.detalle(self.inm)
-        self.assertContiene(data, {'importe_venta': '610000.00', 'ibi': '800.00', 'gran_tenedor': False,
-                                   'n_habitaciones': 4, 'planta': 1})
+        self.assertContiene(data, {'ibi': '800.00', 'gran_tenedor': False, 'n_habitaciones': 4, 'planta': 1})
+        self.assertEqual(self.oferta(self.inm)['precio']['importe'], '610000.00')
         self.assertContiene(data['certificado_energetico'], {'eficiencia': 'E', 'numero': ''})
         self.assertEqual(data['instalaciones']['internet_velocidad_mbps'], 300)
-        self.assertEqual(data['agencia']['numero_api'], 'A13529')
+        self.assertEqual(self.oferta(self.inm)['agencia']['numero_api'], 'A13529')
 
     def test_a_sale_has_no_rental_data(self):
-        oferta = self.detalle(self.inm)['modalidades'][0]
-        self.assertContiene(oferta, {
-            'codigo': 'venta', 'fianza_meses': None, 'fianza_total': None, 'regulacion': None,
-            'terminos': None, 'inclusiones': None})
+        oferta = self.oferta(self.inm)
+        self.assertEqual(oferta['modalidad']['codigo'], 'venta')
+        self.assertContiene(oferta, {'fianza': None, 'regulacion': None, 'terminos': None, 'inclusiones': None})
 
     # NO MODELADO: the page shows no stay limits, deposit or index for a sale; "Check in" in the contact form is
     # the optional `fecha_desde` of a request.
@@ -594,11 +609,12 @@ class Idealista01Test(EjemploTestCase):
     def test_headline_and_derived_price_per_square_metre(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
-            'tipo': 'vivienda', 'subtipo': 'chalet_adosado', 'importe_venta': '279000.00',
-            'importe_alquiler': None, 'es_venta': True, 'sup_construida': '154.00', 'n_habitaciones': 3,
+            'tipo': 'vivienda', 'subtipo': 'chalet_adosado', 'sup_construida': '154.00', 'n_habitaciones': 3,
             'n_banios': 1})
-        # idealista shows "1.812 €/m²": derived by the client from the two fields above.
-        self.assertEqual(round(float(data['importe_venta']) / float(data['sup_construida'])), 1812)
+        precio = self.oferta(self.inm)['precio']
+        self.assertEqual(precio['importe'], '279000.00')
+        # idealista shows "1.812 €/m²": the API derives it.
+        self.assertEqual(round(float(precio['por_m2'])), 1812)
 
     def test_location_outside_barcelona(self):
         data = self.detalle(self.inm)
@@ -636,12 +652,11 @@ class Idealista01Test(EjemploTestCase):
         self.assertEqual([m['tipo'] for m in data['medios']], ['tour', 'video', 'video'])
 
     def test_sale_listing_is_found_by_the_sale_filters(self):
-        ventas = '/api/inmuebles/modalidad/ventas/'
-        for consulta in ('subtipo=chalet_adosado', 'sup_min=150', 'max_precio=300000', 'habitaciones=3',
-                         'provincia=%d' % self.asturias.pk):
-            refs = [i['referencia'] for i in self.client.get(f'{ventas}?{consulta}').json()['inmuebles']]
+        for consulta in ('subtipo=chalet_adosado', 'sup_min=150', 'precio_max=300000', 'habitaciones_min=3',
+                         'municipio=%d' % self.inm.municipio_id):
+            refs = referencias(lista(self.client, f'modalidad=venta&{consulta}'))
             self.assertEqual(refs, ['IDEA-01'], consulta)
-        self.assertEqual(self.client.get(f'{ventas}?subtipo=piso').json()['inmuebles'], [])
+        self.assertEqual(lista(self.client, 'modalidad=venta&subtipo=piso'), [])
 
     def test_contact_form_is_an_information_request(self):
         respuesta = self.solicitar(
@@ -686,23 +701,25 @@ class Idealista02Test(EjemploTestCase):
     def test_numbers(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
-            'importe_venta': '389500.00', 'sup_construida': '265.00', 'sup_util': '260.00',
+            'sup_construida': '265.00', 'sup_util': '260.00',
             'n_habitaciones': 6, 'n_banios': 6, 'n_plantas': 2, 'anio_construccion': 2008,
             'subtipo': 'chalet_independiente', 'situacion_actual': 'alquiler_vacacional'})
         self.assertContiene(data['certificado_energetico'], {'consumo_energetico': '210.00', 'emisiones_co2': '36.00'})
         self.assertContiene(data['distribucion'], {'dobles': 6, 'suites': 2})
-        self.assertEqual(round(float(data['importe_venta']) / float(data['sup_construida'])), 1470)
+        precio = self.oferta(self.inm)['precio']
+        self.assertEqual(precio['importe'], '389500.00')
+        self.assertEqual(round(float(precio['por_m2'])), 1470)
 
     def test_exact_address_is_withheld_but_the_zone_is_shown(self):
-        respuesta = self.client.get(f'/api/inmuebles/{self.inm.id}/')
-        data = respuesta.json()
+        respuesta = ficha(self.client, self.inm)
+        data = respuesta.json()['inmueble']
         self.assertContiene(data, {'ocultar_direccion': True, 'direccion': '', 'direccion_short': ''})
         self.assertNotIn('Calle Carmen', respuesta.content.decode())
         # The map shows an area, not the exact point.
         self.assertEqual((data['geo_latitude'], data['geo_longitude']), (43.555, -5.925))
         self.assertEqual(data['zona_ref'], 'El Pozón - Villalegre - La Luz')
         self.assertEqual(data['municipio']['nombre'], 'Avilés')
-        listado = self.client.get('/api/inmuebles/').content.decode()
+        listado = self.client.get(f'{API}/ofertas/').content.decode()
         self.assertNotIn('Calle Carmen', listado)
 
     def test_floor_plan_is_apart_from_the_photos(self):
@@ -764,21 +781,23 @@ class Idealista03Test(EjemploTestCase):
     def test_price_surfaces_and_energy(self):
         data = self.detalle(self.inm)
         self.assertContiene(data, {
-            'importe_venta': '295000.00', 'sup_construida': '55.00', 'sup_util': '46.00',
+            'sup_construida': '55.00', 'sup_util': '46.00',
             'anio_construccion': 2009, 'conservacion': 'buen_estado', 'gran_tenedor': False,
             'n_habitaciones': 1, 'n_banios': 1})
         self.assertContiene(data['certificado_energetico'], {
             'numero': 'QWVL2082D', 'consumo_energetico': '143.00', 'emisiones_co2': '25.00'})
-        self.assertEqual(round(float(data['importe_venta']) / float(data['sup_construida'])), 5364)
+        precio = self.oferta(self.inm)['precio']
+        self.assertEqual(precio['importe'], '295000.00')
+        self.assertEqual(round(float(precio['por_m2'])), 5364)
 
     def test_registry_numbers_and_the_licence_without_a_number(self):
         registros = {r['tipo']: r['numero'] for r in self.detalle(self.inm)['registros_legales']}
         self.assertEqual(registros, {
             'cedula_habitabilidad': 'CHB00523426001', 'licencia_turistica': ''})
-        self.assertContiene(self.detalle(self.inm)['agencia'], {'aicat': '3366', 'numero_api': 'A10580'})
+        self.assertContiene(self.oferta(self.inm)['agencia'], {'aicat': '3366', 'numero_api': 'A10580'})
 
     def test_sale_costs_clause(self):
-        condiciones = self.detalle(self.inm)['modalidades'][0]['condiciones']
+        condiciones = self.oferta(self.inm)['condiciones']
         self.assertContiene(condiciones, {
             'honorarios': 'Honorarios de la agencia del vendedor: incluidos en el PVP.',
             'gestoria': '350 € aproximadamente más IVA',
